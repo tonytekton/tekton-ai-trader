@@ -1,0 +1,310 @@
+{
+  "AUDCAD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "AUDCHF": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "AUDJPY": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "AUDNZD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "AUDSGD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "AUDUSD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "CADCHF": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "CADJPY": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "CHFJPY": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "CHFSGD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "EURAUD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "EURCAD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "EURCHF": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "EURGBP": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "EURJPY": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "EURNZD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "EURSGD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "EURUSD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "GBPAUD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "GBPCAD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "GBPCHF": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "GBPJPY": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "GBPNZD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "GBPSGD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "GBPUSD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "NZDCAD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "NZDCHF": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "NZDJPY": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "NZDUSD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "SGDJPY": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "USDCAD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "USDCHF": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "USDJPY": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "USDSGD": {
+    "market_type": "forex",
+    "pip_value": 10,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100000
+  },
+  "DE40": {
+    "market_type": "indices",
+    "pip_value": 1,
+    "min_volume": 0.1,
+    "volume_step": 0.1,
+    "contract_size": 1
+  },
+  "UK100": {
+    "market_type": "indices",
+    "pip_value": 1,
+    "min_volume": 0.1,
+    "volume_step": 0.1,
+    "contract_size": 1
+  },
+  "US30": {
+    "market_type": "indices",
+    "pip_value": 1,
+    "min_volume": 0.1,
+    "volume_step": 0.1,
+    "contract_size": 1
+  },
+  "US500": {
+    "market_type": "indices",
+    "pip_value": 1,
+    "min_volume": 0.1,
+    "volume_step": 0.1,
+    "contract_size": 1
+  },
+  "USTEC": {
+    "market_type": "indices",
+    "pip_value": 1,
+    "min_volume": 0.1,
+    "volume_step": 0.1,
+    "contract_size": 1
+  },
+  "XAGUSD": {
+    "market_type": "commodities",
+    "pip_value": 0.1,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 5000
+  },
+  "XAUUSD": {
+    "market_type": "commodities",
+    "pip_value": 1,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 100
+  },
+  "XBRUSD": {
+    "market_type": "commodities",
+    "pip_value": 1,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 1000
+  },
+  "XNGUSD": {
+    "market_type": "commodities",
+    "pip_value": 1,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 1000
+  },
+  "XTIUSD": {
+    "market_type": "commodities",
+    "pip_value": 1,
+    "min_volume": 0.01,
+    "volume_step": 0.01,
+    "contract_size": 1000
+  }
+}

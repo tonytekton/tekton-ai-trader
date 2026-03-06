@@ -1,0 +1,332 @@
+🧠 Tekton Executor Active. Watching Cloud SQL for signals...
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf12920>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf681f0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf68370>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf68820>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf12ad0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf69480>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf69240>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf69810>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf68190>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf137c0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf69ba0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf6a110>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf69de0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf68460>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf68580>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf136a0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf6a2c0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf68c10>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf68d00>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf68f40>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf68370>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf12950>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf69bd0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf68d90>: Failed to establish a new connection: [Errno 111] Connection refused'))
+📊 Sizing (EUR): Margin 3,998,577.82 | Risk: 0.5% | Vol: 13000
+🚀 Executing CADJPY | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing CADJPY | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing CADCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing CADCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing CADCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing GBPCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDJPY | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing XAGUSD | Vol: 13000
+✅ Trade Secured: XAGUSD ID: 587833099
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDJPY | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDSGD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDSGD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,610.43 | Risk: 0.5% | Vol: 13000
+🚀 Executing GBPCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing GBPCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XAGUSD | Vol: 13000
+✅ Trade Secured: XAGUSD ID: 587837880
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURAUD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDJPY | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURUSD | Vol: 13000
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf69150>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf698a0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf68c70>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf12830>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf69e40>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf69210>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf69480>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf69960>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf689d0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf12b90>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf69e10>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf69930>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf680a0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf68430>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf69de0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf128f0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf697b0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf693c0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf68190>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf68cd0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /account/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f709bf682e0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+❌ EXECUTION HALTED: ❌ [EUR] Bridge reported 0 or missing margin.
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDSGD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURAUD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing GBPCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDJPY | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XAGUSD | Vol: 13000
+✅ Trade Secured: XAGUSD ID: 587847192
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDSGD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDSGD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDSGD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDSGD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDJPY | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XAGUSD | Vol: 13000
+✅ Trade Secured: XAGUSD ID: 587851745
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing GBPCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XAGUSD | Vol: 13000
+✅ Trade Secured: XAGUSD ID: 587852934
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDSGD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDSGD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDSGD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDJPY | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDSGD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURGBP | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing GBPCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURGBP | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURGBP | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XPTUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XAUUSD | Vol: 13000
+✅ Trade Secured: XAUUSD ID: 587870573
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XAUUSD | Vol: 13000
+✅ Trade Secured: XAUUSD ID: 587873973
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XAUUSD | Vol: 13000
+✅ Trade Secured: XAUUSD ID: 587875637
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURGBP | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XPTUSD | Vol: 13000
+Executing AUDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing GBPCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XAGUSD | Vol: 13000
+✅ Trade Secured: XAGUSD ID: 587855741
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDCAD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing AUDUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing GBPCHF | Vol: 13000
+❌ EXECUTION HALTED: HTTPSConnectionPool(host='tekton-trade-hub.base44.app', port=443): Read timed out. (read timeout=10)
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURAUD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing GBPCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCHF | Vol: 13000
+❌ EXECUTION HALTED: HTTPSConnectionPool(host='tekton-trade-hub.base44.app', port=443): Read timed out. (read timeout=10)
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XAGUSD | Vol: 13000
+✅ Trade Secured: XAGUSD ID: 587860801
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing NZDCHF | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDJPY | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing USDSGD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XAGUSD | Vol: 13000
+✅ Trade Secured: XAGUSD ID: 587861266
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XAUUSD | Vol: 13000
+✅ Trade Secured: XAUUSD ID: 587863242
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XAUUSD | Vol: 13000
+✅ Trade Secured: XAUUSD ID: 587868333
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURGBP | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XPTUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURGBP | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XPTUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing EURGBP | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XPTUSD | Vol: 13000
+📊 Sizing (EUR): Margin 3,998,571.51 | Risk: 0.5% | Vol: 13000
+🚀 Executing XAUUSD | Vol: 13000
+✅ Trade Secured: XAUUSD ID: 587878434

@@ -1,0 +1,380 @@
+[
+  {
+    "name": "EURUSD",
+    "id": 1,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "GBPUSD",
+    "id": 2,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "USDJPY",
+    "id": 4,
+    "digits": 2,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "USDCHF",
+    "id": 6,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "USDCAD",
+    "id": 8,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "AUDUSD",
+    "id": 5,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "NZDUSD",
+    "id": 12,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "EURGBP",
+    "id": 9,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "EURJPY",
+    "id": 3,
+    "digits": 2,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "GBPJPY",
+    "id": 7,
+    "digits": 2,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "EURAUD",
+    "id": 14,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "EURCAD",
+    "id": 17,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "EURCHF",
+    "id": 10,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "GBPAUD",
+    "id": 16,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "GBPCAD",
+    "id": 19,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "GBPCHF",
+    "id": 40,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "AUDCAD",
+    "id": 18,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "AUDCHF",
+    "id": 23,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "AUDJPY",
+    "id": 11,
+    "digits": 2,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "CADCHF",
+    "id": 27,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "CADJPY",
+    "id": 15,
+    "digits": 2,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "CHFJPY",
+    "id": 13,
+    "digits": 2,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "NZDCAD",
+    "id": 30,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "NZDCHF",
+    "id": 39,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "NZDJPY",
+    "id": 21,
+    "digits": 2,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "AUDNZD",
+    "id": 20,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "EURNZD",
+    "id": 26,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "GBPNZD",
+    "id": 25,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "USDSEK",
+    "id": 29,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "AUDSGD",
+    "id": 1001,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "CHFSGD",
+    "id": 1002,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "EURSGD",
+    "id": 1006,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "GBPSGD",
+    "id": 32,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "SGDJPY",
+    "id": 1016,
+    "digits": 2,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "USDSGD",
+    "id": 28,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "USDDKK",
+    "id": 36,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "USDNOK",
+    "id": 22,
+    "digits": 4,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "XAUUSD",
+    "id": 41,
+    "digits": 2,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "XAGUSD",
+    "id": 42,
+    "digits": 2,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "XTIUSD",
+    "id": 10019,
+    "digits": 2,
+    "volume_min": 0.5,
+    "volume_step": 0.5
+  },
+  {
+    "name": "XBRUSD",
+    "id": 10018,
+    "digits": 2,
+    "volume_min": 0.5,
+    "volume_step": 0.5
+  },
+  {
+    "name": "XNGUSD",
+    "id": 10020,
+    "digits": 3,
+    "volume_min": 0.5,
+    "volume_step": 0.5
+  },
+  {
+    "name": "XPTUSD",
+    "id": 10017,
+    "digits": 2,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "XPDUSD",
+    "id": 10016,
+    "digits": 2,
+    "volume_min": 0.01,
+    "volume_step": 0.01
+  },
+  {
+    "name": "US30",
+    "id": 10015,
+    "digits": 1,
+    "volume_min": 1,
+    "volume_step": 1
+  },
+  {
+    "name": "US500",
+    "id": 10013,
+    "digits": 1,
+    "volume_min": 1,
+    "volume_step": 1
+  },
+  {
+    "name": "USTEC",
+    "id": 10014,
+    "digits": 1,
+    "volume_min": 1,
+    "volume_step": 1
+  },
+  {
+    "name": "UK100",
+    "id": 10011,
+    "digits": 1,
+    "volume_min": 1,
+    "volume_step": 1
+  },
+  {
+    "name": "GER40",
+    "id": 10046,
+    "digits": 1,
+    "volume_min": 1,
+    "volume_step": 1
+  },
+  {
+    "name": "FRA40",
+    "id": 10002,
+    "digits": 1,
+    "volume_min": 1,
+    "volume_step": 1
+  },
+  {
+    "name": "JPN225",
+    "id": 10006,
+    "digits": 1,
+    "volume_min": 1,
+    "volume_step": 1
+  },
+  {
+    "name": "AUS200",
+    "id": 10000,
+    "digits": 1,
+    "volume_min": 1,
+    "volume_step": 1
+  },
+  {
+    "name": "HK50",
+    "id": 10004,
+    "digits": 1,
+    "volume_min": 1,
+    "volume_step": 1
+  },
+  {
+    "name": "EU50",
+    "id": 10001,
+    "digits": 1,
+    "volume_min": 1,
+    "volume_step": 1
+  }
+]

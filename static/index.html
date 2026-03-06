@@ -1,0 +1,99 @@
+
+<!DOCTYPE html>
+<html data-filename="pages/BridgeSetup" data-linenumber="322" data-visual-selector-id="pages/BridgeSetup322" lang="en">
+<head data-filename="pages/BridgeSetup" data-linenumber="323" data-visual-selector-id="pages/BridgeSetup323">
+    <meta data-filename="pages/BridgeSetup" data-linenumber="324" data-visual-selector-id="pages/BridgeSetup324" charset="UTF-8">
+    <meta data-filename="pages/BridgeSetup" data-linenumber="325" data-visual-selector-id="pages/BridgeSetup325" name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-filename="pages/BridgeSetup" data-linenumber="326" data-visual-selector-id="pages/BridgeSetup326">Bridge Admin</title>
+    <style data-filename="pages/BridgeSetup" data-linenumber="327" data-visual-selector-id="pages/BridgeSetup327">
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #111827; color: #d1d5db; line-height: 1.6; margin: 0; padding: 2rem; }
+        .container { max-width: 800px; margin: auto; }
+        h1, h2 { color: #fff; border-bottom: 1px solid #374151; padding-bottom: 0.5rem; }
+        .card { background-color: #1f2937; border: 1px solid #374151; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 1.5rem; }
+        button { background-color: #2563eb; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.375rem; font-size: 1rem; cursor: pointer; transition: background-color 0.2s; }
+        button:hover { background-color: #1d4ed8; }
+        button:disabled { background-color: #4b5563; cursor: not-allowed; }
+        pre { background-color: #0f172a; color: #94a3b8; padding: 1rem; border-radius: 0.375rem; overflow-x: auto; white-space: pre-wrap; font-family: monospace; }
+        .label { font-weight: 600; color: #9ca3af; }
+        input[type="text"], textarea { width: 100%; background-color: #374151; border: 1px solid #4b5563; color: #d1d5db; padding: 0.5rem; border-radius: 0.375rem; box-sizing: border-box; }
+    </style>
+</head>
+<body data-filename="pages/BridgeSetup" data-linenumber="340" data-visual-selector-id="pages/BridgeSetup340">
+    <div data-filename="pages/BridgeSetup" data-linenumber="341" data-visual-selector-id="pages/BridgeSetup341" class="container">
+        <h1 data-filename="pages/BridgeSetup" data-linenumber="342" data-visual-selector-id="pages/BridgeSetup342">Bridge Admin Panel</h1>
+        
+        <div data-filename="pages/BridgeSetup" data-linenumber="344" data-visual-selector-id="pages/BridgeSetup344" class="card">
+            <h2 data-filename="pages/BridgeSetup" data-linenumber="345" data-visual-selector-id="pages/BridgeSetup345">Bridge Status</h2>
+            <button data-filename="pages/BridgeSetup" data-linenumber="346" data-visual-selector-id="pages/BridgeSetup346" id="checkStatusBtn">Check Status</button>
+            <pre data-filename="pages/BridgeSetup" data-linenumber="347" data-visual-selector-id="pages/BridgeSetup347" id="statusResult">Click the button to check bridge status.</pre>
+        </div>
+
+        <div data-filename="pages/BridgeSetup" data-linenumber="350" data-visual-selector-id="pages/BridgeSetup350" class="card">
+            <h2 data-filename="pages/BridgeSetup" data-linenumber="351" data-visual-selector-id="pages/BridgeSetup351">Seed Symbols</h2>
+            <p data-filename="pages/BridgeSetup" data-linenumber="352" data-visual-selector-id="pages/BridgeSetup352">Paste your JSON array of symbol objects below and click "Seed".</p>
+            <textarea data-filename="pages/BridgeSetup" data-linenumber="353" data-visual-selector-id="pages/BridgeSetup353" id="symbolsJson" rows="10" placeholder='[{"name":"EURUSD", "id":1740, "digits":5, ...}]'></textarea>
+            <br data-filename="pages/BridgeSetup" data-linenumber="354" data-visual-selector-id="pages/BridgeSetup354"><br data-filename="pages/BridgeSetup" data-linenumber="354" data-visual-selector-id="pages/BridgeSetup354">
+            <button data-filename="pages/BridgeSetup" data-linenumber="355" data-visual-selector-id="pages/BridgeSetup355" id="seedSymbolsBtn">Seed Symbols</button>
+            <pre data-filename="pages/BridgeSetup" data-linenumber="356" data-visual-selector-id="pages/BridgeSetup356" id="seedResult"></pre>
+        </div>
+
+        <div data-filename="pages/BridgeSetup" data-linenumber="359" data-visual-selector-id="pages/BridgeSetup359" class="card">
+            <h2 data-filename="pages/BridgeSetup" data-linenumber="360" data-visual-selector-id="pages/BridgeSetup360">Test Trendbars</h2>
+            <input data-filename="pages/BridgeSetup" data-linenumber="361" data-visual-selector-id="pages/BridgeSetup361" type="text" id="symbolName" placeholder="Symbol Name (e.g., EURUSD)">
+            <br data-filename="pages/BridgeSetup" data-linenumber="362" data-visual-selector-id="pages/BridgeSetup362"><br data-filename="pages/BridgeSetup" data-linenumber="362" data-visual-selector-id="pages/BridgeSetup362">
+            <button data-filename="pages/BridgeSetup" data-linenumber="363" data-visual-selector-id="pages/BridgeSetup363" id="testTrendbarsBtn">Fetch M15 Trendbars</button>
+            <pre data-filename="pages/BridgeSetup" data-linenumber="364" data-visual-selector-id="pages/BridgeSetup364" id="trendbarsResult"></pre>
+        </div>
+    </div>
+
+    <script data-filename="pages/BridgeSetup" data-linenumber="368" data-visual-selector-id="pages/BridgeSetup368">
+        const bridgeKey = prompt("Please enter your Bridge Key:");
+        
+        document.getElementById('checkStatusBtn').addEventListener('click', async () => {
+            const resultEl = document.getElementById('statusResult');
+            resultEl.textContent = 'Loading...';
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                resultEl.textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                resultEl.textContent = `Error: ${e.message}`;
+            }
+        });
+
+        document.getElementById('seedSymbolsBtn').addEventListener('click', async () => {
+            const resultEl = document.getElementById('seedResult');
+            const jsonText = document.getElementById('symbolsJson').value;
+            resultEl.textContent = 'Seeding...';
+            try {
+                const response = await fetch('/symbols/bulk_put', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Bridge-Key': bridgeKey },
+                    body: jsonText
+                });
+                const data = await response.json();
+                resultEl.textContent = JSON.stringify(data, null, 2);
+                 if(!response.ok) throw new Error(data.error);
+            } catch (e) {
+                resultEl.textContent = `Error: ${e.message}`;
+            }
+        });
+
+        document.getElementById('testTrendbarsBtn').addEventListener('click', async () => {
+            const resultEl = document.getElementById('trendbarsResult');
+            const symbol = document.getElementById('symbolName').value;
+            resultEl.textContent = 'Fetching...';
+            try {
+                const response = await fetch(`/history/trendbars?symbol=${symbol}&period_code=7&count=5`, {
+                    headers: { 'X-Bridge-Key': bridgeKey }
+                });
+                const data = await response.json();
+                resultEl.textContent = JSON.stringify(data, null, 2);
+                if(!response.ok) throw new Error(data.error);
+            } catch (e) {
+                resultEl.textContent = `Error: ${e.message}`;
+            }
+        });
+    </script>
+</body>
+</html>
