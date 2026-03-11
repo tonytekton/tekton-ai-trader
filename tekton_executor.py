@@ -197,19 +197,36 @@ def poll_signals():
         try:
             conn = psycopg2.connect(**DB_PARAMS)
             cur  = conn.cursor()
-            cur.execute("SELECT signal_uuid, symbol, signal_type, timeframe FROM signals WHERE status = 'PENDING' LIMIT 1;")
+
+            # ✅ FIX: Read sl_pips and tp_pips from the signals table
+            cur.execute("""
+                SELECT signal_uuid, symbol, signal_type, timeframe, sl_pips, tp_pips
+                FROM signals
+                WHERE status = 'PENDING'
+                AND sl_pips IS NOT NULL
+                AND tp_pips IS NOT NULL
+                LIMIT 1;
+            """)
             signal = cur.fetchone()
 
             if signal:
-                s_uuid, sym, s_type, tf = signal
-                cur.execute("UPDATE signals SET status = 'EXECUTING' WHERE signal_uuid = %s", (str(s_uuid),))
-                conn.commit()
+                s_uuid, sym, s_type, tf, sl_pips, tp_pips = signal
 
-                if execute_trade(s_uuid, sym, s_type, tf, 15, 30):
-                    cur.execute("UPDATE signals SET status = 'COMPLETED' WHERE signal_uuid = %s", (str(s_uuid),))
+                # Guard: reject zero or negative values
+                if sl_pips <= 0 or tp_pips <= 0:
+                    print(f"⚠️ Invalid SL/TP for {sym}: sl={sl_pips} tp={tp_pips}. Marking FAILED.")
+                    cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
+                    conn.commit()
                 else:
-                    cur.execute("UPDATE signals SET status = 'PENDING' WHERE signal_uuid = %s", (str(s_uuid),))
-                conn.commit()
+                    cur.execute("UPDATE signals SET status = 'EXECUTING' WHERE signal_uuid = %s", (str(s_uuid),))
+                    conn.commit()
+
+                    if execute_trade(s_uuid, sym, s_type, tf, float(sl_pips), float(tp_pips)):
+                        cur.execute("UPDATE signals SET status = 'COMPLETED' WHERE signal_uuid = %s", (str(s_uuid),))
+                    else:
+                        cur.execute("UPDATE signals SET status = 'PENDING' WHERE signal_uuid = %s", (str(s_uuid),))
+                    conn.commit()
+
         except Exception as e:
             print(f"⚠️ Loop Error: {e}")
         finally:
