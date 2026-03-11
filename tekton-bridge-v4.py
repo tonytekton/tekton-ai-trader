@@ -1,6 +1,7 @@
-#  Tekton AI Trader Bridge v4.5
-# Date: 2026-03-06
-# MERGED: HOME + PROJECT with all fixes applied cleanly
+#  Tekton AI Trader Bridge PROJECT
+# Date: 2026-03-02
+# FIXED: Track only cTrader calls, not cache hits
+# FIXED: Indentation corrections across all blocks
 
 import psycopg2
 from twisted.internet import task
@@ -9,8 +10,9 @@ import threading
 import requests
 import sys
 
+# This redirects all 'print' statements to a dedicated log file
 sys.stdout = open('/home/tony/tekton-ai-trader/combined_trades.log', 'a', buffering=1)
-sys.stderr = sys.stdout
+sys.stderr = sys.stdout  # Also capture errors
 
 from datetime import datetime, timezone
 from functools import wraps
@@ -64,14 +66,13 @@ state = {
     "asset_map": {},
     "account_type": "Unknown",
     "account_currency": "EUR",
-    "deposit_asset_id": None,
     "last_spot_prices": {},
     "auto_trade_enabled": False,
     "friday_flush_enabled": False,
     "balance_cents": 0,
     "equity_cents": 0,
     "margin_used_cents": 0,
-    "starting_equity_cents": 0,
+    "starting_equity_cents": 0, # NEW: Baseline for drawdown
 }
 
 # ===== API CALL TRACKING =====
@@ -172,7 +173,7 @@ def health():
     return jsonify({
         "success": True,
         "status": "healthy",
-        "version": "4.5",
+        "version": "4.4",
         "architecture": "PURE_PASS_THROUGH_FIXED_TRACKING",
         "authenticated": state["authenticated"],
         "symbols_loaded": len(state["symbols_cache"]),
@@ -285,13 +286,7 @@ def list_positions():
                 "symbol": name,
                 "tradeSide": "BUY" if pos.tradeData.tradeSide == 1 else "SELL",
                 "unrealizedNetPnL_cents": pnl_data["netPnL_cents"],
-                "marginUsed_cents": pos.usedMargin,
-                "volume": pos.tradeData.volume,
-                "entryPrice": getattr(pos.tradeData, 'openPrice', None),
-                "stopLoss": getattr(pos, 'stopLoss', None),
-                "takeProfit": getattr(pos, 'takeProfit', None),
-                "comment": getattr(pos.tradeData, 'comment', None),
-                "openTimestamp": getattr(pos.tradeData, 'openTimestamp', None),
+                "marginUsed_cents": pos.usedMargin
             })
 
         return jsonify({"success": True, "positions": positions, "count": len(positions)})
@@ -317,21 +312,25 @@ def internal_sync_account():
             trader_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d, 10)
             trader = trader_result.trader
 
+            # Extract data from Protobuf object
             balance = getattr(trader, 'balance', 0)
             equity = getattr(trader, 'moneyBalance', balance)
             margin_used = getattr(trader, 'usedMargin', 0)
-
+            
+            # Update the global state dictionary
             state["balance_cents"] = balance
             state["equity_cents"] = equity
-            state["margin_used_cents"] = margin_used
-
+            state["margin_used_cents"] = margin_used            
+            
+            # Set baseline for the day if not set
             if state.get("starting_equity_cents", 0) == 0:
                 state["starting_equity_cents"] = equity
                 print(f"📈 Baseline Equity Set: €{equity/100}")
 
         except Exception as e:
             print(f"❌ Internal Sync Error: {e}")
-
+        
+        # Reschedule next sync in 30 seconds
         reactor.callLater(30, internal_sync_account)
 
     reactor.callInThread(run_sync)
@@ -412,50 +411,36 @@ def get_contract_specs():
                 "lotSize_centilots": spec.get("lotSize", 100000),
                 "minVolume_centilots": spec.get("minVolume", 1),
                 "maxVolume_centilots": spec.get("maxVolume", 10000000),
-                "stepVolume_centilots": spec.get("stepVolume", 1),
-                "quoteAssetId": spec.get("quoteAssetId", None),
-                "baseAssetId": spec.get("baseAssetId", None),
+                "stepVolume_centilots": spec.get("stepVolume", 1)
             }
         })
     except Exception as e:
         print(f"ERROR /contract/specs: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route("/symbols/list", methods=["GET"])
-@require_auth
-def list_symbols():
-    symbols = []
-    for name, spec in state["symbols_cache"].items():
-        symbols.append({
-            "name": name,
-            "symbolId": spec["symbolId"],
-            "baseAssetId": spec.get("baseAssetId"),
-            "quoteAssetId": spec.get("quoteAssetId"),
-            "digits": spec.get("digits", 5),
-            "pipPosition": spec.get("pipPosition"),
-        })
-    return jsonify({"success": True, "symbols": symbols, "count": len(symbols)})
-
 @app.route("/account/status", methods=["GET"])
 @require_auth
 def get_account_status():
     """Endpoint for Executor and Monitor to check account health."""
+    # Convert cents from state to full units
     equity = state.get("equity_cents", 0) / 100
     margin_used = state.get("margin_used_cents", 0) / 100
-    free_margin = equity - margin_used
-
+    
+    # Calculate Free Margin for the Executor
+    free_margin = equity - margin_used 
+    
+    # Calculate Drawdown for the Monitor
     start_equity = state.get("starting_equity_cents", 0) / 100
     drawdown_pct = 0.0
     if start_equity > 0:
         drawdown_pct = ((start_equity - equity) / start_equity) * 100
-
+    
     return jsonify({
         "success": True,
         "equity": round(equity, 2),
-        "free_margin": round(free_margin, 2),
+        "free_margin": round(free_margin, 2), # Key field for Executor
         "drawdown_pct": round(max(drawdown_pct, 0.0), 2),
-        "currency": state.get("account_currency", "EUR"),
-        "depositAssetId": state.get("deposit_asset_id"),
+        "currency": state.get("account_currency", "EUR")
     })
 
 @app.route("/proxy/account-summary", methods=["GET"])
@@ -516,6 +501,17 @@ def update_system_settings():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
+import uuid
+import time
+import traceback
+from datetime import datetime
+from flask import jsonify
+from twisted.internet import defer, threads
+
+# Ensure these constants are defined at the top of your bridge script
+TRADE_SIDE_BUY = 1
+TRADE_SIDE_SELL = 2
+
 @app.route("/proxy/executions", methods=["GET"])
 @require_auth
 def get_executions():
@@ -528,22 +524,25 @@ def get_executions():
         d_recon, client_msg_id_recon = defer.Deferred(), str(uuid.uuid4())
         pending_requests[client_msg_id_recon] = d_recon
 
+        # Use Twisted reactor to send message and wait for result
         reactor.callFromThread(lambda: bridge.client.send(recon_msg, clientMsgId=client_msg_id_recon))
         recon_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_recon, 10)
 
         for pos in recon_result.position:
+            # positionStatus 1 is Open
             if hasattr(pos, 'positionStatus') and pos.positionStatus != 1:
                 continue
 
             spec = state["symbol_id_to_spec_map"].get(pos.tradeData.symbolId, {})
             name = spec.get("symbolName", f"UNKNOWN_{pos.tradeData.symbolId}")
             digits = spec.get("digits", 5)
+
+            # THE FIX: Read signal_uuid from the trade comment
             trade_comment = getattr(pos.tradeData, 'comment', None)
-            open_ts = getattr(pos.tradeData, 'openTimestamp', None)
 
             open_trades.append({
                 "id": str(pos.positionId),
-                "signal_uuid": trade_comment,
+                "signal_uuid": trade_comment, # Populated from cTrader comment
                 "symbol": name,
                 "side": "BUY" if pos.tradeData.tradeSide == TRADE_SIDE_BUY else "SELL",
                 "volume": pos.tradeData.volume,
@@ -553,21 +552,20 @@ def get_executions():
                 "close_price": None,
                 "pnl": None,
                 "status": "open",
-                "created_at": datetime.fromtimestamp(open_ts / 1000).isoformat() if open_ts else None,
-                "closed_at": None,
+                "created_at": None,
                 "digits": digits
             })
 
-        # --- 2. Fetch Closed Positions (Last 30 Days) ---
+        # --- 2. Fetch Closed Positions (Last 7 Days) ---
         closed_trades = []
         to_ts = int(time.time() * 1000)
-        from_ts = to_ts - (30 * 24 * 60 * 60 * 1000)
+        from_ts = to_ts - (7 * 24 * 60 * 60 * 1000)
 
         deal_req = openapi.ProtoOADealListReq()
         deal_req.ctidTraderAccountId = ACCOUNT_ID
         deal_req.fromTimestamp = from_ts
         deal_req.toTimestamp = to_ts
-        deal_req.maxRows = 500
+        deal_req.maxRows = 200
 
         d_deals, client_msg_id_deals = defer.Deferred(), str(uuid.uuid4())
         pending_requests[client_msg_id_deals] = d_deals
@@ -591,8 +589,11 @@ def get_executions():
             spec = state["symbol_id_to_spec_map"].get(closing_deal.symbolId, {})
             symbol_name = spec.get("symbolName", f"UNKNOWN_{closing_deal.symbolId}")
             digits = spec.get("digits", 5)
+
+            # THE FIX: Historical trades also use the opening deal's comment
             hist_comment = getattr(opening_deal, 'comment', None)
 
+            # Calculate Net PnL (Gross + Swap - Commission)
             gross_pnl = 0
             commission = 0
             swap = 0
@@ -607,29 +608,28 @@ def get_executions():
                     commission += getattr(deal, 'commission', 0)
 
             net_pnl_cents = gross_pnl - abs(commission) + swap
-            open_ts = getattr(opening_deal, 'executionTimestamp', None)
             close_ts = getattr(closing_deal, 'executionTimestamp', None)
 
             closed_trades.append({
                 "id": pos_id,
-                "signal_uuid": hist_comment,
+                "signal_uuid": hist_comment, # Populated from history comment
                 "symbol": symbol_name,
                 "side": "BUY" if opening_deal.tradeSide == TRADE_SIDE_BUY else "SELL",
                 "volume": getattr(closing_deal, 'filledVolume', 0),
                 "entry_price": getattr(opening_deal, 'executionPrice', 0),
                 "close_price": getattr(closing_deal, 'executionPrice', 0),
-                "stop_loss": None,
+                "stop_loss": None, 
                 "take_profit": None,
                 "pnl": round(net_pnl_cents / 100, 2),
                 "status": "closed",
-                "created_at": datetime.fromtimestamp(open_ts / 1000).isoformat() if open_ts else None,
-                "closed_at": datetime.fromtimestamp(close_ts / 1000).isoformat() if close_ts else None,
+                "created_at": datetime.fromtimestamp(close_ts / 1000).isoformat() if close_ts else None,
                 "digits": digits
             })
 
-        closed_trades.sort(key=lambda x: x.get('closed_at') or '', reverse=True)
+        # --- 3. Return Combined List ---
+        closed_trades.sort(key=lambda x: x.get('created_at') or '', reverse=True)
         return jsonify({
-            "success": True,
+            "success": True, 
             "executions": open_trades + closed_trades
         })
 
@@ -638,10 +638,11 @@ def get_executions():
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
+# --- LIVE CANDLE TOP-UP THREAD (Remains unchanged) ---
 def sync_latest_candles():
     while True:
         time.sleep(900)
-        # ... candle sync logic ...
+        # ... rest of your sync logic ...
 
 @app.route("/proxy/signals", methods=["GET"])
 @require_auth
@@ -712,6 +713,7 @@ def execute_trade():
         if comment:
             req.comment = comment
 
+        # SINGLE-STEP PROTECTION
         rel_sl = data.get("rel_sl")
         rel_tp = data.get("rel_tp")
         if rel_sl:
@@ -725,17 +727,6 @@ def execute_trade():
         reactor.callFromThread(lambda: bridge.client.send(req, clientMsgId=client_msg_id))
         result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_exec, 30)
         log_ctrader_call("/trade/execute", int((time.time() - start_time) * 1000), True)
-
-        # ADD THIS DEBUG LOGGING
-        print(f"🔍 FULL BROKER RESPONSE: {result}")
-        print(f"   - hasattr order: {hasattr(result, 'order')}")
-        print(f"   - hasattr position: {hasattr(result, 'position')}")
-        print(f"   - hasattr errorCode: {hasattr(result, 'errorCode')}")
-        if hasattr(result, 'errorCode'):
-            print(f"   - errorCode: {result.errorCode}")
-        if hasattr(result, 'description'):
-            print(f"   - description: {result.description}")
-        print(f"   - All attributes: {dir(result)}")
 
         if hasattr(result, 'errorCode') and result.errorCode:
             return jsonify({"success": False, "error": str(result.description)}), 400
@@ -773,6 +764,8 @@ def modify_trade():
         if not position_id:
             return jsonify({"success": False, "error": "position_id required"}), 400
 
+        # FIX: Fetch digits locally from state instead of making a new HTTP request
+        # This avoids the 'HEADERS' error entirely.
         recon_msg = openapi.ProtoOAReconcileReq()
         recon_msg.ctidTraderAccountId = ACCOUNT_ID
         d_recon, mid_recon = defer.Deferred(), str(uuid.uuid4())
@@ -787,10 +780,12 @@ def modify_trade():
         spec = state["symbol_id_to_spec_map"].get(target_pos.tradeData.symbolId, {})
         digits = spec.get("digits", 5)
 
+        # 2. CONSTRUCT AMEND REQUEST
         req = openapi.ProtoOAAmendPositionSLTPReq()
         req.ctidTraderAccountId = ACCOUNT_ID
         req.positionId = int(position_id)
 
+        # MANDATORY: Convert Float to cTrader Integer (Price * 10^digits)
         if sl_val is not None:
             req.stopLoss = int(round(float(sl_val) * (10**digits)))
         if tp_val is not None:
@@ -811,6 +806,7 @@ def modify_trade():
     except Exception as e:
         print(f"❌ ERROR /trade/modify: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 @app.route("/trade/close", methods=["POST"])
 @require_auth
@@ -934,7 +930,6 @@ def get_positions_history():
                 "commission_cents": commission_cents,
                 "pnl_cents": net_pnl_cents,
                 "pnl": net_pnl_cents / 100,
-                "comment": getattr(opening_deal, 'comment', None),
                 "openTimestamp": getattr(opening_deal, 'executionTimestamp', None),
                 "closeTimestamp": getattr(closing_deal, 'executionTimestamp', None),
                 "digits": symbol_spec.get("digits", 5)
@@ -1098,12 +1093,6 @@ class Bridge:
         state["authenticated"] = False
 
     def on_message(self, client, msg):
-# Only log critical Protobuf events (skip price updates)
-        if hasattr(msg, 'payloadType'):
-            # 2104 = ProtoOAOrderErrorEvent, 2105 = ProtoOAOrderFillEvent, etc.
-            if msg.payloadType in [2104, 2105, 2106, 2107, 2108]:
-                print(f"📡 BRIDGE WIRE LOG | Type: {msg.payloadType} | Payload: {msg}")
-
         try:
             pt = msg.payloadType
             client_msg_id = getattr(msg, "clientMsgId", None)
@@ -1192,7 +1181,6 @@ class Bridge:
                 payload.ParseFromString(msg.payload)
                 deposit_asset_id = getattr(payload.trader, 'depositAssetId', None)
                 state["account_currency"] = state["asset_map"].get(deposit_asset_id, 'EUR') if deposit_asset_id else 'EUR'
-                state["deposit_asset_id"] = deposit_asset_id  # stored for /account/status
                 self.client.send(openapi.ProtoOASymbolsListReq(ctidTraderAccountId=ACCOUNT_ID))
             elif pt == openapi.ProtoOASymbolsListRes().payloadType:
                 payload = openapi.ProtoOASymbolsListRes()
@@ -1236,8 +1224,6 @@ class Bridge:
                                 "minVolume": getattr(symbol_obj, "minVolume", 1),
                                 "maxVolume": getattr(symbol_obj, "maxVolume", 10000000),
                                 "stepVolume": getattr(symbol_obj, "stepVolume", 1),
-                                "quoteAssetId": getattr(symbol_obj, "quoteAssetId", None),
-                                "baseAssetId": getattr(symbol_obj, "baseAssetId", None),
                             }
                             state["symbols_cache"][symbol_name] = spec_data
                             state["symbol_id_to_spec_map"][symbol_id] = spec_data
@@ -1286,7 +1272,7 @@ if __name__ == "__main__":
     resource = WSGIResource(reactor, reactor.getThreadPool(), app)
     site = Site(resource)
     reactor.listenTCP(BRIDGE_PORT, site, interface=BRIDGE_HOST)
-    print(f"🚀 Bridge v4.5 - MERGED: HOME + PROJECT with all fixes")
+    print(f"🚀 Bridge v4.4 - FIXED TRACKING: Only counts actual cTrader API calls")
     print(f"   ✅ Tracks: positions, account, execute, modify, close, deals, historical")
     print(f"   ❌ Skips: contract/specs (cache), prices/current (spot subscription)")
     print(f"   API stats: /stats/api-usage")
@@ -1294,3 +1280,4 @@ if __name__ == "__main__":
     reactor.callLater(10, internal_sync_account)
     threading.Thread(target=sync_latest_candles, daemon=True).start()
     reactor.run()
+    
