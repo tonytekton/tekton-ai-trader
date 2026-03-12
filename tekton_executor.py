@@ -2,7 +2,6 @@ import os
 import sys
 import time
 import json
-import base64
 import requests
 import psycopg2
 from datetime import datetime
@@ -15,12 +14,6 @@ sys.stdout = open('/home/tony/tekton-ai-trader/combined_trades.log', 'a', buffer
 sys.stderr = sys.stdout
 
 # --- CONFIGURATION ---
-BACKEND_FUNC_URL = "https://tekton-trade-hub.base44.app/api/functions/getBase64Config"
-BASE44_HEADERS = {
-    "Content-Type": "application/json",
-    "api_key": "3636548f91ad4225bf0d8bfbc13b0eeb"
-}
-
 BRIDGE_BASE_URL = "http://localhost:8080"
 BRIDGE_EXECUTE_URL = f"{BRIDGE_BASE_URL}/trade/execute"
 BRIDGE_MODIFY_URL  = f"{BRIDGE_BASE_URL}/trade/modify"
@@ -62,19 +55,21 @@ INDEX_QUOTE_MAP = {
 POINTS_PER_PIP = 10
 
 # ---------------------------------------------------------------------------
-def fetch_base44_settings():
-    """Fetches and decodes live settings from the Base44 Hub."""
+def fetch_settings():
+    """Fetches live settings from the SQL settings table via bridge."""
     try:
-        response = requests.post(BACKEND_FUNC_URL, json={}, headers=BASE44_HEADERS, timeout=10)
+        response = requests.get(f"{BRIDGE_BASE_URL}/data/settings", headers=HEADERS, timeout=10)
         response.raise_for_status()
         data = response.json()
-        encoded_str = data.get("config")
-        if not encoded_str:
-            raise ValueError("❌ Base44 'config' key is missing.")
-        decoded_bytes = base64.b64decode(encoded_str)
-        return json.loads(decoded_bytes.decode("utf-8"))
+        return {
+            "auto_trade": data.get("auto_trade", False),
+            "friday_flush": data.get("friday_flush", False),
+            "risk_pct": float(data.get("risk_pct", 0.01)),
+            "target_reward": float(data.get("target_reward", 1.8)),
+            "daily_drawdown_limit": float(data.get("daily_drawdown_limit", 0.05))
+        }
     except Exception as e:
-        print(f"⚠️ Base44 Fetch Error: {e}")
+        print(f"⚠️ Settings Fetch Error: {e}")
         raise
 
 # ---------------------------------------------------------------------------
@@ -156,8 +151,8 @@ def calculate_professional_lot_size(symbol, sl_pips):
     Formula: required_lots = risk_cash / (sl_pips * pip_value_per_lot)
     Then: centilots = required_lots * 100
     """
-    settings = fetch_base44_settings()
-    risk_pct = float(settings.get("RISK_PCT", 0.005))
+    settings = fetch_settings()
+    risk_pct = settings.get("risk_pct", 0.01)
 
     acc_res      = requests.get(f"{BRIDGE_BASE_URL}/account/status", headers=HEADERS)
     acc_data     = acc_res.json()
@@ -240,6 +235,13 @@ def poll_signals():
     while True:
         conn, cur = None, None
         try:
+            # Gate on AUTO_TRADE setting
+            settings = fetch_settings()
+            if not settings.get("auto_trade"):
+                print("🚫 AUTO_TRADE disabled — skipping signal processing.")
+                time.sleep(30)
+                continue
+
             conn = psycopg2.connect(**DB_PARAMS)
             cur  = conn.cursor()
 
