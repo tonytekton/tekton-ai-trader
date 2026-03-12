@@ -62,8 +62,14 @@ def get_live_pip_value(symbol, account_currency):
     pip_pos  = symbol_spec.get("pipPosition", symbol_spec.get("digits", 5))
     pip_size = 10 ** -(pip_pos - 1)   # Changed from: 10 ** -pip_pos
 
-    # Derive quote currency from symbol name (last 3 chars for standard forex pairs)
-    quote_currency = symbol[-3:].upper()
+    # Known quote currencies for index/commodity symbols
+    INDEX_QUOTE_MAP = {
+        "UK100": "GBP", "DE40": "EUR", "FR40": "EUR", "EU50": "EUR",
+        "JP225": "JPY", "US30": "USD", "US500": "USD", "USTEC": "USD",
+        "AUS200": "AUD", "HK50": "HKD", "XAUUSD": "USD", "XAGUSD": "USD",
+        "XTIUSD": "USD", "XBRUSD": "USD",
+    }
+    quote_currency = INDEX_QUOTE_MAP.get(symbol.upper(), symbol[-3:].upper())
     acc_currency   = account_currency.upper()
 
     if quote_currency == acc_currency:
