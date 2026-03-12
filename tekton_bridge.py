@@ -507,34 +507,52 @@ def system_settings():
         cur = conn.cursor()
         if request.method == "POST":
             data = request.get_json()
-            if "autoTrade" in data:
-                state["auto_trade_enabled"] = bool(data["autoTrade"])
-            if "fridayFlush" in data:
-                state["friday_flush_enabled"] = bool(data["fridayFlush"])
+            auto_trade = data.get("auto_trade", data.get("autoTrade", False))
+            friday_flush = data.get("friday_flush", data.get("fridayFlush", False))
+            risk_pct = data.get("risk_pct", 0.01)
+            target_reward = data.get("target_reward", 1.8)
+            daily_drawdown_limit = data.get("daily_drawdown_limit", 0.05)
+            
             cur.execute("""
-                INSERT INTO system_settings (id, auto_trade_enabled, friday_flush_enabled)
-                VALUES (1, %s, %s)
+                INSERT INTO settings (id, auto_trade, friday_flush, risk_pct, target_reward, daily_drawdown_limit)
+                VALUES (1, %s, %s, %s, %s, %s)
                 ON CONFLICT (id) DO UPDATE SET
-                    auto_trade_enabled = EXCLUDED.auto_trade_enabled,
-                    friday_flush_enabled = EXCLUDED.friday_flush_enabled
-            """, (state["auto_trade_enabled"], state["friday_flush_enabled"]))
+                    auto_trade = EXCLUDED.auto_trade,
+                    friday_flush = EXCLUDED.friday_flush,
+                    risk_pct = EXCLUDED.risk_pct,
+                    target_reward = EXCLUDED.target_reward,
+                    daily_drawdown_limit = EXCLUDED.daily_drawdown_limit
+            """, (auto_trade, friday_flush, risk_pct, target_reward, daily_drawdown_limit))
             conn.commit()
         else:
-            cur.execute("SELECT auto_trade_enabled, friday_flush_enabled FROM system_settings LIMIT 1")
+            cur.execute("""
+                SELECT auto_trade, friday_flush, risk_pct, target_reward, daily_drawdown_limit
+                FROM settings WHERE id = 1
+            """)
             row = cur.fetchone()
             if row:
-                state["auto_trade_enabled"] = row[0]
-                state["friday_flush_enabled"] = row[1]
+                return jsonify({
+                    "success": True,
+                    "auto_trade": row[0],
+                    "friday_flush": row[1],
+                    "risk_pct": float(row[2]),
+                    "target_reward": float(row[3]),
+                    "daily_drawdown_limit": float(row[4])
+                })
         cur.close()
         conn.close()
+        return jsonify({
+            "success": True,
+            "auto_trade": auto_trade,
+            "friday_flush": friday_flush,
+            "risk_pct": float(risk_pct),
+            "target_reward": float(target_reward),
+            "daily_drawdown_limit": float(daily_drawdown_limit)
+        })
     except Exception as e:
         print(f"⚠️ system_settings error: {e}")
-    return jsonify({
-        "success": True,
-        "autoTrade": state.get("auto_trade_enabled", False),
-        "fridayFlush": state.get("friday_flush_enabled", False)
-    })
-
+        return jsonify({"success": False, "error": str(e)}), 500
+        
 @app.route("/proxy/executions", methods=["GET"])
 @require_auth
 def get_executions():
