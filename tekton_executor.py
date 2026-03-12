@@ -60,7 +60,7 @@ def get_live_pip_value(symbol, account_currency):
     symbol_spec = spec_res.json().get("contract_specifications", {})
 
     pip_pos  = symbol_spec.get("pipPosition", symbol_spec.get("digits", 5))
-    pip_size = 10 ** -pip_pos
+    pip_size = 10 ** -(pip_pos - 1)   # Changed from: 10 ** -pip_pos
 
     # Derive quote currency from symbol name (last 3 chars for standard forex pairs)
     quote_currency = symbol[-3:].upper()
