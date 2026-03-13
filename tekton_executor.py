@@ -146,7 +146,7 @@ def get_live_pip_value(symbol, account_currency):
 def calculate_professional_lot_size(symbol, sl_pips):
     """
     Calculates volume in centilots based on live equity and risk %.
-    
+
     cTrader volume units: centilots (100 = 1 standard lot).
     Formula: required_lots = risk_cash / (sl_pips * pip_value_per_lot)
     Then: centilots = required_lots * 100
@@ -245,6 +245,7 @@ def poll_signals():
             conn = psycopg2.connect(**DB_PARAMS)
             cur  = conn.cursor()
 
+            # ✅ FIX: Read sl_pips and tp_pips from the signals table
             cur.execute("""
                 SELECT signal_uuid, symbol, signal_type, timeframe, sl_pips, tp_pips
                 FROM signals
@@ -258,6 +259,7 @@ def poll_signals():
             if signal:
                 s_uuid, sym, s_type, tf, sl_pips, tp_pips = signal
 
+                # Guard: reject zero or negative values
                 if sl_pips <= 0 or tp_pips <= 0:
                     print(f"⚠️ Invalid SL/TP for {sym}: sl={sl_pips} tp={tp_pips}. Marking FAILED.")
                     cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
