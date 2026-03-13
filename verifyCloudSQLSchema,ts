@@ -1,0 +1,111 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import postgres from 'npm:postgres@3.4.4';
+
+Deno.serve(async (req) => {
+  try {
+    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (user?.role !== 'admin') {
+      return Response.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    // Get Cloud SQL credentials from secrets
+    const host = Deno.env.get('CLOUD_SQL_HOST');
+    const dbName = Deno.env.get('CLOUD_SQL_DB_NAME');
+    const user_sql = Deno.env.get('CLOUD_SQL_DB_USER');
+    const password = Deno.env.get('CLOUD_SQL_DB_PASSWORD');
+
+    // Create connection
+    const sql = postgres({
+      host,
+      database: dbName,
+      username: user_sql,
+      password,
+      ssl: true
+    });
+
+    const results = {
+      timestamp: new Date().toISOString(),
+      checks: {}
+    };
+
+    try {
+      // 1. Check pgcrypto extension
+      const extRes = await sql`SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'pgcrypto')`;
+      results.checks.pgcrypto_enabled = extRes[0]?.exists || false;
+
+      // 2. Verify signal_uuid column and default
+      const signalUuidRes = await sql`
+        SELECT column_name, column_default 
+        FROM information_schema.columns 
+        WHERE table_name='signals' AND column_name='signal_uuid'
+      `;
+      results.checks.signal_uuid_exists = signalUuidRes.length > 0;
+      if (signalUuidRes.length > 0) {
+        results.checks.signal_uuid_default = signalUuidRes[0].column_default;
+      }
+
+      // 3. Check asset mapping for key symbols
+      const assetRes = await sql`
+        SELECT name, "baseAssetId", "quoteAssetId" 
+        FROM symbols 
+        WHERE name IN ('EURUSD', 'USDJPY', 'SGDJPY', 'GBPUSD')
+        ORDER BY name
+      `;
+      results.checks.asset_mapping = assetRes.map(row => ({
+        symbol: row.name,
+        baseAssetId: row.baseAssetId,
+        quoteAssetId: row.quoteAssetId
+      }));
+
+      // 4. Check trades table structure
+      const tradesRes = await sql`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name='trades' AND column_name IN ('signal_uuid', 'broker_position_id')
+        ORDER BY column_name
+      `;
+      results.checks.trades_columns = tradesRes.map(row => ({
+        name: row.column_name,
+        type: row.data_type
+      }));
+
+      // 5. Signal log integrity
+      const signalStatusRes = await sql`
+        SELECT status, COUNT(*) as count 
+        FROM signals 
+        GROUP BY status 
+        ORDER BY status
+      `;
+      results.checks.signal_status_distribution = signalStatusRes;
+
+      // 6. Count NULL signal_uuids (the "MANUAL" issue)
+      const nullUuidRes = await sql`
+        SELECT COUNT(*) as null_uuid_count 
+        FROM signals 
+        WHERE signal_uuid IS NULL
+      `;
+      results.checks.signals_with_null_uuid = nullUuidRes[0]?.null_uuid_count || 0;
+
+      // 7. Sample of recent signals
+      const recentSignalsRes = await sql`
+        SELECT id, signal_uuid, status, created_at 
+        FROM signals 
+        ORDER BY created_at DESC 
+        LIMIT 5
+      `;
+      results.checks.recent_signals = recentSignalsRes;
+
+      results.status = 'success';
+    } finally {
+      await sql.end();
+    }
+
+    return Response.json(results);
+  } catch (error) {
+    return Response.json({ 
+      error: error.message,
+      status: 'failed'
+    }, { status: 500 });
+  }
+});
