@@ -28,37 +28,35 @@ DB_PARAMS = {
 }
 
 # ---------------------------------------------------------------------------
-# Known pip sizes for non-forex instruments (cTrader).
-# Forex pairs derive pip_size from pipPosition via contract specs.
-# Indices/commodities use fixed values.
-PIP_SIZE_MAP = {
-    "UK100":  1.0,   "DE40":   1.0,   "FR40":   1.0,   "EU50":   1.0,
-    "JP225":  1.0,   "US30":   1.0,   "US500":  0.1,   "USTEC":  0.1,
-    "AUS200": 1.0,   "HK50":   1.0,
-    "XAUUSD": 0.1,   "XAGUSD": 0.01,
-    "XTIUSD": 0.01,  "XBRUSD": 0.01,
-}
+# PIP_SIZE_MAP removed. All pip sizes are derived dynamically from cTrader
+# contract specs using: pip_size = 10 ^ -pipPosition
+# This is correct for all instrument types:
+#   Forex 4-digit (EURUSD):  pipPosition=4 → pip_size=0.0001
+#   JPY pairs:               pipPosition=2 → pip_size=0.01
+#   Indices (UK100, DE40..): pipPosition=1 → pip_size=0.1
+#   Gold/Silver/Oil:         pipPosition=2 → pip_size=0.01
+#   Natural Gas:             pipPosition=3 → pip_size=0.001
+# ---------------------------------------------------------------------------
 
 # Known quote currencies for index/commodity symbols (can't derive from last 3 chars).
 INDEX_QUOTE_MAP = {
     "UK100":  "GBP", "DE40":   "EUR", "FR40":   "EUR", "EU50":   "EUR",
     "JP225":  "JPY", "US30":   "USD", "US500":  "USD", "USTEC":  "USD",
-    "AUS200": "AUD", "HK50":   "HKD",
+    "AUS200": "AUD", "HK50":   "HKD", "F40":    "EUR", "STOXX50": "EUR",
     "XAUUSD": "USD", "XAGUSD": "USD", "XTIUSD": "USD", "XBRUSD": "USD",
+    "XNGUSD": "USD", "XPDUSD": "USD", "XPTUSD": "USD",
 }
 
 # cTrader: relativeStopLoss/relativeTakeProfit are in POINTS.
-# For standard 5-digit forex: 1 pip = 10 points.
-# For JPY pairs (2-digit): 1 pip = 10 points (same — pipPosition handles the scaling).
-# For indices with pip_size=1.0: 1 pip = 10 points.
-# This constant is correct for all instruments when sl_pips comes from the strategy as true pips.
+# 1 pip = 10 points for all instruments (pipPosition handles the scaling per instrument).
+# sl_pips and tp_pips from strategies are always true pips → multiply by POINTS_PER_PIP.
 POINTS_PER_PIP = 10
 
 # ---------------------------------------------------------------------------
 def fetch_settings():
     """Fetches live settings from the SQL settings table via bridge."""
     try:
-        response = requests.get(f"{BRIDGE_BASE_URL}/data/settings", headers=HEADERS, timeout=10)
+        response = requests.get(f"{BRIDGE_BASE_URL}/data/system-settings", headers=HEADERS, timeout=10)
         response.raise_for_status()
         data = response.json()
         return {
@@ -73,35 +71,68 @@ def fetch_settings():
         raise
 
 # ---------------------------------------------------------------------------
-def get_live_pip_value(symbol, account_currency):
+def get_contract_specs(symbol):
     """
-    Returns pip value per 1 lot in account currency.
-    Uses hardcoded pip sizes for indices/commodities.
-    Derives pip size from cTrader pipPosition for forex pairs.
+    Fetches contract specifications for a symbol from the bridge.
+    Returns the contract_specifications dict.
+    Raises on failure — callers must not proceed without valid specs.
     """
-    sym_upper = symbol.upper()
+    res = requests.post(
+        f"{BRIDGE_BASE_URL}/contract/specs",
+        json={"symbol": symbol},
+        headers=HEADERS,
+        timeout=10
+    )
+    res.raise_for_status()
+    specs = res.json().get("contract_specifications", {})
+    if not specs:
+        raise ValueError(f"Empty contract specs returned for {symbol}")
+    return specs
+
+# ---------------------------------------------------------------------------
+def get_pip_size(symbol_spec):
+    """
+    Derives pip size from cTrader pipPosition in contract specs.
+
+    cTrader pipPosition is the decimal place of 1 pip:
+        pipPosition=4 → pip_size=0.0001  (EURUSD, GBPUSD, most forex)
+        pipPosition=2 → pip_size=0.01    (JPY pairs, XAUUSD, XAGUSD, oils)
+        pipPosition=1 → pip_size=0.1     (indices: UK100, DE40, JP225 etc)
+        pipPosition=3 → pip_size=0.001   (XNGUSD)
+
+    Formula: pip_size = 10 ^ -pipPosition
+    """
+    pip_pos = symbol_spec.get("pipPosition")
+    if pip_pos is None:
+        raise ValueError("pipPosition missing from contract specs")
+    return 10 ** -pip_pos
+
+# ---------------------------------------------------------------------------
+def get_live_pip_value(symbol, symbol_spec, account_currency, lot_size_units):
+    """
+    Returns pip value per 1 LOT in account currency.
+    Derives pip size dynamically from contract specs — no hardcoded values.
+
+    pip_value_per_lot = pip_size * lot_size_units (if quote == account currency)
+    pip_value_per_lot = pip_size * lot_size_units * conversion_rate (if conversion needed)
+
+    lot_size_units = lotSize_centilots / 100
+        EURUSD: 10,000,000 / 100 = 100,000 units per lot
+        UK100:  100 / 100        = 1 unit per lot
+        XAUUSD: 10,000 / 100     = 100 units per lot
+    """
+    sym_upper    = symbol.upper()
     acc_currency = account_currency.upper()
 
-    # Determine pip size
-    if sym_upper in PIP_SIZE_MAP:
-        pip_size = PIP_SIZE_MAP[sym_upper]
-    else:
-        spec_res   = requests.post(f"{BRIDGE_BASE_URL}/contract/specs", json={"symbol": symbol}, headers=HEADERS)
-        symbol_spec = spec_res.json().get("contract_specifications", {})
-        pip_pos    = symbol_spec.get("pipPosition", 5)
-        # cTrader pipPosition: e.g. 5 for EURUSD (0.00001 pip) → pip_size = 0.0001
-        # pipPosition is the number of decimal places of the price quote.
-        # A pip is 1 unit at (pipPosition - 1) decimal places → 10^-(pipPosition-1)
-        pip_size   = 10 ** -(pip_pos - 1)
+    # pip_size derived from live contract specs — no hardcoding
+    pip_size = get_pip_size(symbol_spec)
 
     # Determine quote currency
-    quote_currency = INDEX_QUOTE_MAP.get(sym_upper, sym_upper[-3:])
+    quote_currency = INDEX_QUOTE_MAP.get(sym_upper, sym_upper[-3:]).upper()
 
     if quote_currency == acc_currency:
-        # No conversion needed: pip value = pip_size * lot_size (100,000 for forex, 1 for indices)
-        # For indices, the lot size is 1, so pip_value = pip_size
-        # This is handled correctly — the ratio is 1:1
-        return pip_size
+        # No conversion needed — pip value per lot = pip_size * units per lot
+        return pip_size * lot_size_units
 
     # Need conversion rate: quote_currency → account_currency
     direct   = f"{quote_currency}{acc_currency}"
@@ -140,16 +171,27 @@ def get_live_pip_value(symbol, account_currency):
         raise ValueError(f"Conversion failed for {symbol}: no price for {conv_symbol}")
 
     conversion_rate = (1.0 / avg_price) if invert else avg_price
-    return pip_size * conversion_rate
+    return pip_size * lot_size_units * conversion_rate
 
 # ---------------------------------------------------------------------------
 def calculate_professional_lot_size(symbol, sl_pips):
     """
-    Calculates volume in centilots based on live equity and risk %.
+    Calculates volume in cTrader native units based on live equity and risk %.
 
-    cTrader volume units: centilots (100 = 1 standard lot).
-    Formula: required_lots = risk_cash / (sl_pips * pip_value_per_lot)
-    Then: centilots = required_lots * 100
+    cTrader volume units are instrument-specific centilots derived from lotSize:
+        Forex (EURUSD):  lotSize_centilots = 10,000,000  (1 lot = 10M centilots)
+        Indices (UK100): lotSize_centilots = 100
+        Gold (XAUUSD):   lotSize_centilots = 10,000
+        Silver (XAGUSD): lotSize_centilots = 100,000
+        Oil (XTIUSD):    lotSize_centilots = 10,000
+
+    Formula:
+        risk_cash       = free_margin * risk_pct
+        pip_value       = pip_size * conversion_rate (per lot, in account currency)
+        required_lots   = risk_cash / (sl_pips * pip_value)
+        protocol_volume = int(required_lots * lotSize_centilots)
+
+    Volume is then snapped to broker step and clamped to min/max.
     """
     settings = fetch_settings()
     risk_pct = settings.get("risk_pct", 0.01)
@@ -159,23 +201,32 @@ def calculate_professional_lot_size(symbol, sl_pips):
     free_margin  = float(acc_data.get("free_margin", 0))
     acc_currency = acc_data.get("currency", "EUR")
 
-    total_risk_cash    = free_margin * risk_pct
-    pip_value_per_unit = get_live_pip_value(symbol, acc_currency)
+    # Fetch contract specs once — used for pip_size, lot_size, and volume constraints
+    symbol_spec = get_contract_specs(symbol)
 
-    # required_units is in lots; convert to centilots (* 100)
-    required_lots   = total_risk_cash / (sl_pips * pip_value_per_unit)
-    protocol_volume = int(required_lots * 100)
+    # lot_size_units: how many price units make 1 standard lot for this instrument.
+    # centilots / 100 = units. EURUSD=100,000 | UK100=1 | XAUUSD=100
+    lot_size         = symbol_spec.get("lotSize_centilots", 10_000_000)
+    lot_size_units   = lot_size / 100
 
-    spec_res = requests.post(f"{BRIDGE_BASE_URL}/contract/specs", json={"symbol": symbol}, headers=HEADERS)
-    spec     = spec_res.json().get("contract_specifications", {})
-    step     = spec.get("stepVolume_centilots", 100)
-    min_v    = spec.get("minVolume_centilots", 100)
-    max_v    = spec.get("maxVolume_centilots", 100_000)  # honour broker max
+    pip_value_per_lot = get_live_pip_value(symbol, symbol_spec, acc_currency, lot_size_units)
+
+    total_risk_cash = free_margin * risk_pct
+    required_lots   = total_risk_cash / (sl_pips * pip_value_per_lot)
+
+    # Multiply required_lots by lotSize_centilots to get protocol volume in centilots.
+    protocol_volume = int(required_lots * lot_size)
+
+    # Snap to broker step, enforce min/max — all values in same centilot units
+    step    = symbol_spec.get("stepVolume_centilots", lot_size)
+    min_v   = symbol_spec.get("minVolume_centilots",  lot_size)
+    max_v   = symbol_spec.get("maxVolume_centilots",  lot_size * 100)
 
     final_vol = max((protocol_volume // step) * step, min_v)
-    final_vol = min(final_vol, max_v)  # never exceed broker max
+    final_vol = min(final_vol, max_v)
 
-    print(f"📊 Risk: {acc_currency} {total_risk_cash:,.2f} | PipVal/Unit: {pip_value_per_unit:.6f} | Lots: {final_vol/100:.2f} | Vol: {final_vol}")
+    final_lots = final_vol / lot_size
+    print(f"📊 {symbol} | Risk: {acc_currency} {total_risk_cash:,.2f} | PipVal/Lot: {pip_value_per_lot:.6f} | Lots: {final_lots:.4f} | Vol: {final_vol}")
     return final_vol
 
 # ---------------------------------------------------------------------------
@@ -199,34 +250,34 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
         vol = calculate_professional_lot_size(symbol, sl_pips)
 
         # cTrader relativeStopLoss/relativeTakeProfit are in POINTS.
-        # sl_pips from the strategy are true pips → multiply by POINTS_PER_PIP (10).
+        # sl_pips/tp_pips from strategy are true pips → multiply by POINTS_PER_PIP (10).
         rel_sl = int(sl_pips * POINTS_PER_PIP)
         rel_tp = int(tp_pips * POINTS_PER_PIP)
 
         payload = {
             "symbol": symbol,
-            "side": side.upper(),
+            "side":   side.upper(),
             "volume": vol,
             "comment": str(s_uuid),
             "rel_sl": rel_sl,
             "rel_tp": rel_tp
         }
 
-        print(f"🚀 Executing {symbol} | SL: {sl_pips} pips ({rel_sl} pts) | TP: {tp_pips} pips ({rel_tp} pts)")
+        print(f"🚀 Executing {symbol} | Side: {side} | SL: {sl_pips} pips ({rel_sl} pts) | TP: {tp_pips} pips ({rel_tp} pts)")
         response = requests.post(BRIDGE_EXECUTE_URL, json=payload, headers=HEADERS, timeout=30)
-        result = response.json()
+        result   = response.json()
         print(f"🔍 Bridge response: {result}")
 
         if result.get("success"):
             pos_id = result.get("position_id")
-            print(f"✅ Trade Executed: {symbol} ID: {pos_id}")
+            print(f"✅ Trade Executed: {symbol} | Position ID: {pos_id}")
             return True
         else:
             print(f"❌ Execution Failed: {result.get('error')}")
             return False
 
     except Exception as e:
-        print(f"❌ CRITICAL ERROR: {e}")
+        print(f"❌ CRITICAL ERROR in execute_trade: {e}")
         return False
 
 # ---------------------------------------------------------------------------
@@ -245,7 +296,6 @@ def poll_signals():
             conn = psycopg2.connect(**DB_PARAMS)
             cur  = conn.cursor()
 
-            # ✅ FIX: Read sl_pips and tp_pips from the signals table
             cur.execute("""
                 SELECT signal_uuid, symbol, signal_type, timeframe, sl_pips, tp_pips
                 FROM signals
@@ -259,7 +309,7 @@ def poll_signals():
             if signal:
                 s_uuid, sym, s_type, tf, sl_pips, tp_pips = signal
 
-                # Guard: reject zero or negative values
+                # Guard: reject zero or negative SL/TP
                 if sl_pips <= 0 or tp_pips <= 0:
                     print(f"⚠️ Invalid SL/TP for {sym}: sl={sl_pips} tp={tp_pips}. Marking FAILED.")
                     cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
@@ -267,18 +317,19 @@ def poll_signals():
                 else:
                     cur.execute("UPDATE signals SET status = 'EXECUTING' WHERE signal_uuid = %s", (str(s_uuid),))
                     conn.commit()
+                    time.sleep(1)  # brief pause — lets position list update before duplicate check
 
                     if execute_trade(s_uuid, sym, s_type, tf, float(sl_pips), float(tp_pips)):
                         cur.execute("UPDATE signals SET status = 'COMPLETED' WHERE signal_uuid = %s", (str(s_uuid),))
                     else:
-                        # Mark FAILED not PENDING — prevents infinite retry on broker-rejected orders
+                        # Mark FAILED — prevents infinite retry on broker-rejected orders
                         cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
                     conn.commit()
 
         except Exception as e:
             print(f"⚠️ Loop Error: {e}")
         finally:
-            if cur: cur.close()
+            if cur:  cur.close()
             if conn: conn.close()
         time.sleep(5)
 
