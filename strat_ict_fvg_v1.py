@@ -27,7 +27,7 @@ BRIDGE_URL         = os.getenv("BRIDGE_URL", "http://localhost:8080")
 BRIDGE_KEY         = os.getenv("BRIDGE_KEY", "")
 
 SCAN_INTERVAL_SEC  = 300
-SIGNAL_COOLDOWN_HR = 4
+SIGNAL_COOLDOWN_HR = 1
 HTF_CANDLES        = 50
 LTF_CANDLES        = 60
 FVG_LOOKBACK       = 10
