@@ -328,11 +328,23 @@ def detect_signal(df: pd.DataFrame, symbol: str) -> dict | None:
                 and gap_b >= atr_val * ATR_MIN_RATIO
                 and current_close >= mss_level_b - atr_val * MSS_ATR_BUFFER
         ):
-            sl_price = mss_level_b - (gap_b * 0.1)
-            sl_pips  = round((current_close - sl_price) / pip_size, 1)
-            tp_pips  = round(sl_pips * TP_RATIO, 1)
+            # SL: structural (c_prev low) vs 1×ATR below entry — wider stop wins.
+            # This ensures ATR-based volatility never places stop inside normal noise.
+            sl_structural = float(c_prev["low"])
+            sl_atr        = current_close - atr_val
+            sl_price      = min(sl_structural, sl_atr)
 
+            # TP: purely structural — c_next high is the natural FVG target.
+            # TP_RATIO kept as reference for future AI optimisation; not enforced here.
+            tp_price = float(c_next["high"])
+
+            sl_pips  = round((current_close - sl_price) / pip_size, 1)
+            tp_pips  = round((tp_price - current_close) / pip_size, 1)
+
+            # Sanity guard — catch broken calculations only
             if not (MIN_SL_PIPS <= sl_pips <= MAX_SL_PIPS):
+                continue
+            if tp_pips <= 0:
                 continue
 
             gap_atr_ratio = gap_b / atr_val
@@ -363,11 +375,22 @@ def detect_signal(df: pd.DataFrame, symbol: str) -> dict | None:
                 and gap_s >= atr_val * ATR_MIN_RATIO
                 and current_close <= mss_level_s + atr_val * MSS_ATR_BUFFER
         ):
-            sl_price = mss_level_s + (gap_s * 0.1)
-            sl_pips  = round((sl_price - current_close) / pip_size, 1)
-            tp_pips  = round(sl_pips * TP_RATIO, 1)
+            # SL: structural (c_prev high) vs 1×ATR above entry — wider stop wins.
+            sl_structural = float(c_prev["high"])
+            sl_atr        = current_close + atr_val
+            sl_price      = max(sl_structural, sl_atr)
 
+            # TP: purely structural — c_next low is the natural FVG target.
+            # TP_RATIO kept as reference for future AI optimisation; not enforced here.
+            tp_price = float(c_next["low"])
+
+            sl_pips  = round((sl_price - current_close) / pip_size, 1)
+            tp_pips  = round((current_close - tp_price) / pip_size, 1)
+
+            # Sanity guard — catch broken calculations only
             if not (MIN_SL_PIPS <= sl_pips <= MAX_SL_PIPS):
+                continue
+            if tp_pips <= 0:
                 continue
 
             gap_atr_ratio = gap_s / atr_val
