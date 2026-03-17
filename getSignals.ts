@@ -15,29 +15,19 @@ Deno.serve(async (req) => {
 
     const data = await res.json();
 
-    // Bridge returns { success, signals: [...] }
-    // Normalise to match what the Signals page expects
-    const now = Date.now();
-    const maxAgeMs = 30 * 60 * 1000; // 30 minutes
-
-    const signals = (data.signals || [])
-      .map(s => {
-        const createdAt = new Date(s.created_at).getTime();
-        const isOld = (now - createdAt) > maxAgeMs;
-        const status = isOld && s.status === 'PENDING' ? 'EXPIRED' : (s.status || 'PENDING');
-        return {
-          signal_uuid: s.uuid,
-          symbol:      s.symbol,
-          direction:   s.direction,
-          timeframe:   s.timeframe,
-          confidence:  s.confidence,
-          status,
-          sl_pips:     s.sl_pips ?? null,
-          tp_pips:     s.tp_pips ?? null,
-          created_at:  s.created_at,
-        };
-      })
-      .filter(s => s.status !== 'EXPIRED');
+    // Bridge now returns all statuses (PENDING, EXECUTED, FAILED, EXPIRED, CANCELLED)
+    // with sl_pips, tp_pips included — last 200 records ordered newest first
+    const signals = (data.signals || []).map(s => ({
+      signal_uuid: s.uuid,
+      symbol:      s.symbol,
+      direction:   s.direction,
+      timeframe:   s.timeframe,
+      confidence:  s.confidence,
+      status:      s.status || 'PENDING',
+      sl_pips:     s.sl_pips ?? null,
+      tp_pips:     s.tp_pips ?? null,
+      created_at:  s.created_at,
+    }));
 
     return Response.json(signals);
   } catch (error) {
