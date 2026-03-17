@@ -31,10 +31,23 @@ DB_PARAMS = {
 }
 
 # ---------------------------------------------------------------------------
-# STATE  —  circuit breaker latch so we only trigger autopsy once per breach
+# AI REVIEW TRIGGER THRESHOLDS
+# ---------------------------------------------------------------------------
+R_DELTA_TRIGGER       = 0.25   # trigger if R has moved ±0.25 since last review
+SL_PROXIMITY_PCT      = 0.20   # trigger if price within 20% of SL distance
+TP_PROXIMITY_PCT      = 0.20   # trigger if price within 20% of TP distance
+MAX_REVIEW_INTERVAL   = 900    # always review if 15 min have passed (seconds)
+MIN_REVIEW_INTERVAL   = 60     # never review same position more than once per minute
+
+# ---------------------------------------------------------------------------
+# STATE
 # ---------------------------------------------------------------------------
 _circuit_broken    = False
 _autopsy_triggered = False
+
+# Per-position review state:
+# { pos_id: { last_review_ts, last_r, last_candle_time } }
+_position_state: dict = {}
 
 
 # ---------------------------------------------------------------------------
@@ -44,7 +57,6 @@ def _ts():
     return datetime.now().strftime("%H:%M:%S")
 
 def get_pip_size(symbol):
-    """Returns (pip_size, price_scale) from live bridge pipPosition."""
     try:
         spec_res = requests.post(
             f"{BRIDGE_URL}/contract/specs",
@@ -58,15 +70,13 @@ def get_pip_size(symbol):
         price_scale = 10 ** pip_pos
         return pip_size, price_scale
     except Exception as e:
-        print(f"[{_ts()}] ⚠️ get_pip_size error for {symbol}: {e} — using defaults")
+        print(f"[{_ts()}] ⚠️ get_pip_size error for {symbol}: {e}")
         return 0.0001, 100000
 
 def norm_price(p, price_scale):
-    """Normalise raw cTrader integer price to real price."""
     return p / price_scale if p > 1000 else p
 
 def get_recent_candles(symbol, count=20):
-    """Fetch recent candles for a symbol from the bridge."""
     try:
         res = requests.post(
             f"{BRIDGE_URL}/candles",
@@ -79,7 +89,6 @@ def get_recent_candles(symbol, count=20):
         return []
 
 def get_signal_for_position(pos_id, symbol):
-    """Look up the most recent signal for this symbol in EXECUTING/COMPLETED state."""
     try:
         conn = psycopg2.connect(**DB_PARAMS)
         cur  = conn.cursor()
@@ -107,7 +116,6 @@ def get_signal_for_position(pos_id, symbol):
     return {}
 
 def get_recent_signals(limit=50):
-    """Fetch recent signals from DB for autopsy context."""
     try:
         conn = psycopg2.connect(**DB_PARAMS)
         cur  = conn.cursor()
@@ -129,7 +137,6 @@ def get_recent_signals(limit=50):
         return []
 
 def get_recent_interventions(limit=20):
-    """Fetch recent AI interventions from Base44 for autopsy context."""
     try:
         res = requests.get(
             "https://lester-fd0cd5bc.base44.app/api/entities/AiIntervention",
@@ -142,7 +149,6 @@ def get_recent_interventions(limit=20):
         return []
 
 def update_intervention_outcome(intervention_id, outcome, outcome_r):
-    """Update a logged AI intervention with its final outcome."""
     try:
         requests.patch(
             f"https://lester-fd0cd5bc.base44.app/api/entities/AiIntervention/{intervention_id}",
@@ -154,13 +160,12 @@ def update_intervention_outcome(intervention_id, outcome, outcome_r):
         print(f"[{_ts()}] ⚠️ update_intervention_outcome error: {e}")
 
 def close_all_positions():
-    """Emergency close all open positions before freeze."""
     try:
         res       = requests.get(f"{BRIDGE_URL}/positions/list", headers=HEADERS, timeout=10)
         positions = res.json().get("positions", [])
         for pos in positions:
-            pos_id = pos.get("position_id") or pos.get("id")
-            symbol = pos.get("symbol", "?")
+            pos_id    = pos.get("position_id") or pos.get("id")
+            symbol    = pos.get("symbol", "?")
             close_res = requests.post(
                 f"{BRIDGE_URL}/trade/close",
                 json={"position_id": pos_id},
@@ -178,7 +183,72 @@ def close_all_positions():
 
 
 # ---------------------------------------------------------------------------
-# SETTINGS  —  single source of truth: bridge /data/system-settings
+# AI REVIEW TRIGGER LOGIC
+# ---------------------------------------------------------------------------
+def should_review(pos_id, current_r, risk_dist, reward_to_sl, reward_to_tp, latest_candle_time):
+    """
+    Returns (should_review: bool, reason: str)
+
+    Triggers AI review if ANY of the following are true:
+      1. Never been reviewed before
+      2. R has moved ±R_DELTA_TRIGGER since last review
+      3. Price is within SL_PROXIMITY_PCT of the stop loss
+      4. Price is within TP_PROXIMITY_PCT of the take profit
+      5. A new candle has closed since last review
+      6. MAX_REVIEW_INTERVAL seconds have elapsed since last review
+
+    Never triggers if MIN_REVIEW_INTERVAL has not elapsed (rate limit).
+    """
+    now   = time.time()
+    state = _position_state.get(pos_id)
+
+    if state is None:
+        return True, "first review"
+
+    # Rate limit — never more than once per MIN_REVIEW_INTERVAL
+    elapsed = now - state["last_review_ts"]
+    if elapsed < MIN_REVIEW_INTERVAL:
+        return False, "rate limited"
+
+    # Max interval — always review eventually
+    if elapsed >= MAX_REVIEW_INTERVAL:
+        return True, f"max interval ({MAX_REVIEW_INTERVAL}s elapsed)"
+
+    # R delta
+    r_delta = abs(current_r - state["last_r"])
+    if r_delta >= R_DELTA_TRIGGER:
+        return True, f"R moved {r_delta:.2f} (threshold {R_DELTA_TRIGGER})"
+
+    # SL proximity — price within 20% of risk distance from SL
+    if risk_dist > 0 and reward_to_sl <= risk_dist * SL_PROXIMITY_PCT:
+        return True, f"near SL ({reward_to_sl/risk_dist*100:.0f}% of risk distance)"
+
+    # TP proximity — price within 20% of TP distance
+    if reward_to_tp is not None and risk_dist > 0 and reward_to_tp <= risk_dist * TP_PROXIMITY_PCT:
+        return True, f"near TP ({reward_to_tp/risk_dist*100:.0f}% of risk distance)"
+
+    # New candle closed
+    if latest_candle_time and latest_candle_time != state.get("last_candle_time"):
+        return True, "new candle closed"
+
+    return False, "no trigger"
+
+def update_position_state(pos_id, current_r, latest_candle_time):
+    _position_state[pos_id] = {
+        "last_review_ts":   time.time(),
+        "last_r":           current_r,
+        "last_candle_time": latest_candle_time,
+    }
+
+def prune_closed_positions(active_ids):
+    """Remove state for positions that are no longer open."""
+    stale = [k for k in _position_state if k not in active_ids]
+    for k in stale:
+        del _position_state[k]
+
+
+# ---------------------------------------------------------------------------
+# SETTINGS
 # ---------------------------------------------------------------------------
 def fetch_config():
     res = requests.get(f"{BRIDGE_URL}/data/system-settings", headers=HEADERS, timeout=10)
@@ -187,17 +257,11 @@ def fetch_config():
 
 
 # ---------------------------------------------------------------------------
-# CIRCUIT BREAKER  —  triggers autopsy, freezes trading
+# CIRCUIT BREAKER
 # ---------------------------------------------------------------------------
 def check_circuit_breaker(config):
-    """
-    Returns True if daily drawdown limit is breached.
-    On first breach: closes all positions, triggers AI autopsy, latches state.
-    Trading stays frozen until autopsy status is set to APPROVED_RESUME via UI.
-    """
     global _circuit_broken, _autopsy_triggered
 
-    # If already broken, stay frozen until manually approved
     if _circuit_broken:
         print(f"[{_ts()}] 🔒 Trading frozen — awaiting autopsy review and approval to resume.")
         return True
@@ -206,10 +270,9 @@ def check_circuit_breaker(config):
     if max_dd_raw is None:
         raise KeyError("Field 'daily_drawdown_limit' missing from bridge config.")
 
-    max_dd = float(max_dd_raw) * 100  # e.g. 0.05 → 5.0%
-
-    acct_res   = requests.get(f"{BRIDGE_URL}/account/status", headers=HEADERS, timeout=10)
-    acct_data  = acct_res.json()
+    max_dd    = float(max_dd_raw) * 100
+    acct_res  = requests.get(f"{BRIDGE_URL}/account/status", headers=HEADERS, timeout=10)
+    acct_data = acct_res.json()
     current_dd = float(acct_data.get("drawdown_pct", 0))
 
     if current_dd < max_dd:
@@ -225,17 +288,16 @@ def check_circuit_breaker(config):
     if not _autopsy_triggered:
         _autopsy_triggered = True
         print(f"[{_ts()}] 🔬 Triggering AI drawdown autopsy...")
-
         try:
             autopsy_res = requests.post(
                 f"{BASE44_FUNCTIONS_URL}/drawdownAutopsy",
                 json={
-                    "drawdown_pct":        current_dd,
-                    "drawdown_limit_pct":  max_dd,
-                    "account_balance":     acct_data.get("balance"),
-                    "account_equity":      acct_data.get("equity"),
-                    "open_positions":      open_positions,
-                    "recent_signals":      get_recent_signals(50),
+                    "drawdown_pct":         current_dd,
+                    "drawdown_limit_pct":   max_dd,
+                    "account_balance":      acct_data.get("balance"),
+                    "account_equity":       acct_data.get("equity"),
+                    "open_positions":       open_positions,
+                    "recent_signals":       get_recent_signals(50),
                     "recent_interventions": get_recent_interventions(20),
                 },
                 headers=BASE44_HEADERS,
@@ -254,16 +316,12 @@ def check_circuit_breaker(config):
 
 
 # ---------------------------------------------------------------------------
-# AI POSITION REVIEW  —  calls Lester for each open position
+# AI POSITION REVIEW
 # ---------------------------------------------------------------------------
 def ai_review_position(pos, signal_info, pip_size, price_scale, minutes_open):
-    """
-    Sends position context to the AI review backend function.
-    Returns the AI decision dict or None on error.
-    """
-    entry   = norm_price(pos.get("entry_price", 0), price_scale)
-    sl      = norm_price(pos.get("stop_loss", 0),   price_scale)
-    tp      = norm_price(pos.get("take_profit", 0), price_scale)
+    entry   = norm_price(pos.get("entry_price", 0),   price_scale)
+    sl      = norm_price(pos.get("stop_loss", 0),     price_scale)
+    tp      = norm_price(pos.get("take_profit", 0),   price_scale)
     current = norm_price(pos.get("current_price", 0), price_scale)
     side    = pos.get("side", "").upper()
     symbol  = pos.get("symbol", "?")
@@ -275,10 +333,26 @@ def ai_review_position(pos, signal_info, pip_size, price_scale, minutes_open):
     reward_dist = (current - entry) if side == "BUY" else (entry - current)
     current_r   = reward_dist / risk_dist
 
-    recent_candles = get_recent_candles(symbol)
+    recent_candles  = get_recent_candles(symbol)
+    latest_candle_t = recent_candles[-1].get("time") if recent_candles else None
+
+    pos_id = pos.get("position_id") or pos.get("id")
+
+    # Distance to SL and TP for trigger logic
+    reward_to_sl = (current - sl) if side == "BUY" else (sl - current)
+    reward_to_tp = abs(tp - current) if tp else None
+
+    trigger, reason = should_review(
+        pos_id, current_r, risk_dist, reward_to_sl, reward_to_tp, latest_candle_t
+    )
+
+    if not trigger:
+        return None  # skip — nothing meaningful has changed
+
+    print(f"[{_ts()}] 🤔 AI review triggered for {symbol} [{pos_id}] — {reason}")
 
     payload = {
-        "position_id":    pos.get("position_id") or pos.get("id"),
+        "position_id":    pos_id,
         "symbol":         symbol,
         "strategy":       signal_info.get("strategy", "unknown"),
         "direction":      signal_info.get("direction", side),
@@ -293,7 +367,7 @@ def ai_review_position(pos, signal_info, pip_size, price_scale, minutes_open):
     }
 
     try:
-        res = requests.post(
+        res  = requests.post(
             f"{BASE44_FUNCTIONS_URL}/aiPositionReview",
             json=payload,
             headers=BASE44_HEADERS,
@@ -301,9 +375,11 @@ def ai_review_position(pos, signal_info, pip_size, price_scale, minutes_open):
         )
         data = res.json()
         if data.get("ok"):
-            decision                 = data.get("decision", {})
+            decision                     = data.get("decision", {})
             decision["_intervention_id"] = data.get("intervention_id")
             decision["_current_r"]       = current_r
+            # Update state so we don't re-trigger unnecessarily
+            update_position_state(pos_id, current_r, latest_candle_t)
             return decision
         else:
             print(f"[{_ts()}] ⚠️ AI review error for {symbol}: {data.get('error')}")
@@ -317,7 +393,6 @@ def ai_review_position(pos, signal_info, pip_size, price_scale, minutes_open):
 # EXECUTE AI DECISION
 # ---------------------------------------------------------------------------
 def execute_decision(pos, decision, pip_size, price_scale):
-    """Acts on the AI decision — modify SL/TP or close position."""
     pos_id = pos.get("position_id") or pos.get("id")
     symbol = pos.get("symbol", "?")
     action = decision.get("action", "HOLD")
@@ -375,12 +450,12 @@ def execute_decision(pos, decision, pip_size, price_scale):
             print(f"[{_ts()}] ⚠️ AI TP adjust failed for {symbol}: {data.get('error')}")
 
     elif action == "PARTIAL_CLOSE":
-        # Partial close not yet supported by bridge — log intent, hold for now
+        # Not yet supported by bridge — log intent, hold
         print(f"[{_ts()}] ⏳ PARTIAL_CLOSE not yet supported by bridge — holding {symbol}")
 
 
 # ---------------------------------------------------------------------------
-# MAIN RISK MANAGER  —  AI-driven, no hard trade rules
+# MAIN RISK MANAGER
 # ---------------------------------------------------------------------------
 def manage_risk(config):
     res = requests.get(f"{BRIDGE_URL}/positions/list", headers=HEADERS, timeout=10)
@@ -390,9 +465,18 @@ def manage_risk(config):
 
     positions = res.json().get("positions", [])
     if not positions:
+        prune_closed_positions(set())
         return
 
-    print(f"[{_ts()}] 🛡️ Reviewing {len(positions)} open positions with AI")
+    active_ids = set()
+    for pos in positions:
+        pos_id = pos.get("position_id") or pos.get("id")
+        active_ids.add(pos_id)
+
+    prune_closed_positions(active_ids)
+
+    reviewed = 0
+    skipped  = 0
 
     for pos in positions:
         pos_id = pos.get("position_id") or pos.get("id")
@@ -401,7 +485,6 @@ def manage_risk(config):
         pip_size, price_scale = get_pip_size(symbol)
         signal_info = get_signal_for_position(pos_id, symbol)
 
-        # Calculate minutes open
         minutes_open = 0
         opened_at    = pos.get("opened_at") or pos.get("open_time")
         if opened_at:
@@ -414,6 +497,11 @@ def manage_risk(config):
         decision = ai_review_position(pos, signal_info, pip_size, price_scale, minutes_open)
         if decision:
             execute_decision(pos, decision, pip_size, price_scale)
+            reviewed += 1
+        else:
+            skipped += 1
+
+    print(f"[{_ts()}] 🛡️ {len(positions)} positions — {reviewed} reviewed by AI, {skipped} skipped (no trigger)")
 
 
 # ---------------------------------------------------------------------------
