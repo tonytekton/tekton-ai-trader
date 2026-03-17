@@ -19,11 +19,9 @@ BRIDGE_URL   = os.getenv("BRIDGE_URL", "http://localhost:8080")
 BRIDGE_KEY   = os.getenv("BRIDGE_KEY")
 HEADERS      = {"X-Bridge-Key": BRIDGE_KEY}
 
-AI_REVIEW_URL = os.getenv(
-    "AI_REVIEW_URL",
-    "https://lester-fd0cd5bc.base44.app/functions/aiPositionReview"
-)
 BASE44_SERVICE_TOKEN = os.getenv("BASE44_SERVICE_TOKEN", "")
+BASE44_HEADERS       = {"Authorization": f"Bearer {BASE44_SERVICE_TOKEN}"}
+BASE44_FUNCTIONS_URL = "https://lester-fd0cd5bc.base44.app/functions"
 
 DB_PARAMS = {
     "host":     os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
@@ -31,6 +29,12 @@ DB_PARAMS = {
     "user":     "postgres",
     "password": os.getenv("CLOUD_SQL_DB_PASSWORD"),
 }
+
+# ---------------------------------------------------------------------------
+# STATE  —  circuit breaker latch so we only trigger autopsy once per breach
+# ---------------------------------------------------------------------------
+_circuit_broken    = False
+_autopsy_triggered = False
 
 
 # ---------------------------------------------------------------------------
@@ -40,7 +44,7 @@ def _ts():
     return datetime.now().strftime("%H:%M:%S")
 
 def get_pip_size(symbol):
-    """Returns pip size and price scale from live bridge pipPosition."""
+    """Returns (pip_size, price_scale) from live bridge pipPosition."""
     try:
         spec_res = requests.post(
             f"{BRIDGE_URL}/contract/specs",
@@ -48,8 +52,8 @@ def get_pip_size(symbol):
             headers=HEADERS,
             timeout=10
         )
-        spec    = spec_res.json().get("contract_specifications", {})
-        pip_pos = spec.get("pipPosition", 4)
+        spec        = spec_res.json().get("contract_specifications", {})
+        pip_pos     = spec.get("pipPosition", 4)
         pip_size    = 10 ** (-pip_pos)
         price_scale = 10 ** pip_pos
         return pip_size, price_scale
@@ -74,8 +78,8 @@ def get_recent_candles(symbol, count=20):
     except Exception:
         return []
 
-def get_signal_for_position(position_id, symbol):
-    """Look up the signal record that corresponds to this open position."""
+def get_signal_for_position(pos_id, symbol):
+    """Look up the most recent signal for this symbol in EXECUTING/COMPLETED state."""
     try:
         conn = psycopg2.connect(**DB_PARAMS)
         cur  = conn.cursor()
@@ -102,17 +106,75 @@ def get_signal_for_position(position_id, symbol):
         print(f"[{_ts()}] ⚠️ get_signal_for_position error: {e}")
     return {}
 
+def get_recent_signals(limit=50):
+    """Fetch recent signals from DB for autopsy context."""
+    try:
+        conn = psycopg2.connect(**DB_PARAMS)
+        cur  = conn.cursor()
+        cur.execute("""
+            SELECT symbol, signal_type, strategy, status, confidence_score,
+                   sl_pips, tp_pips, created_at
+            FROM signals
+            ORDER BY created_at DESC
+            LIMIT %s;
+        """, (limit,))
+        cols = ["symbol","direction","strategy","status","confidence",
+                "sl_pips","tp_pips","created_at"]
+        rows = [dict(zip(cols, [str(v) for v in row])) for row in cur.fetchall()]
+        cur.close()
+        conn.close()
+        return rows
+    except Exception as e:
+        print(f"[{_ts()}] ⚠️ get_recent_signals error: {e}")
+        return []
+
+def get_recent_interventions(limit=20):
+    """Fetch recent AI interventions from Base44 for autopsy context."""
+    try:
+        res = requests.get(
+            "https://lester-fd0cd5bc.base44.app/api/entities/AiIntervention",
+            params={"limit": limit, "sort": "-created_date"},
+            headers=BASE44_HEADERS,
+            timeout=10
+        )
+        return res.json().get("items", [])
+    except Exception:
+        return []
+
 def update_intervention_outcome(intervention_id, outcome, outcome_r):
     """Update a logged AI intervention with its final outcome."""
     try:
         requests.patch(
             f"https://lester-fd0cd5bc.base44.app/api/entities/AiIntervention/{intervention_id}",
             json={"outcome": outcome, "outcome_r": outcome_r, "executed": True},
-            headers={"Authorization": f"Bearer {BASE44_SERVICE_TOKEN}"},
+            headers=BASE44_HEADERS,
             timeout=10
         )
     except Exception as e:
         print(f"[{_ts()}] ⚠️ update_intervention_outcome error: {e}")
+
+def close_all_positions():
+    """Emergency close all open positions before freeze."""
+    try:
+        res       = requests.get(f"{BRIDGE_URL}/positions/list", headers=HEADERS, timeout=10)
+        positions = res.json().get("positions", [])
+        for pos in positions:
+            pos_id = pos.get("position_id") or pos.get("id")
+            symbol = pos.get("symbol", "?")
+            close_res = requests.post(
+                f"{BRIDGE_URL}/trade/close",
+                json={"position_id": pos_id},
+                headers=HEADERS,
+                timeout=10
+            )
+            if close_res.json().get("success"):
+                print(f"[{_ts()}] 🔴 Emergency closed {symbol} [{pos_id}]")
+            else:
+                print(f"[{_ts()}] ⚠️ Emergency close failed for {symbol} [{pos_id}]")
+        return positions
+    except Exception as e:
+        print(f"[{_ts()}] ❌ close_all_positions error: {e}")
+        return []
 
 
 # ---------------------------------------------------------------------------
@@ -125,24 +187,70 @@ def fetch_config():
 
 
 # ---------------------------------------------------------------------------
-# CIRCUIT BREAKER  —  daily drawdown only, no per-trade hard rules
+# CIRCUIT BREAKER  —  triggers autopsy, freezes trading
 # ---------------------------------------------------------------------------
 def check_circuit_breaker(config):
-    """Returns True if daily drawdown limit is breached — halt all trading."""
+    """
+    Returns True if daily drawdown limit is breached.
+    On first breach: closes all positions, triggers AI autopsy, latches state.
+    Trading stays frozen until autopsy status is set to APPROVED_RESUME via UI.
+    """
+    global _circuit_broken, _autopsy_triggered
+
+    # If already broken, stay frozen until manually approved
+    if _circuit_broken:
+        print(f"[{_ts()}] 🔒 Trading frozen — awaiting autopsy review and approval to resume.")
+        return True
+
     max_dd_raw = config.get("daily_drawdown_limit")
     if max_dd_raw is None:
         raise KeyError("Field 'daily_drawdown_limit' missing from bridge config.")
 
     max_dd = float(max_dd_raw) * 100  # e.g. 0.05 → 5.0%
 
-    res = requests.get(f"{BRIDGE_URL}/account/status", headers=HEADERS, timeout=10)
-    res.raise_for_status()
-    current_dd = float(res.json().get("drawdown_pct", 0))
+    acct_res   = requests.get(f"{BRIDGE_URL}/account/status", headers=HEADERS, timeout=10)
+    acct_data  = acct_res.json()
+    current_dd = float(acct_data.get("drawdown_pct", 0))
 
-    if current_dd >= max_dd:
-        print(f"[{_ts()}] 🚨 CIRCUIT BREAKER: {current_dd:.2f}% drawdown ≥ {max_dd:.2f}% limit. Halting.")
-        return True
-    return False
+    if current_dd < max_dd:
+        return False
+
+    # ── BREACH ──────────────────────────────────────────────────────────────
+    _circuit_broken = True
+    print(f"[{_ts()}] 🚨 CIRCUIT BREAKER FIRED: {current_dd:.2f}% ≥ {max_dd:.2f}% limit.")
+    print(f"[{_ts()}] 🔴 Closing all open positions...")
+
+    open_positions = close_all_positions()
+
+    if not _autopsy_triggered:
+        _autopsy_triggered = True
+        print(f"[{_ts()}] 🔬 Triggering AI drawdown autopsy...")
+
+        try:
+            autopsy_res = requests.post(
+                f"{BASE44_FUNCTIONS_URL}/drawdownAutopsy",
+                json={
+                    "drawdown_pct":        current_dd,
+                    "drawdown_limit_pct":  max_dd,
+                    "account_balance":     acct_data.get("balance"),
+                    "account_equity":      acct_data.get("equity"),
+                    "open_positions":      open_positions,
+                    "recent_signals":      get_recent_signals(50),
+                    "recent_interventions": get_recent_interventions(20),
+                },
+                headers=BASE44_HEADERS,
+                timeout=60
+            )
+            data = autopsy_res.json()
+            if data.get("ok"):
+                print(f"[{_ts()}] ✅ Autopsy report created: {data.get('autopsy_id')}")
+                print(f"[{_ts()}] 📋 Root causes: {data.get('summary','')[:200]}")
+            else:
+                print(f"[{_ts()}] ⚠️ Autopsy function error: {data.get('error')}")
+        except Exception as e:
+            print(f"[{_ts()}] ❌ Autopsy request failed: {e}")
+
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +268,7 @@ def ai_review_position(pos, signal_info, pip_size, price_scale, minutes_open):
     side    = pos.get("side", "").upper()
     symbol  = pos.get("symbol", "?")
 
-    risk_dist   = abs(entry - sl)
+    risk_dist = abs(entry - sl)
     if risk_dist == 0:
         return None
 
@@ -186,16 +294,15 @@ def ai_review_position(pos, signal_info, pip_size, price_scale, minutes_open):
 
     try:
         res = requests.post(
-            AI_REVIEW_URL,
+            f"{BASE44_FUNCTIONS_URL}/aiPositionReview",
             json=payload,
-            headers={"Authorization": f"Bearer {BASE44_SERVICE_TOKEN}"},
+            headers=BASE44_HEADERS,
             timeout=30
         )
         data = res.json()
         if data.get("ok"):
-            decision = data.get("decision", {})
-            intervention_id = data.get("intervention_id")
-            decision["_intervention_id"] = intervention_id
+            decision                 = data.get("decision", {})
+            decision["_intervention_id"] = data.get("intervention_id")
             decision["_current_r"]       = current_r
             return decision
         else:
@@ -224,12 +331,18 @@ def execute_decision(pos, decision, pip_size, price_scale):
     print(f"[{_ts()}] 🤖 {symbol} [{pos_id}] {action} | {curr_r:.2f}R | {decision.get('reasoning','')[:80]}")
 
     if action == "CLOSE":
-        res  = requests.post(f"{BRIDGE_URL}/trade/close", json={"position_id": pos_id}, headers=HEADERS, timeout=10)
+        res  = requests.post(
+            f"{BRIDGE_URL}/trade/close",
+            json={"position_id": pos_id},
+            headers=HEADERS,
+            timeout=10
+        )
         data = res.json()
         if data.get("success"):
             print(f"[{_ts()}] ✅ AI closed {symbol} [{pos_id}]")
             outcome = "WIN" if curr_r > 0 else "LOSS" if curr_r < -0.1 else "BREAKEVEN"
-            if iid: update_intervention_outcome(iid, outcome, curr_r)
+            if iid:
+                update_intervention_outcome(iid, outcome, curr_r)
         else:
             print(f"[{_ts()}] ⚠️ AI close failed for {symbol}: {data.get('error')}")
 
@@ -238,7 +351,8 @@ def execute_decision(pos, decision, pip_size, price_scale):
         res  = requests.post(
             f"{BRIDGE_URL}/trade/modify",
             json={"position_id": pos_id, "stop_loss": new_sl_raw},
-            headers=HEADERS, timeout=10
+            headers=HEADERS,
+            timeout=10
         )
         data = res.json()
         if data.get("success"):
@@ -251,7 +365,8 @@ def execute_decision(pos, decision, pip_size, price_scale):
         res  = requests.post(
             f"{BRIDGE_URL}/trade/modify",
             json={"position_id": pos_id, "take_profit": new_tp_raw},
-            headers=HEADERS, timeout=10
+            headers=HEADERS,
+            timeout=10
         )
         data = res.json()
         if data.get("success"):
@@ -288,7 +403,7 @@ def manage_risk(config):
 
         # Calculate minutes open
         minutes_open = 0
-        opened_at = pos.get("opened_at") or pos.get("open_time")
+        opened_at    = pos.get("opened_at") or pos.get("open_time")
         if opened_at:
             try:
                 opened_dt    = datetime.fromisoformat(str(opened_at).replace("Z", "+00:00"))
@@ -314,4 +429,4 @@ if __name__ == "__main__":
                 manage_risk(config)
         except Exception as e:
             print(f"[{_ts()}] ❌ MONITOR ERROR: {e}")
-        time.sleep(60)  # Review every 60s — AI calls have latency
+        time.sleep(60)
