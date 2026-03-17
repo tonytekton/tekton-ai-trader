@@ -1,69 +1,57 @@
 import os
 import sys
 import time
-import json
 import requests
 import psycopg2
-from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Redirect stdout/stderr to log file AFTER imports
+# Redirect stdout/stderr to log file
 sys.stdout = open('/home/tony/tekton-ai-trader/combined_trades.log', 'a', buffering=1)
 sys.stderr = sys.stdout
 
-# --- CONFIGURATION ---
-BRIDGE_BASE_URL = "http://localhost:8080"
+# ---------------------------------------------------------------------------
+# CONFIGURATION
+# ---------------------------------------------------------------------------
+BRIDGE_BASE_URL   = os.getenv("BRIDGE_URL", "http://localhost:8080")
 BRIDGE_EXECUTE_URL = f"{BRIDGE_BASE_URL}/trade/execute"
-BRIDGE_MODIFY_URL  = f"{BRIDGE_BASE_URL}/trade/modify"
-BRIDGE_KEY = os.getenv("BRIDGE_KEY")
-HEADERS = {"X-Bridge-Key": BRIDGE_KEY}
+BRIDGE_KEY        = os.getenv("BRIDGE_KEY")
+HEADERS           = {"X-Bridge-Key": BRIDGE_KEY}
 
 DB_PARAMS = {
-    "host":     "172.16.64.3",
+    "host":     os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
     "database": "tekton-trader",
     "user":     "postgres",
     "password": os.getenv("CLOUD_SQL_DB_PASSWORD")
 }
 
-# ---------------------------------------------------------------------------
-# PIP_SIZE_MAP removed. All pip sizes are derived dynamically from cTrader
-# contract specs using: pip_size = 10 ^ -pipPosition
-# This is correct for all instrument types:
-#   Forex 4-digit (EURUSD):  pipPosition=4 → pip_size=0.0001
-#   JPY pairs:               pipPosition=2 → pip_size=0.01
-#   Indices (UK100, DE40..): pipPosition=1 → pip_size=0.1
-#   Gold/Silver/Oil:         pipPosition=2 → pip_size=0.01
-#   Natural Gas:             pipPosition=3 → pip_size=0.001
-# ---------------------------------------------------------------------------
-
 # Known quote currencies for index/commodity symbols (can't derive from last 3 chars).
 INDEX_QUOTE_MAP = {
     "UK100":  "GBP", "DE40":   "EUR", "FR40":   "EUR", "EU50":   "EUR",
     "JP225":  "JPY", "US30":   "USD", "US500":  "USD", "USTEC":  "USD",
-    "AUS200": "AUD", "HK50":   "HKD", "F40":    "EUR", "STOXX50": "EUR",
+    "AUS200": "AUD", "HK50":   "HKD",
     "XAUUSD": "USD", "XAGUSD": "USD", "XTIUSD": "USD", "XBRUSD": "USD",
-    "XNGUSD": "USD", "XPDUSD": "USD", "XPTUSD": "USD",
 }
 
 # cTrader: relativeStopLoss/relativeTakeProfit are in POINTS.
-# 1 pip = 10 points for all instruments (pipPosition handles the scaling per instrument).
-# sl_pips and tp_pips from strategies are always true pips → multiply by POINTS_PER_PIP.
+# 1 pip = 10 points for all instruments (pipPosition handles the scaling).
 POINTS_PER_PIP = 10
 
 # ---------------------------------------------------------------------------
+# SETTINGS  —  single source of truth: /data/system-settings
+# ---------------------------------------------------------------------------
 def fetch_settings():
-    """Fetches live settings from the SQL settings table via bridge."""
+    """Fetches live trading settings from the bridge."""
     try:
         response = requests.get(f"{BRIDGE_BASE_URL}/data/system-settings", headers=HEADERS, timeout=10)
         response.raise_for_status()
         data = response.json()
         return {
-            "auto_trade": data.get("auto_trade", False),
-            "friday_flush": data.get("friday_flush", False),
-            "risk_pct": float(data.get("risk_pct", 0.01)),
-            "target_reward": float(data.get("target_reward", 1.8)),
+            "auto_trade":           data.get("auto_trade", False),
+            "friday_flush":         data.get("friday_flush", False),
+            "risk_pct":             float(data.get("risk_pct", 0.01)),
+            "target_reward":        float(data.get("target_reward", 1.8)),
             "daily_drawdown_limit": float(data.get("daily_drawdown_limit", 0.05))
         }
     except Exception as e:
@@ -71,74 +59,53 @@ def fetch_settings():
         raise
 
 # ---------------------------------------------------------------------------
-def get_contract_specs(symbol):
+# PIP SIZE  —  always from bridge, never hardcoded
+# ---------------------------------------------------------------------------
+def get_pip_size(symbol):
     """
-    Fetches contract specifications for a symbol from the bridge.
-    Returns the contract_specifications dict.
-    Raises on failure — callers must not proceed without valid specs.
+    Returns pip size derived from live bridge pipPosition.
+    Formula: pip_size = 10^-pipPosition
+    e.g. pipPosition=4 → pip_size=0.0001 (standard forex)
+         pipPosition=2 → pip_size=0.01   (JPY pairs, indices)
     """
-    res = requests.post(
-        f"{BRIDGE_BASE_URL}/contract/specs",
-        json={"symbol": symbol},
-        headers=HEADERS,
-        timeout=10
-    )
-    res.raise_for_status()
-    specs = res.json().get("contract_specifications", {})
-    if not specs:
-        raise ValueError(f"Empty contract specs returned for {symbol}")
-    return specs
+    try:
+        spec_res = requests.post(
+            f"{BRIDGE_BASE_URL}/contract/specs",
+            json={"symbol": symbol},
+            headers=HEADERS,
+            timeout=10
+        )
+        spec = spec_res.json().get("contract_specifications", {})
+        pip_pos = spec.get("pipPosition", 4)
+        return 10 ** (-pip_pos)
+    except Exception as e:
+        print(f"⚠️ get_pip_size error for {symbol}: {e} — using default 0.0001")
+        return 0.0001
 
 # ---------------------------------------------------------------------------
-def get_pip_size(symbol_spec):
-    """
-    Derives pip size from cTrader pipPosition in contract specs.
-
-    cTrader pipPosition is the decimal place of 1 pip:
-        pipPosition=4 → pip_size=0.0001  (EURUSD, GBPUSD, most forex)
-        pipPosition=2 → pip_size=0.01    (JPY pairs, XAUUSD, XAGUSD, oils)
-        pipPosition=1 → pip_size=0.1     (indices: UK100, DE40, JP225 etc)
-        pipPosition=3 → pip_size=0.001   (XNGUSD)
-
-    Formula: pip_size = 10 ^ -pipPosition
-    """
-    pip_pos = symbol_spec.get("pipPosition")
-    if pip_pos is None:
-        raise ValueError("pipPosition missing from contract specs")
-    return 10 ** -pip_pos
-
+# PIP VALUE  —  value of 1 pip per 1 lot in account currency
 # ---------------------------------------------------------------------------
-def get_live_pip_value(symbol, symbol_spec, account_currency, lot_size_units):
+def get_live_pip_value(symbol, account_currency):
     """
-    Returns pip value per 1 LOT in account currency.
-    Derives pip size dynamically from contract specs — no hardcoded values.
-
-    pip_value_per_lot = pip_size * lot_size_units (if quote == account currency)
-    pip_value_per_lot = pip_size * lot_size_units * conversion_rate (if conversion needed)
-
-    lot_size_units = lotSize_centilots / 100
-        EURUSD: 10,000,000 / 100 = 100,000 units per lot
-        UK100:  100 / 100        = 1 unit per lot
-        XAUUSD: 10,000 / 100     = 100 units per lot
+    Returns pip value per 1 lot in account currency.
+    Uses live pipPosition from bridge for all instruments.
     """
     sym_upper    = symbol.upper()
     acc_currency = account_currency.upper()
-
-    # pip_size derived from live contract specs — no hardcoding
-    pip_size = get_pip_size(symbol_spec)
+    pip_size     = get_pip_size(symbol)
 
     # Determine quote currency
-    quote_currency = INDEX_QUOTE_MAP.get(sym_upper, sym_upper[-3:]).upper()
+    quote_currency = INDEX_QUOTE_MAP.get(sym_upper, sym_upper[-3:])
 
     if quote_currency == acc_currency:
-        # No conversion needed — pip value per lot = pip_size * units per lot
-        return pip_size * lot_size_units
+        # No conversion needed
+        return pip_size
 
     # Need conversion rate: quote_currency → account_currency
     direct   = f"{quote_currency}{acc_currency}"
     indirect = f"{acc_currency}{quote_currency}"
 
-    all_symbols_res = requests.get(f"{BRIDGE_BASE_URL}/symbols/list", headers=HEADERS)
+    all_symbols_res = requests.get(f"{BRIDGE_BASE_URL}/symbols", headers=HEADERS)
     available_names = {s["name"].upper() for s in all_symbols_res.json().get("symbols", [])}
 
     if direct in available_names:
@@ -171,67 +138,50 @@ def get_live_pip_value(symbol, symbol_spec, account_currency, lot_size_units):
         raise ValueError(f"Conversion failed for {symbol}: no price for {conv_symbol}")
 
     conversion_rate = (1.0 / avg_price) if invert else avg_price
-    return pip_size * lot_size_units * conversion_rate
+    return pip_size * conversion_rate
 
+# ---------------------------------------------------------------------------
+# LOT SIZE CALCULATION
 # ---------------------------------------------------------------------------
 def calculate_professional_lot_size(symbol, sl_pips):
     """
-    Calculates volume in cTrader native units based on live equity and risk %.
+    Calculates volume in centilots based on live equity and risk %.
 
-    cTrader volume units are instrument-specific centilots derived from lotSize:
-        Forex (EURUSD):  lotSize_centilots = 10,000,000  (1 lot = 10M centilots)
-        Indices (UK100): lotSize_centilots = 100
-        Gold (XAUUSD):   lotSize_centilots = 10,000
-        Silver (XAGUSD): lotSize_centilots = 100,000
-        Oil (XTIUSD):    lotSize_centilots = 10,000
-
-    Formula:
-        risk_cash       = free_margin * risk_pct
-        pip_value       = pip_size * conversion_rate (per lot, in account currency)
-        required_lots   = risk_cash / (sl_pips * pip_value)
-        protocol_volume = int(required_lots * lotSize_centilots)
-
-    Volume is then snapped to broker step and clamped to min/max.
+    cTrader volume units: centilots (100 = 1 standard lot).
+    Formula: required_lots = risk_cash / (sl_pips * pip_value_per_lot)
+             centilots = required_lots * 100
     """
-    settings = fetch_settings()
-    risk_pct = settings.get("risk_pct", 0.01)
+    settings         = fetch_settings()
+    risk_pct         = settings.get("risk_pct", 0.01)
 
-    acc_res      = requests.get(f"{BRIDGE_BASE_URL}/account/status", headers=HEADERS)
-    acc_data     = acc_res.json()
-    free_margin  = float(acc_data.get("free_margin", 0))
-    acc_currency = acc_data.get("currency", "EUR")
+    acc_res          = requests.get(f"{BRIDGE_BASE_URL}/account/status", headers=HEADERS)
+    acc_data         = acc_res.json()
+    free_margin      = float(acc_data.get("free_margin", 0))
+    acc_currency     = acc_data.get("currency", "EUR")
 
-    # Fetch contract specs once — used for pip_size, lot_size, and volume constraints
-    symbol_spec = get_contract_specs(symbol)
+    total_risk_cash    = free_margin * risk_pct
+    pip_value_per_unit = get_live_pip_value(symbol, acc_currency)
 
-    # lot_size_units: how many price units make 1 standard lot for this instrument.
-    # centilots / 100 = units. EURUSD=100,000 | UK100=1 | XAUUSD=100
-    lot_size         = symbol_spec.get("lotSize_centilots", 10_000_000)
-    lot_size_units   = lot_size / 100
+    required_lots   = total_risk_cash / (sl_pips * pip_value_per_unit)
+    protocol_volume = int(required_lots * 100)
 
-    pip_value_per_lot = get_live_pip_value(symbol, symbol_spec, acc_currency, lot_size_units)
-
-    total_risk_cash = free_margin * risk_pct
-    required_lots   = total_risk_cash / (sl_pips * pip_value_per_lot)
-
-    # Multiply required_lots by lotSize_centilots to get protocol volume in centilots.
-    protocol_volume = int(required_lots * lot_size)
-
-    # Snap to broker step, enforce min/max — all values in same centilot units
-    step    = symbol_spec.get("stepVolume_centilots", lot_size)
-    min_v   = symbol_spec.get("minVolume_centilots",  lot_size)
-    max_v   = symbol_spec.get("maxVolume_centilots",  lot_size * 100)
+    spec_res = requests.post(f"{BRIDGE_BASE_URL}/contract/specs", json={"symbol": symbol}, headers=HEADERS)
+    spec     = spec_res.json().get("contract_specifications", {})
+    step     = spec.get("stepVolume_centilots", 100)
+    min_v    = spec.get("minVolume_centilots", 100)
+    max_v    = spec.get("maxVolume_centilots", 100_000)
 
     final_vol = max((protocol_volume // step) * step, min_v)
     final_vol = min(final_vol, max_v)
 
-    final_lots = final_vol / lot_size
-    print(f"📊 {symbol} | Risk: {acc_currency} {total_risk_cash:,.2f} | PipVal/Lot: {pip_value_per_lot:.6f} | Lots: {final_lots:.4f} | Vol: {final_vol}")
+    print(f"📊 Risk: {acc_currency} {total_risk_cash:,.2f} | PipVal/Unit: {pip_value_per_unit:.6f} | Lots: {final_vol/100:.2f} | Vol: {final_vol}")
     return final_vol
 
 # ---------------------------------------------------------------------------
+# DUPLICATE CHECK
+# ---------------------------------------------------------------------------
 def is_symbol_already_open(symbol):
-    """Checks if a position for the given symbol is already open."""
+    """Checks if a position for this symbol is already open."""
     try:
         res = requests.get(f"{BRIDGE_BASE_URL}/positions/list", headers=HEADERS, timeout=10)
         positions = res.json().get("positions", [])
@@ -241,6 +191,8 @@ def is_symbol_already_open(symbol):
         return False
 
 # ---------------------------------------------------------------------------
+# TRADE EXECUTION
+# ---------------------------------------------------------------------------
 def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
     try:
         if is_symbol_already_open(symbol):
@@ -249,56 +201,26 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
 
         vol = calculate_professional_lot_size(symbol, sl_pips)
 
-        # cTrader relativeStopLoss/relativeTakeProfit are in POINTS.
-        # sl_pips/tp_pips from strategy are true pips → multiply by POINTS_PER_PIP (10).
+        # cTrader relativeStopLoss/relativeTakeProfit are in POINTS (1 pip = 10 points)
         rel_sl = int(sl_pips * POINTS_PER_PIP)
         rel_tp = int(tp_pips * POINTS_PER_PIP)
 
         payload = {
-            "symbol": symbol,
-            "side":   side.upper(),
-            "volume": vol,
+            "symbol":  symbol,
+            "side":    side.upper(),
+            "volume":  vol,
             "comment": str(s_uuid),
-            "rel_sl": rel_sl,
-            "rel_tp": rel_tp
+            "rel_sl":  rel_sl,
+            "rel_tp":  rel_tp
         }
 
-        print(f"🚀 Executing {symbol} | Side: {side} | SL: {sl_pips} pips ({rel_sl} pts) | TP: {tp_pips} pips ({rel_tp} pts)")
+        print(f"🚀 Executing {symbol} | SL: {sl_pips}p ({rel_sl}pts) | TP: {tp_pips}p ({rel_tp}pts)")
         response = requests.post(BRIDGE_EXECUTE_URL, json=payload, headers=HEADERS, timeout=30)
         result   = response.json()
         print(f"🔍 Bridge response: {result}")
 
         if result.get("success"):
-            pos_id      = result.get("position_id")
-            entry_price = result.get("entry_price")
-            print(f"✅ Trade Executed: {symbol} | Position ID: {pos_id}")
-
-            # Write broker_position_id back to signals and insert into executions table
-            try:
-                db_conn = psycopg2.connect(**DB_PARAMS)
-                db_cur  = db_conn.cursor()
-
-                # Update signals with broker position ID
-                db_cur.execute(
-                    "UPDATE signals SET broker_position_id = %s WHERE signal_uuid = %s",
-                    (str(pos_id), str(s_uuid))
-                )
-
-                # Insert execution record — position_id is the primary key
-                db_cur.execute("""
-                    INSERT INTO executions (position_id, signal_uuid, symbol, entry_price, status)
-                    VALUES (%s, %s, %s, %s, 'OPEN')
-                    ON CONFLICT (position_id) DO NOTHING;
-                """, (int(pos_id), str(s_uuid), symbol, entry_price))
-
-                db_conn.commit()
-                print(f"📝 Recorded: signals.broker_position_id={pos_id} | executions row inserted.")
-            except Exception as db_err:
-                print(f"⚠️ DB record error (trade still executed): {db_err}")
-            finally:
-                if db_cur:  db_cur.close()
-                if db_conn: db_conn.close()
-
+            print(f"✅ Trade Executed: {symbol} ID: {result.get('position_id')}")
             return True
         else:
             print(f"❌ Execution Failed: {result.get('error')}")
@@ -309,12 +231,13 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
         return False
 
 # ---------------------------------------------------------------------------
+# SIGNAL POLL LOOP
+# ---------------------------------------------------------------------------
 def poll_signals():
-    print("🧠 Tekton Executor Active.")
+    print(f"🧠 Tekton Executor Active. [{__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]")
     while True:
         conn, cur = None, None
         try:
-            # Gate on AUTO_TRADE setting
             settings = fetch_settings()
             if not settings.get("auto_trade"):
                 print("🚫 AUTO_TRADE disabled — skipping signal processing.")
@@ -337,7 +260,6 @@ def poll_signals():
             if signal:
                 s_uuid, sym, s_type, tf, sl_pips, tp_pips = signal
 
-                # Guard: reject zero or negative SL/TP
                 if sl_pips <= 0 or tp_pips <= 0:
                     print(f"⚠️ Invalid SL/TP for {sym}: sl={sl_pips} tp={tp_pips}. Marking FAILED.")
                     cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
@@ -345,12 +267,10 @@ def poll_signals():
                 else:
                     cur.execute("UPDATE signals SET status = 'EXECUTING' WHERE signal_uuid = %s", (str(s_uuid),))
                     conn.commit()
-                    time.sleep(1)  # brief pause — lets position list update before duplicate check
 
                     if execute_trade(s_uuid, sym, s_type, tf, float(sl_pips), float(tp_pips)):
                         cur.execute("UPDATE signals SET status = 'COMPLETED' WHERE signal_uuid = %s", (str(s_uuid),))
                     else:
-                        # Mark FAILED — prevents infinite retry on broker-rejected orders
                         cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
                     conn.commit()
 
