@@ -9,14 +9,14 @@ Deno.serve(async (req) => {
     const bridgeUrl = Deno.env.get('BRIDGE_URL');
     const bridgeKey = Deno.env.get('BRIDGE_KEY');
 
+    // Calls dedicated stats endpoint — returns full counts across all signals, not capped
     const res = await fetch(`${bridgeUrl}/proxy/signals/stats`, {
       headers: { 'X-Bridge-Key': bridgeKey },
     });
 
     const data = await res.json();
-
-    // Returns { counts: { TOTAL, PENDING, EXECUTED, FAILED, EXPIRED, CANCELLED }, symbols: [...] }
     return Response.json(data);
+
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
