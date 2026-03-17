@@ -9,7 +9,7 @@ import sys
 sys.stdout = open('/home/tony/tekton-ai-trader/strategy.log', 'a', buffering=1)
 sys.stderr = sys.stdout
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,18 +23,21 @@ DB_PARAMS = {
     "password": os.getenv("CLOUD_SQL_DB_PASSWORD"),
 }
 
-BRIDGE_URL = os.getenv("BRIDGE_URL", "http://localhost:8080")
-BRIDGE_KEY = os.getenv("BRIDGE_KEY", "")
+BRIDGE_URL         = os.getenv("BRIDGE_URL", "http://localhost:8080")
+BRIDGE_KEY         = os.getenv("BRIDGE_KEY", "")
 
-SCAN_INTERVAL_SEC  = 300          # scan every 5 minutes
-SIGNAL_COOLDOWN_HR = 4            # minimum hours between signals for same symbol+direction
-HTF_CANDLES        = 30           # candles to use for 1H trend filter
-LTF_CANDLES        = 50           # candles to use for 15min signal detection
-MIN_SL_PIPS        = 5.0          # discard signals with SL too tight
-MAX_SL_PIPS        = 500.0        # discard signals with SL unreasonably wide
-TP_RATIO           = 1.8          # TP = SL * 1.8 (1.8R)
-CONFIDENCE_BASE    = 72           # base confidence score
-SPECS_CACHE_TTL    = 300          # seconds to cache bridge specs
+SCAN_INTERVAL_SEC  = 300      # scan every 5 minutes
+SIGNAL_COOLDOWN_HR = 4        # minimum hours between signals for same symbol+direction
+HTF_CANDLES        = 50       # candles for 1H trend filter
+LTF_CANDLES        = 60       # candles for 15min detection
+FVG_LOOKBACK       = 10       # scan last N candles for a valid FVG (not just last 3)
+ATR_PERIOD         = 14
+ATR_MIN_RATIO      = 0.2      # FVG gap must be ≥ 20% of ATR (loosened from 30%)
+MIN_SL_PIPS        = 3.0      # minimum SL in pips
+MAX_SL_PIPS        = 600.0    # maximum SL in pips
+TP_RATIO           = 1.8      # TP = SL × 1.8R
+CONFIDENCE_BASE    = 72
+SPECS_CACHE_TTL    = 300
 
 # ─── BRIDGE SPECS CACHE ────────────────────────────────────────────────────────
 
@@ -45,9 +48,9 @@ _specs_cache_ts     = 0
 def get_symbol_specs() -> dict:
     """
     Fetches pip_size and price_scale for every symbol from the bridge.
-    pip_size   = 10^-(pipPosition-1)  e.g. pipPosition=5 → 0.0001
-    price_scale = 10^pipPosition       e.g. pipPosition=5 → 100000
-    Results are cached for SPECS_CACHE_TTL seconds.
+    pip_size    = 10^-(pipPosition-1)  e.g. pipPosition=5 → 0.0001
+    price_scale = 10^pipPosition        e.g. pipPosition=5 → 100000
+    Cached for SPECS_CACHE_TTL seconds.
     """
     global _symbol_specs_cache, _specs_cache_ts
     now = time.time()
@@ -66,10 +69,10 @@ def get_symbol_specs() -> dict:
 
         specs = {}
         for s in symbols:
-            sym_name  = s.get("name", "")
-            pip_pos   = s.get("pipPosition") or s.get("digits") or 4
-            pip_size  = 10 ** (-(pip_pos - 1))   # human pip size
-            price_scale = 10 ** pip_pos           # raw integer → real price
+            sym_name    = s.get("name", "")
+            pip_pos     = s.get("pipPosition") or s.get("digits") or 4
+            pip_size    = 10 ** (-(pip_pos - 1))
+            price_scale = 10 ** pip_pos
             specs[sym_name] = {
                 "pip_size":    pip_size,
                 "price_scale": price_scale,
@@ -87,12 +90,10 @@ def get_symbol_specs() -> dict:
 
 
 def get_pip_info(symbol: str) -> tuple:
-    """Returns (pip_size, price_scale) for a symbol, with hardcoded fallback."""
+    """Returns (pip_size, price_scale) — bridge live data with hardcoded fallback."""
     specs = get_symbol_specs()
     if symbol in specs:
         return specs[symbol]["pip_size"], specs[symbol]["price_scale"]
-
-    # Hardcoded fallback (last resort only)
     if symbol.endswith("JPY"):
         return 0.01, 1000
     FALLBACK = {
@@ -117,7 +118,6 @@ def _db():
 
 
 def notify(msg: str):
-    """Send Telegram notification."""
     token   = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
@@ -135,10 +135,7 @@ def notify(msg: str):
 # ─── MARKET DATA ───────────────────────────────────────────────────────────────
 
 def get_ohlc(symbol: str, timeframe: str, limit: int) -> pd.DataFrame | None:
-    """
-    Fetches OHLC from DB, scales raw cTrader integers to real prices.
-    Returns None on error, empty DataFrame if no data.
-    """
+    """Fetches OHLC from DB, scales raw cTrader integers to real prices."""
     try:
         conn = _db()
         df = pd.read_sql(
@@ -148,15 +145,12 @@ def get_ohlc(symbol: str, timeframe: str, limit: int) -> pd.DataFrame | None:
             conn, params=(symbol, timeframe, limit)
         )
         conn.close()
-
         if df.empty:
             return df
-
         df = df.sort_values("timestamp").reset_index(drop=True)
         _, price_scale = get_pip_info(symbol)
         for col in ["open", "high", "low", "close"]:
             df[col] = df[col] / price_scale
-
         return df
     except Exception as e:
         print(f"[{_ts()}] ❌ DB error ({symbol} {timeframe}): {e}")
@@ -166,18 +160,13 @@ def get_ohlc(symbol: str, timeframe: str, limit: int) -> pd.DataFrame | None:
 # ─── ACTIVE SYMBOLS ────────────────────────────────────────────────────────────
 
 def get_active_symbols() -> list:
-    """
-    Returns all symbols that have at least 30 rows of 15min data in the DB.
-    Falls back to a minimal hardcoded list on error.
-    """
     try:
         conn = _db()
         cur  = conn.cursor()
         cur.execute("""
             SELECT symbol FROM market_data
             WHERE timeframe = '15min'
-            GROUP BY symbol
-            HAVING COUNT(*) >= 30
+            GROUP BY symbol HAVING COUNT(*) >= 30
             ORDER BY symbol;
         """)
         symbols = [row[0] for row in cur.fetchall()]
@@ -192,176 +181,181 @@ def get_active_symbols() -> list:
 # ─── COOLDOWN CHECK ────────────────────────────────────────────────────────────
 
 def is_on_cooldown(symbol: str, direction: str) -> bool:
-    """
-    Returns True if a signal for this symbol+direction was inserted
-    within the last SIGNAL_COOLDOWN_HR hours.
-    Prevents the same setup firing on every 5-minute scan.
-    """
+    """True if a signal for this symbol+direction was inserted within SIGNAL_COOLDOWN_HR hours."""
     try:
         conn = _db()
         cur  = conn.cursor()
         cur.execute("""
             SELECT created_at FROM signals
-            WHERE symbol = %s
-              AND signal_type = %s
-              AND strategy = 'Tekton-SMC-v1'
-            ORDER BY created_at DESC
-            LIMIT 1;
+            WHERE symbol = %s AND signal_type = %s AND strategy = 'Tekton-SMC-v1'
+            ORDER BY created_at DESC LIMIT 1;
         """, (symbol, direction))
         row = cur.fetchone()
         cur.close()
         conn.close()
-
         if row is None:
             return False
-
         age_hours = (datetime.utcnow() - row[0].replace(tzinfo=None)).total_seconds() / 3600
         return age_hours < SIGNAL_COOLDOWN_HR
-
     except Exception as e:
         print(f"[{_ts()}] ⚠️  Cooldown check error ({symbol}): {e}")
-        return False  # allow on error, don't silently block
+        return False
+
+
+# ─── ATR ───────────────────────────────────────────────────────────────────────
+
+def calc_atr(df: pd.DataFrame, period: int = ATR_PERIOD) -> float:
+    high  = df["high"]
+    low   = df["low"]
+    prev  = df["close"].shift(1)
+    tr    = pd.concat([high - low, (high - prev).abs(), (low - prev).abs()], axis=1).max(axis=1)
+    return float(tr.rolling(period).mean().iloc[-1])
 
 
 # ─── HTF TREND FILTER ──────────────────────────────────────────────────────────
 
 def htf_trend(symbol: str) -> str | None:
     """
-    Determines the 1H trend direction using EMA20 vs EMA50.
-    Returns 'BUY', 'SELL', or None if indeterminate.
-    A signal must match the HTF trend to be accepted.
+    1H trend using EMA20 vs EMA50.
+    Returns 'BUY', 'SELL', or None (neutral / insufficient data).
     """
     df = get_ohlc(symbol, "60min", HTF_CANDLES)
     if df is None or len(df) < 20:
-        return None  # no data — neutral (don't block)
+        return None
 
-    ema20 = df["close"].ewm(span=20, adjust=False).mean().iloc[-1]
-    ema50 = df["close"].ewm(span=50, adjust=False).mean().iloc[-1] if len(df) >= 50 else None
+    closes = df["close"]
+    ema20  = closes.ewm(span=20, adjust=False).mean().iloc[-1]
 
-    if ema50 is not None:
-        if ema20 > ema50:
-            return "BUY"
-        elif ema20 < ema50:
-            return "SELL"
+    if len(df) >= 50:
+        ema50 = closes.ewm(span=50, adjust=False).mean().iloc[-1]
+        if ema20 > ema50:   return "BUY"
+        if ema20 < ema50:   return "SELL"
         return None
     else:
-        # Fewer than 50 candles — use slope of EMA20
-        ema20_prev = df["close"].ewm(span=20, adjust=False).mean().iloc[-3]
-        if ema20 > ema20_prev:
-            return "BUY"
-        elif ema20 < ema20_prev:
-            return "SELL"
+        # Fewer than 50 candles — use EMA20 slope
+        ema20_prev = closes.ewm(span=20, adjust=False).mean().iloc[-4]
+        if ema20 > ema20_prev: return "BUY"
+        if ema20 < ema20_prev: return "SELL"
         return None
-
-
-# ─── VOLATILITY FILTER ─────────────────────────────────────────────────────────
-
-def atr(df: pd.DataFrame, period: int = 14) -> float:
-    """Calculate Average True Range over last `period` candles."""
-    high  = df["high"]
-    low   = df["low"]
-    close = df["close"].shift(1)
-    tr    = pd.concat([
-        high - low,
-        (high - close).abs(),
-        (low  - close).abs(),
-    ], axis=1).max(axis=1)
-    return tr.rolling(period).mean().iloc[-1]
 
 
 # ─── SIGNAL DETECTION ──────────────────────────────────────────────────────────
 
 def detect_signal(df: pd.DataFrame, symbol: str) -> dict | None:
     """
-    ICT Fair Value Gap (FVG) + Market Structure Shift (MSS) detection.
+    Scans the last FVG_LOOKBACK candles for any valid ICT Fair Value Gap + MSS.
 
-    Improvements over v1:
-    - Uses ATR to validate that the FVG is meaningful (not noise)
-    - Validates FVG gap size is at least 0.5× ATR (filters weak setups)
-    - Calculates SL from actual swing low/high (not just FVG edge)
-    - Confidence scoring: base + bonuses for gap size and HTF alignment
-    - SL/TP sanity gates applied here (not just in outer loop)
+    Key fixes over v1:
+    - Rolls across candles [-FVG_LOOKBACK .. -3] instead of checking only iloc[-3]
+      This means we find FVGs that formed earlier in the lookback window, not just
+      the most recent 3 candles which almost never align on every 5-min scan.
+    - Uses ATR to gate noise (gap >= ATR_MIN_RATIO × ATR)
+    - Returns the STRONGEST signal found (largest gap relative to ATR)
+    - SL/TP sanity gates: MIN_SL_PIPS / MAX_SL_PIPS
     """
     if len(df) < 20:
         return None
 
     pip_size, _ = get_pip_info(symbol)
-    current_close = float(df["close"].iloc[-1])
-    atr_val = atr(df, 14)
-
-    if atr_val <= 0:
+    atr_val     = calc_atr(df)
+    if atr_val <= 0 or pip_size <= 0:
         return None
 
-    # ── BULLISH FVG + MSS ──────────────────────────────────────────────────────
-    # Classic 3-candle FVG: candle[-3] high < candle[-1] low → gap between them
-    # MSS confirmation: price closes above candle[-3] high
-    fvg_high_b = float(df["low"].iloc[-1])
-    fvg_low_b  = float(df["high"].iloc[-3])
-    gap_b      = fvg_high_b - fvg_low_b
+    current_close = float(df["close"].iloc[-1])
+    best_signal   = None
+    best_gap_atr  = 0.0
 
-    if (gap_b > 0                                      # valid gap
-            and gap_b >= atr_val * 0.3                 # gap is meaningful (≥30% ATR)
-            and current_close > fvg_low_b              # price above gap (MSS)
-            and current_close > float(df["high"].iloc[-2])  # broke prior candle high
-    ):
-        # SL below FVG low with 10% buffer
-        sl_price = fvg_low_b - (gap_b * 0.1)
-        sl_pips  = round((current_close - sl_price) / pip_size, 1)
-        tp_pips  = round(sl_pips * TP_RATIO, 1)
+    # Scan from newest to oldest within lookback window
+    # i = the index of the MIDDLE candle of the 3-candle FVG pattern
+    # pattern: candle[i-1], candle[i], candle[i+1]
+    # FVG is the gap between candle[i-1] and candle[i+1]
+    end_idx   = len(df) - 1          # latest complete candle
+    start_idx = max(1, len(df) - FVG_LOOKBACK)
 
-        if not (MIN_SL_PIPS <= sl_pips <= MAX_SL_PIPS):
-            return None
+    for i in range(end_idx - 1, start_idx, -1):
+        c_prev = df.iloc[i - 1]  # candle before gap
+        c_mid  = df.iloc[i]      # middle candle (inside gap)
+        c_next = df.iloc[i + 1]  # candle after gap (most recent side)
 
-        confidence = CONFIDENCE_BASE
-        if gap_b >= atr_val * 0.6:  confidence += 8   # large gap bonus
-        if gap_b >= atr_val * 1.0:  confidence += 8   # very large gap bonus
+        # ── BULLISH FVG ────────────────────────────────────────────────────────
+        # Gap: c_prev.high < c_next.low (price jumped up, leaving unfilled space)
+        # MSS: current price is above c_prev.high (bullish break of structure)
+        gap_b = float(c_next["low"]) - float(c_prev["high"])
+        if (gap_b > 0
+                and gap_b >= atr_val * ATR_MIN_RATIO
+                and current_close > float(c_prev["high"])   # price above gap (MSS)
+                and current_close > float(c_mid["high"])    # broke mid-candle high
+        ):
+            sl_price = float(c_prev["high"]) - (gap_b * 0.1)
+            sl_pips  = round((current_close - sl_price) / pip_size, 1)
+            tp_pips  = round(sl_pips * TP_RATIO, 1)
 
-        return {
-            "type":       "BUY",
-            "reason":     f"Bullish FVG+MSS (gap={round(gap_b/pip_size,1)}p, ATR={round(atr_val/pip_size,1)}p)",
-            "confidence": min(confidence, 95),
-            "sl_pips":    sl_pips,
-            "tp_pips":    tp_pips,
-        }
+            if not (MIN_SL_PIPS <= sl_pips <= MAX_SL_PIPS):
+                continue
 
-    # ── BEARISH FVG + MSS ──────────────────────────────────────────────────────
-    # Candle[-3] low > candle[-1] high → bearish gap
-    # MSS confirmation: price closes below candle[-3] low
-    fvg_low_s  = float(df["high"].iloc[-1])
-    fvg_high_s = float(df["low"].iloc[-3])
-    gap_s      = fvg_high_s - fvg_low_s
+            gap_atr_ratio = gap_b / atr_val
+            if gap_atr_ratio > best_gap_atr:
+                best_gap_atr = gap_atr_ratio
+                confidence   = CONFIDENCE_BASE
+                if gap_atr_ratio >= 0.5: confidence += 8
+                if gap_atr_ratio >= 1.0: confidence += 8
+                age_candles  = end_idx - i  # how many candles ago the FVG formed
+                if age_candles <= 2: confidence += 5  # fresher = better
 
-    if (gap_s > 0
-            and gap_s >= atr_val * 0.3
-            and current_close < fvg_high_s
-            and current_close < float(df["low"].iloc[-2])
-    ):
-        sl_price = fvg_high_s + (gap_s * 0.1)
-        sl_pips  = round((sl_price - current_close) / pip_size, 1)
-        tp_pips  = round(sl_pips * TP_RATIO, 1)
+                best_signal = {
+                    "type":       "BUY",
+                    "reason":     (f"Bullish FVG+MSS "
+                                   f"(gap={round(gap_b/pip_size,1)}p "
+                                   f"ATR={round(atr_val/pip_size,1)}p "
+                                   f"age={age_candles}c)"),
+                    "confidence": min(confidence, 95),
+                    "sl_pips":    sl_pips,
+                    "tp_pips":    tp_pips,
+                }
 
-        if not (MIN_SL_PIPS <= sl_pips <= MAX_SL_PIPS):
-            return None
+        # ── BEARISH FVG ────────────────────────────────────────────────────────
+        # Gap: c_prev.low > c_next.high (price dropped, leaving unfilled space above)
+        # MSS: current price is below c_prev.low (bearish break of structure)
+        gap_s = float(c_prev["low"]) - float(c_next["high"])
+        if (gap_s > 0
+                and gap_s >= atr_val * ATR_MIN_RATIO
+                and current_close < float(c_prev["low"])    # price below gap (MSS)
+                and current_close < float(c_mid["low"])     # broke mid-candle low
+        ):
+            sl_price = float(c_prev["low"]) + (gap_s * 0.1)
+            sl_pips  = round((sl_price - current_close) / pip_size, 1)
+            tp_pips  = round(sl_pips * TP_RATIO, 1)
 
-        confidence = CONFIDENCE_BASE
-        if gap_s >= atr_val * 0.6:  confidence += 8
-        if gap_s >= atr_val * 1.0:  confidence += 8
+            if not (MIN_SL_PIPS <= sl_pips <= MAX_SL_PIPS):
+                continue
 
-        return {
-            "type":       "SELL",
-            "reason":     f"Bearish FVG+MSS (gap={round(gap_s/pip_size,1)}p, ATR={round(atr_val/pip_size,1)}p)",
-            "confidence": min(confidence, 95),
-            "sl_pips":    sl_pips,
-            "tp_pips":    tp_pips,
-        }
+            gap_atr_ratio = gap_s / atr_val
+            if gap_atr_ratio > best_gap_atr:
+                best_gap_atr = gap_atr_ratio
+                confidence   = CONFIDENCE_BASE
+                if gap_atr_ratio >= 0.5: confidence += 8
+                if gap_atr_ratio >= 1.0: confidence += 8
+                age_candles  = end_idx - i
+                if age_candles <= 2: confidence += 5
 
-    return None
+                best_signal = {
+                    "type":       "SELL",
+                    "reason":     (f"Bearish FVG+MSS "
+                                   f"(gap={round(gap_s/pip_size,1)}p "
+                                   f"ATR={round(atr_val/pip_size,1)}p "
+                                   f"age={age_candles}c)"),
+                    "confidence": min(confidence, 95),
+                    "sl_pips":    sl_pips,
+                    "tp_pips":    tp_pips,
+                }
+
+    return best_signal
 
 
 # ─── SIGNAL INSERT ─────────────────────────────────────────────────────────────
 
-def save_signal(symbol: str, direction: str, reason: str, confidence: int,
-                sl_pips: float, tp_pips: float):
+def save_signal(symbol: str, direction: str, reason: str,
+                confidence: int, sl_pips: float, tp_pips: float):
     try:
         conn = _db()
         cur  = conn.cursor()
@@ -374,8 +368,7 @@ def save_signal(symbol: str, direction: str, reason: str, confidence: int,
         cur.close()
         conn.close()
         print(f"[{_ts()}] 📡 SIGNAL: {direction:4s} {symbol:10s} | "
-              f"SL:{sl_pips:6.1f}p TP:{tp_pips:6.1f}p | "
-              f"Conf:{confidence}% | {reason}")
+              f"SL:{sl_pips:6.1f}p TP:{tp_pips:6.1f}p | Conf:{confidence}% | {reason}")
     except Exception as e:
         print(f"[{_ts()}] ❌ Signal insert error ({symbol}): {e}")
 
@@ -384,14 +377,10 @@ def save_signal(symbol: str, direction: str, reason: str, confidence: int,
 
 def run_scan():
     print(f"[{_ts()}] 🧠 Scan started")
-
     symbols = get_active_symbols()
     print(f"[{_ts()}] 📊 {len(symbols)} active symbols")
 
-    accepted = 0
-    rejected_htf = 0
-    rejected_cooldown = 0
-    rejected_no_setup = 0
+    accepted = rejected_htf = rejected_cooldown = rejected_no_setup = 0
 
     for symbol in symbols:
         df = get_ohlc(symbol, "15min", LTF_CANDLES)
@@ -408,24 +397,23 @@ def run_scan():
         tp_pips    = signal["tp_pips"]
         confidence = signal["confidence"]
 
-        # ── Cooldown gate ──────────────────────────────────────────────────────
+        # Cooldown gate
         if is_on_cooldown(symbol, direction):
             rejected_cooldown += 1
-            print(f"[{_ts()}] ⏳ COOLDOWN: {symbol} {direction} — skipping (< {SIGNAL_COOLDOWN_HR}h since last)")
+            print(f"[{_ts()}] ⏳ COOLDOWN: {symbol} {direction}")
             continue
 
-        # ── HTF trend filter ───────────────────────────────────────────────────
+        # HTF trend filter
         trend = htf_trend(symbol)
         if trend is not None and trend != direction:
             rejected_htf += 1
-            print(f"[{_ts()}] 🚫 HTF BLOCK: {symbol} {direction} vs 1H trend={trend}")
+            print(f"[{_ts()}] 🚫 HTF BLOCK: {symbol} {direction} (1H={trend})")
             continue
 
-        # HTF aligned — add confidence bonus
+        # HTF aligned — confidence bonus
         if trend == direction:
             confidence = min(confidence + 6, 95)
 
-        # ── Accept and save ────────────────────────────────────────────────────
         save_signal(symbol, direction, signal["reason"], confidence, sl_pips, tp_pips)
         notify(
             f"✅ *{direction}* `{symbol}`\n"
@@ -435,21 +423,20 @@ def run_scan():
         accepted += 1
 
     print(f"[{_ts()}] ✅ Scan done — "
-          f"accepted={accepted} | "
-          f"no_setup={rejected_no_setup} | "
-          f"htf_blocked={rejected_htf} | "
-          f"cooldown={rejected_cooldown}")
+          f"accepted={accepted} | no_setup={rejected_no_setup} | "
+          f"htf_blocked={rejected_htf} | cooldown={rejected_cooldown}")
 
 
 # ─── ENTRY POINT ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    notify("🛡️ Tekton Strategy Engine v1.1 started.")
-    print(f"[{_ts()}] 🚀 Strategy engine started. Scan interval: {SCAN_INTERVAL_SEC}s, Cooldown: {SIGNAL_COOLDOWN_HR}h")
-
+    notify("🛡️ Tekton Strategy Engine v1.2 started.")
+    print(f"[{_ts()}] 🚀 Strategy v1.2 started — "
+          f"scan={SCAN_INTERVAL_SEC}s cooldown={SIGNAL_COOLDOWN_HR}h "
+          f"lookback={FVG_LOOKBACK}c ATR_min={ATR_MIN_RATIO}")
     while True:
         try:
             run_scan()
         except Exception as e:
-            print(f"[{_ts()}] 💥 Unhandled error in run_scan: {e}")
+            print(f"[{_ts()}] 💥 Unhandled error: {e}")
         time.sleep(SCAN_INTERVAL_SEC)
