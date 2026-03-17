@@ -684,6 +684,12 @@ def sync_latest_candles():
 @require_auth
 def get_signals():
     try:
+        # Optional query params: status, symbol, limit (default 200), offset (default 0)
+        status_filter = request.args.get("status", None)
+        symbol_filter = request.args.get("symbol", None)
+        limit = int(request.args.get("limit", 200))
+        offset = int(request.args.get("offset", 0))
+
         conn = psycopg2.connect(
             host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
             database=os.getenv("CLOUD_SQL_DB_NAME", "tekton-trader"),
@@ -691,11 +697,27 @@ def get_signals():
             password=os.getenv("CLOUD_SQL_DB_PASSWORD")
         )
         cur = conn.cursor()
-        cur.execute("""
+
+        # Build dynamic WHERE clause
+        conditions = []
+        params = []
+        if status_filter:
+            conditions.append("status = %s")
+            params.append(status_filter)
+        if symbol_filter:
+            conditions.append("symbol = %s")
+            params.append(symbol_filter)
+
+        where_clause = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+        params += [limit, offset]
+
+        cur.execute(f"""
             SELECT signal_uuid, symbol, signal_type, timeframe, confidence_score, sl_pips, tp_pips, status, created_at
             FROM signals
-            ORDER BY created_at DESC LIMIT 200;
-        """)
+            {where_clause}
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s;
+        """, params)
         rows = cur.fetchall()
         cur.close()
         conn.close()
@@ -714,11 +736,52 @@ def get_signals():
                 "created_at": row[8].strftime("%Y-%m-%d %H:%M:%S") if row[8] else "N/A"
             })
 
-        print(f"📡 API HIT: Dashboard requested Signals. Found {len(signals_list)} rows in DB.")
+        print(f"📡 API HIT: Signals requested. status={status_filter} symbol={symbol_filter} limit={limit} offset={offset}. Found {len(signals_list)} rows.")
         return jsonify({"success": True, "signals": signals_list})
 
     except Exception as e:
         print(f"❌ Signals Proxy Error: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/proxy/signals/stats", methods=["GET"])
+@require_auth
+def get_signals_stats():
+    try:
+        conn = psycopg2.connect(
+            host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
+            database=os.getenv("CLOUD_SQL_DB_NAME", "tekton-trader"),
+            user=os.getenv("CLOUD_SQL_DB_USER", "postgres"),
+            password=os.getenv("CLOUD_SQL_DB_PASSWORD")
+        )
+        cur = conn.cursor()
+
+        # Count by status
+        cur.execute("""
+            SELECT status, COUNT(*) as cnt
+            FROM signals
+            GROUP BY status;
+        """)
+        rows = cur.fetchall()
+
+        # Distinct symbols for filter dropdown
+        cur.execute("SELECT DISTINCT symbol FROM signals ORDER BY symbol;")
+        symbols = [r[0] for r in cur.fetchall()]
+
+        cur.close()
+        conn.close()
+
+        counts = {"TOTAL": 0, "PENDING": 0, "EXECUTED": 0, "FAILED": 0, "EXPIRED": 0, "CANCELLED": 0}
+        for row in rows:
+            status, cnt = row[0], row[1]
+            counts["TOTAL"] += cnt
+            if status in counts:
+                counts[status] = cnt
+
+        print(f"📊 API HIT: Signal stats requested. Total={counts['TOTAL']}")
+        return jsonify({"success": True, "counts": counts, "symbols": symbols})
+
+    except Exception as e:
+        print(f"❌ Signal Stats Error: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/trade/execute", methods=["POST"])
