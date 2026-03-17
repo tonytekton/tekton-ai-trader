@@ -2,6 +2,7 @@ import time
 import sys
 import requests
 import os
+import psycopg2
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,6 +15,17 @@ sys.stderr = sys.stdout
 BRIDGE_URL  = os.getenv("BRIDGE_URL", "http://localhost:8080")
 BRIDGE_KEY  = os.getenv("BRIDGE_KEY")
 HEADERS     = {"X-Bridge-Key": BRIDGE_KEY}
+
+DB_PARAMS = {
+    "host":     "172.16.64.3",
+    "database": "tekton-trader",
+    "user":     "postgres",
+    "password": os.getenv("CLOUD_SQL_DB_PASSWORD")
+}
+
+# Orphan check runs every N monitor loops (every 15s * 20 = every 5 minutes)
+ORPHAN_CHECK_INTERVAL = 20
+_orphan_loop_counter  = 0
 
 
 def fetch_config():
@@ -102,6 +114,59 @@ def manage_risk(config):
                 print(f"⚠️ Close failed for {symbol} [{pos_id}]: {close_data.get('error')}")
 
 
+def check_orphans():
+    """
+    Compares open positions on cTrader against the executions table in the DB.
+    Any position with no matching executions row is an orphan — not opened by this system.
+    Orphans are inserted into executions with signal_uuid=NULL and status='ORPHAN'.
+    Already-flagged orphans are skipped (ON CONFLICT DO NOTHING).
+    """
+    conn, cur = None, None
+    try:
+        # Fetch all open positions from bridge
+        res = requests.get(f"{BRIDGE_URL}/positions/list", headers=HEADERS, timeout=10)
+        if not res.text.strip():
+            return
+        positions = res.json().get("positions", [])
+        if not positions:
+            return
+
+        conn = psycopg2.connect(**DB_PARAMS)
+        cur  = conn.cursor()
+
+        # Fetch all known position IDs from executions table
+        cur.execute("SELECT position_id FROM executions;")
+        known_ids = {row[0] for row in cur.fetchall()}
+
+        orphans_found = 0
+        for pos in positions:
+            pos_id = pos.get("position_id") or pos.get("id")
+            if not pos_id:
+                continue
+
+            if int(pos_id) not in known_ids:
+                # Unknown position — flag as ORPHAN
+                symbol = pos.get("symbol", "UNKNOWN")
+                print(f"🚨 ORPHAN DETECTED: {symbol} | Position ID: {pos_id} — not in executions table. Flagging.")
+                cur.execute("""
+                    INSERT INTO executions (position_id, signal_uuid, symbol, status)
+                    VALUES (%s, NULL, %s, 'ORPHAN')
+                    ON CONFLICT (position_id) DO NOTHING;
+                """, (int(pos_id), symbol))
+                orphans_found += 1
+
+        if orphans_found:
+            conn.commit()
+            print(f"⚠️ {orphans_found} orphan(s) flagged in executions table.")
+        # No print if zero orphans — keeps log clean
+
+    except Exception as e:
+        print(f"❌ ORPHAN CHECK ERROR: {e}")
+    finally:
+        if cur:  cur.close()
+        if conn: conn.close()
+
+
 if __name__ == "__main__":
     print(f"🛡️ Tekton Monitor Engine Active. [{time.strftime('%Y-%m-%d %H:%M:%S')}]")
     while True:
@@ -112,4 +177,14 @@ if __name__ == "__main__":
                 manage_risk(config)
         except Exception as e:
             print(f"❌ MONITOR ERROR: {e}")
+
+        # Orphan check every 5 minutes (independent of circuit breaker state)
+        _orphan_loop_counter += 1
+        if _orphan_loop_counter >= ORPHAN_CHECK_INTERVAL:
+            _orphan_loop_counter = 0
+            try:
+                check_orphans()
+            except Exception as e:
+                print(f"❌ ORPHAN CHECK ERROR: {e}")
+
         time.sleep(15)

@@ -269,8 +269,36 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
         print(f"🔍 Bridge response: {result}")
 
         if result.get("success"):
-            pos_id = result.get("position_id")
+            pos_id      = result.get("position_id")
+            entry_price = result.get("entry_price")
             print(f"✅ Trade Executed: {symbol} | Position ID: {pos_id}")
+
+            # Write broker_position_id back to signals and insert into executions table
+            try:
+                db_conn = psycopg2.connect(**DB_PARAMS)
+                db_cur  = db_conn.cursor()
+
+                # Update signals with broker position ID
+                db_cur.execute(
+                    "UPDATE signals SET broker_position_id = %s WHERE signal_uuid = %s",
+                    (str(pos_id), str(s_uuid))
+                )
+
+                # Insert execution record — position_id is the primary key
+                db_cur.execute("""
+                    INSERT INTO executions (position_id, signal_uuid, symbol, entry_price, status)
+                    VALUES (%s, %s, %s, %s, 'OPEN')
+                    ON CONFLICT (position_id) DO NOTHING;
+                """, (int(pos_id), str(s_uuid), symbol, entry_price))
+
+                db_conn.commit()
+                print(f"📝 Recorded: signals.broker_position_id={pos_id} | executions row inserted.")
+            except Exception as db_err:
+                print(f"⚠️ DB record error (trade still executed): {db_err}")
+            finally:
+                if db_cur:  db_cur.close()
+                if db_conn: db_conn.close()
+
             return True
         else:
             print(f"❌ Execution Failed: {result.get('error')}")
