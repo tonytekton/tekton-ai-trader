@@ -9,14 +9,25 @@ Deno.serve(async (req) => {
     const bridgeUrl = Deno.env.get('BRIDGE_URL');
     const bridgeKey = Deno.env.get('BRIDGE_KEY');
 
-    const res = await fetch(`${bridgeUrl}/proxy/signals`, {
+    // Forward query params: status, symbol, limit, offset
+    const url = new URL(req.url);
+    const status = url.searchParams.get('status') || '';
+    const symbol = url.searchParams.get('symbol') || '';
+    const limit  = url.searchParams.get('limit')  || '200';
+    const offset = url.searchParams.get('offset') || '0';
+
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (symbol) params.set('symbol', symbol);
+    params.set('limit', limit);
+    params.set('offset', offset);
+
+    const res = await fetch(`${bridgeUrl}/proxy/signals?${params.toString()}`, {
       headers: { 'X-Bridge-Key': bridgeKey },
     });
 
     const data = await res.json();
 
-    // Bridge now returns all statuses (PENDING, EXECUTED, FAILED, EXPIRED, CANCELLED)
-    // with sl_pips, tp_pips included — last 200 records ordered newest first
     const signals = (data.signals || []).map(s => ({
       signal_uuid: s.uuid,
       symbol:      s.symbol,
