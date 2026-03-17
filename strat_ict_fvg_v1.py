@@ -36,7 +36,8 @@ ATR_MIN_RATIO      = 0.2      # FVG gap must be ≥ 20% of ATR
 MSS_ATR_BUFFER     = 0.5      # price can be within 0.5×ATR of gap level and still pass
 MIN_SL_PIPS        = 3.0
 MAX_SL_PIPS        = 600.0
-TP_RATIO           = 1.8
+MIN_RR             = 1.5      # minimum reward:risk ratio to accept a signal — entry quality gate only
+TP_RATIO           = 1.8      # reference for AI optimisation; not enforced at entry
 CONFIDENCE_BASE    = 72
 SPECS_CACHE_TTL    = 300
 
@@ -347,6 +348,11 @@ def detect_signal(df: pd.DataFrame, symbol: str) -> dict | None:
             if tp_pips <= 0:
                 continue
 
+            # Entry quality gate — reject setups below minimum RR.
+            # Once in a trade, AI manages exits freely regardless of RR.
+            if sl_pips > 0 and (tp_pips / sl_pips) < MIN_RR:
+                continue
+
             gap_atr_ratio = gap_b / atr_val
             if gap_atr_ratio > best_gap_atr:
                 best_gap_atr = gap_atr_ratio
@@ -391,6 +397,11 @@ def detect_signal(df: pd.DataFrame, symbol: str) -> dict | None:
             if not (MIN_SL_PIPS <= sl_pips <= MAX_SL_PIPS):
                 continue
             if tp_pips <= 0:
+                continue
+
+            # Entry quality gate — reject setups below minimum RR.
+            # Once in a trade, AI manages exits freely regardless of RR.
+            if sl_pips > 0 and (tp_pips / sl_pips) < MIN_RR:
                 continue
 
             gap_atr_ratio = gap_s / atr_val
