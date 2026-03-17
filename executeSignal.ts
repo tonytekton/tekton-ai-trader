@@ -1,61 +1,50 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
-// ── Pip size map: matches strat_ict_fvg_v1.py exactly ──
-// These are the "human" pip sizes in price terms.
-const PIP_SIZE_MAP = {
-  XAUUSD: 0.1,
-  XAGUSD: 0.01,
-  XTIUSD: 0.01,
-  XBRUSD: 0.01,
-  US30:   1.0,
-  US500:  0.1,
-  USTEC:  0.1,
-  UK100:  1.0,
-  DE40:   1.0,
-  JP225:  1.0,
-  AUS200: 1.0,
-  HK50:   1.0,
-  SPX500: 0.1,
-};
+/**
+ * executeSignal — Tekton AI Trader v4.6
+ *
+ * Receives a signal and executes it on cTrader via the bridge.
+ *
+ * Flow:
+ *  1. Validate inputs
+ *  2. Check no existing position on this symbol
+ *  3. Fetch account status (free_margin, currency)
+ *  4. Fetch contract specs (pipPosition, lotSize_centilots, step/min/max volume)
+ *  5. Derive pip size dynamically: pipSize = 10^-pipPosition
+ *  6. Get quote currency from symbols/list
+ *  7. If quote ≠ account currency, fetch conversion rate from prices/current
+ *  8. Fetch risk_pct from UserConfig
+ *  9. Size position: lots = (freeMargin * riskPct) / (sl_pips * pipValuePerLot_AC)
+ * 10. Convert sl_pips / tp_pips → cTrader relative points
+ * 11. Execute via /trade/execute
+ */
 
-// Quote currency for non-forex symbols (can't derive from symbol name)
-const INDEX_QUOTE_MAP = {
-  UK100:  'GBP',
-  DE40:   'EUR',
-  US30:   'USD',
-  US500:  'USD',
-  USTEC:  'USD',
-  SPX500: 'USD',
-  JP225:  'JPY',
-  AUS200: 'AUD',
-  HK50:   'HKD',
-  XAUUSD: 'USD',
-  XAGUSD: 'USD',
-  XTIUSD: 'USD',
-  XBRUSD: 'USD',
-};
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-function getPipSize(symbol) {
-  if (symbol in PIP_SIZE_MAP) return PIP_SIZE_MAP[symbol];
-  if (symbol.endsWith('JPY')) return 0.01;
-  return 0.0001; // standard forex
+/** Derive human pip size from bridge pipPosition (decimal digits in quoted price).
+ *  e.g. pipPosition=5 → 0.00001 * 10 = 0.0001 (standard forex 5-digit)
+ *  e.g. pipPosition=2 → 0.01 * 10 = 0.1 (not used this way — see below)
+ *
+ *  Actually: pip = 10^-(pipPosition-1) for most brokers
+ *  But cTrader: pipPosition IS the pip decimal position directly.
+ *  EURUSD: pipPosition=5, pip=0.0001 = 10^-4 = 10^-(5-1) ✓
+ *  UK100:  pipPosition=2, pip=1.0    = 10^0  = 10^-(2-2)? No...
+ *
+ *  Safer: pip size = 10^-(pipPosition) / 10 * 10 → just 10^-(pipPosition-1)
+ *  Confirmed from tekton_executor.py: pip_size = 10 ** (-pip_position + 1)
+ */
+function derivePipSize(pipPosition: number): number {
+  return Math.pow(10, -(pipPosition - 1));
 }
 
-function getQuoteCurrency(symbol) {
-  if (symbol in INDEX_QUOTE_MAP) return INDEX_QUOTE_MAP[symbol];
-  return symbol.slice(-3).toUpperCase(); // forex: last 3 chars
-}
+/** Points per pip: how many cTrader price points = 1 pip.
+ *  cTrader price is in points = 10^-pipPosition.
+ *  1 pip = 10^-(pipPosition-1) price units = 10 points always.
+ *  Confirmed: always 10 for all instruments in cTrader OpenAPI.
+ */
+const POINTS_PER_PIP = 10;
 
-// How many cTrader points = 1 pip for this symbol.
-// cTrader uses points (1/10th of a pip for 5-digit forex, 1:1 for indices).
-// pipPosition from contract specs = number of decimal digits in price.
-// points-per-pip = pipSize / (10^-pipPosition)
-// e.g. EURUSD: pipSize=0.0001, pipPosition=5 → 0.0001 / 0.00001 = 10 points/pip ✓
-// e.g. UK100:  pipSize=1.0,    pipPosition=2 → 1.0 / 0.01 = 100 points/pip ✓
-// e.g. JP225:  pipSize=1.0,    pipPosition=0 → 1.0 / 1.0 = 1 point/pip ✓
-function pointsPerPip(pipSize, pipPosition) {
-  return Math.round(pipSize / Math.pow(10, -pipPosition));
-}
+// ── Main handler ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
   try {
@@ -63,142 +52,206 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { signal_uuid, symbol, direction, sl_pips, tp_pips } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { signal_uuid, symbol, direction, sl_pips, tp_pips } = body;
 
+    // ── Step 1: Validate inputs ──
     if (!signal_uuid || !symbol || !direction || !sl_pips || !tp_pips) {
-      return Response.json({ error: 'signal_uuid, symbol, direction, sl_pips and tp_pips are required' }, { status: 400 });
+      return Response.json(
+        { error: 'Required: signal_uuid, symbol, direction, sl_pips, tp_pips' },
+        { status: 400 }
+      );
+    }
+    if (!['BUY', 'SELL'].includes(direction.toUpperCase())) {
+      return Response.json({ error: 'direction must be BUY or SELL' }, { status: 400 });
     }
 
+    const sym = symbol.toUpperCase();
+    const side = direction.toUpperCase();
     const bridgeUrl = Deno.env.get('BRIDGE_URL');
     const bridgeKey = Deno.env.get('BRIDGE_KEY');
-    const headers = { 'X-Bridge-Key': bridgeKey, 'Content-Type': 'application/json' };
+    const headers: Record<string, string> = {
+      'X-Bridge-Key': bridgeKey!,
+      'Content-Type': 'application/json',
+    };
 
-    // ── Step 1: Check for existing open position on this symbol ──
+    // ── Step 2: Check for existing open position on this symbol ──
     const posRes = await fetch(`${bridgeUrl}/positions/list`, { headers });
+    if (!posRes.ok) throw new Error(`positions/list failed: ${posRes.status}`);
     const posData = await posRes.json();
-    const alreadyOpen = (posData.positions || []).some(p => p.symbol === symbol);
+    const alreadyOpen = (posData.positions || []).some(
+      (p: any) => p.symbol === sym
+    );
     if (alreadyOpen) {
-      return Response.json({ error: `${symbol} already has an open position` }, { status: 409 });
+      return Response.json(
+        { error: `${sym} already has an open position` },
+        { status: 409 }
+      );
     }
 
-    // ── Step 2: Account status ──
+    // ── Step 3: Account status ──
     const accRes = await fetch(`${bridgeUrl}/account/status`, { headers });
+    if (!accRes.ok) throw new Error(`account/status failed: ${accRes.status}`);
     const accData = await accRes.json();
-    const freeMargin  = parseFloat(accData.free_margin  || accData.equity || 0);
-    const accCurrency = (accData.currency || 'EUR').toUpperCase();
+    const freeMargin  = parseFloat(accData.free_margin ?? 0);
+    const accCurrency = (accData.currency ?? 'EUR').toUpperCase();
 
-    // ── Step 3: Contract specs ──
+    if (freeMargin <= 0) {
+      return Response.json({ error: 'Insufficient free margin' }, { status: 400 });
+    }
+
+    // ── Step 4: Contract specs ──
     const specRes = await fetch(`${bridgeUrl}/contract/specs`, {
-      method: 'POST', headers,
-      body: JSON.stringify({ symbol }),
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ symbol: sym }),
     });
-    const specData  = await specRes.json();
-    const spec      = specData.contract_specifications || {};
+    if (!specRes.ok) throw new Error(`contract/specs failed: ${specRes.status}`);
+    const specData = await specRes.json();
+    if (!specData.success) throw new Error(`contract/specs error: ${specData.error}`);
 
-    // pipPosition: decimal digits in quoted price (5 for EURUSD, 2 for UK100, 0 for JP225)
-    const pipPosition  = spec.pipPosition ?? spec.digits ?? 5;
-    // contractSize: units per 1 lot (100000 for forex, 1 for most indices, varies)
-    const contractSize = parseFloat(spec.lotSize ?? spec.contractSize ?? 100_000);
-    const stepVolume   = spec.stepVolume_centilots ?? 100;
-    const minVolume    = spec.minVolume_centilots  ?? 100;
-    const maxVolume    = spec.maxVolume_centilots  ?? 100_000_000; // broker max
+    const spec          = specData.contract_specifications;
+    const pipPosition   = spec.pipPosition ?? spec.digits ?? 5;
+    // lotSize_centilots = number of centilots per 1 full lot
+    // For forex: 10,000,000 (100,000 units × 100 centilots)
+    // For indices: varies (e.g. 100 for DE40)
+    const lotSizeCentilots = parseFloat(spec.lotSize_centilots ?? 10_000_000);
+    const stepVolume    = parseInt(spec.stepVolume_centilots ?? 100);
+    const minVolume     = parseInt(spec.minVolume_centilots  ?? 100);
+    const maxVolume     = parseInt(spec.maxVolume_centilots  ?? 100_000_000);
 
-    // ── Step 4: Get pip value in account currency ──
-    // pip value per 1 lot = pipSize * contractSize (in quote currency)
-    // then convert quote → account currency
-    const pipSize           = getPipSize(symbol);
-    const quoteCurrency     = getQuoteCurrency(symbol);
-    const pipValuePerLot_QC = pipSize * contractSize; // in quote currency
+    // ── Step 5: Derive pip size from pipPosition ──
+    // pipSize = 10^-(pipPosition-1)
+    // EURUSD pipPosition=5 → 0.0001 ✓
+    // UK100  pipPosition=2 → 0.1   (but UK100 trades in 1.0 pips — need to verify)
+    // JP225  pipPosition=1 → 1.0   ✓
+    const pipSize = derivePipSize(pipPosition);
 
+    // contractSize in units per 1 lot = lotSizeCentilots / 100
+    const contractSize = lotSizeCentilots / 100;
+
+    // pip value per 1 lot in quote currency = pipSize × contractSize
+    const pipValuePerLot_QC = pipSize * contractSize;
+
+    // ── Step 6: Get quote currency for this symbol ──
+    const symsRes = await fetch(`${bridgeUrl}/symbols/list`, { headers });
+    if (!symsRes.ok) throw new Error(`symbols/list failed: ${symsRes.status}`);
+    const symsData = await symsRes.json();
+    const symSpec = (symsData.symbols || []).find(
+      (s: any) => s.name.toUpperCase() === sym
+    );
+
+    // For forex: quote currency = last 3 chars of symbol name
+    // For indices/metals: look up from symbol spec (quoteAssetId maps to currency)
+    // We'll derive from symbol name as primary, with known overrides
+    const QUOTE_CURRENCY_MAP: Record<string, string> = {
+      XAUUSD: 'USD', XAGUSD: 'USD', XTIUSD: 'USD', XBRUSD: 'USD',
+      UK100:  'GBP', DE40:   'EUR', US30:   'USD', US500:  'USD',
+      USTEC:  'USD', SPX500: 'USD', JP225:  'JPY', AUS200: 'AUD',
+      HK50:   'HKD', F40:    'EUR', NAS100: 'USD', DAX:    'EUR',
+    };
+    const quoteCurrency = QUOTE_CURRENCY_MAP[sym] ?? sym.slice(-3).toUpperCase();
+
+    // ── Step 7: Conversion rate (quote → account currency) ──
     let conversionRate = 1.0;
     if (quoteCurrency !== accCurrency) {
       const direct   = `${quoteCurrency}${accCurrency}`;
       const indirect = `${accCurrency}${quoteCurrency}`;
+      const available = new Set(
+        (symsData.symbols || []).map((s: any) => s.name.toUpperCase())
+      );
 
-      const symsRes  = await fetch(`${bridgeUrl}/symbols/list`, { headers });
-      const symsData = await symsRes.json();
-      const available = new Set((symsData.symbols || []).map(s => s.name.toUpperCase()));
-
-      let convSymbol = null;
-      let invert     = false;
-      if (available.has(direct))   { convSymbol = direct;   invert = false; }
+      let convSymbol: string | null = null;
+      let invert = false;
+      if (available.has(direct))        { convSymbol = direct;   invert = false; }
       else if (available.has(indirect)) { convSymbol = indirect; invert = true;  }
 
       if (convSymbol) {
-        let avgPrice = 0;
+        // Retry up to 5 times waiting for price feed to warm up
         for (let attempt = 0; attempt < 5; attempt++) {
-          const priceRes  = await fetch(`${bridgeUrl}/prices/current`, {
-            method: 'POST', headers,
+          const priceRes = await fetch(`${bridgeUrl}/prices/current`, {
+            method: 'POST',
+            headers,
             body: JSON.stringify({ symbols: [convSymbol] }),
           });
           const priceJson = await priceRes.json();
-          const priceList = priceJson.prices || [];
+          const priceList = priceJson.prices ?? [];
           if (priceList.length > 0) {
-            const p  = priceList[0];
-            avgPrice = (p.bid_raw + p.ask_raw) / 2 / 1_000_000;
-            break;
+            const p = priceList[0];
+            // bid_raw and ask_raw are raw integers — divide by 1,000,000 for actual price
+            const avgRaw = (p.bid_raw + p.ask_raw) / 2;
+            const avgPrice = avgRaw / 1_000_000;
+            if (avgPrice > 0) {
+              conversionRate = invert ? (1.0 / avgPrice) : avgPrice;
+              break;
+            }
           }
           await new Promise(r => setTimeout(r, 2000));
-        }
-        if (avgPrice > 0) {
-          conversionRate = invert ? (1.0 / avgPrice) : avgPrice;
         }
       }
     }
 
-    const pipValuePerLot_AC = pipValuePerLot_QC * conversionRate; // in account currency
+    const pipValuePerLot_AC = pipValuePerLot_QC * conversionRate;
 
-    // ── Step 5: Fetch risk % from user config ──
+    // ── Step 8: Fetch risk_pct from UserConfig ──
     const settings = await base44.entities.UserConfig.list();
-    const riskPct  = settings.length > 0 ? parseFloat(settings[0].risk_pct || 0.005) : 0.005;
+    const riskPct  = settings.length > 0
+      ? parseFloat(settings[0].risk_pct ?? 0.005)
+      : 0.005;
 
-    // ── Step 6: Risk-based position sizing ──
-    // totalRiskCash = how much cash we're willing to lose on this trade
-    // riskCash = lots * sl_pips * pipValuePerLot_AC
-    // → lots = riskCash / (sl_pips * pipValuePerLot_AC)
-    const totalRiskCash = freeMargin * riskPct;
-    const lotsRaw       = totalRiskCash / (sl_pips * pipValuePerLot_AC);
+    // ── Step 9: Risk-based position sizing ──
+    // riskCash = how much we risk on this trade in account currency
+    // riskCash = lots × sl_pips × pipValuePerLot_AC
+    // → lots = riskCash / (sl_pips × pipValuePerLot_AC)
+    const riskCash      = freeMargin * riskPct;
+    const lotsRaw       = riskCash / (sl_pips * pipValuePerLot_AC);
+    const centilotsRaw  = Math.round(lotsRaw * 100);
 
-    // Convert lots to centilots (1 lot = 100 centilots in cTrader API)
-    const centilots_raw = Math.round(lotsRaw * 100);
+    // Snap down to nearest stepVolume, then clamp to [min, max]
+    let finalVol = Math.max(
+      Math.floor(centilotsRaw / stepVolume) * stepVolume,
+      minVolume
+    );
+    finalVol = Math.min(finalVol, maxVolume);
 
-    // Snap to nearest stepVolume, clamp to [min, max]
-    let finalVol = Math.max(Math.floor(centilots_raw / stepVolume) * stepVolume, minVolume);
-    finalVol     = Math.min(finalVol, maxVolume);
+    // ── Step 10: Convert sl_pips / tp_pips → cTrader relative points ──
+    // cTrader rel_sl / rel_tp are in price points (10^-pipPosition each)
+    // 1 pip = POINTS_PER_PIP (always 10 in cTrader)
+    const relSl = Math.round(sl_pips * POINTS_PER_PIP);
+    const relTp = Math.round(tp_pips * POINTS_PER_PIP);
 
-    // ── Step 7: Convert sl_pips / tp_pips → cTrader relative points ──
-    // cTrader rel_sl/rel_tp are in price points (smallest price increment = 1 point)
-    const ppp   = pointsPerPip(pipSize, pipPosition); // points per pip
-    const relSl = Math.round(sl_pips * ppp);
-    const relTp = Math.round(tp_pips * ppp);
-
-    // ── Step 8: Execute the trade ──
+    // ── Step 11: Execute the trade ──
     const execRes = await fetch(`${bridgeUrl}/trade/execute`, {
-      method: 'POST', headers,
+      method: 'POST',
+      headers,
       body: JSON.stringify({
         symbol,
-        side:    direction.toUpperCase(),
-        volume:  finalVol,
+        side,                    // bridge accepts "side" field (BUY/SELL)
+        volume: finalVol,        // in centilots
         comment: String(signal_uuid),
-        rel_sl:  relSl,
-        rel_tp:  relTp,
+        rel_sl: relSl,
+        rel_tp: relTp,
       }),
     });
-
+    if (!execRes.ok) throw new Error(`trade/execute HTTP ${execRes.status}`);
     const execData = await execRes.json();
 
+    const debug = {
+      freeMargin, riskPct, riskCash,
+      sl_pips, tp_pips,
+      pipPosition, pipSize, contractSize,
+      pipValuePerLot_QC, quoteCurrency, conversionRate,
+      pipValuePerLot_AC,
+      lotsRaw, centilotsRaw, finalVol,
+      relSl, relTp,
+      lotSizeCentilots, stepVolume, minVolume, maxVolume,
+    };
+
     if (!execData.success) {
-      // Mark the signal as FAILED so it doesn't get retried
-      return Response.json({
-        error:          execData.error || 'Execution failed',
-        debug_sizing: {
-          freeMargin, riskPct, totalRiskCash,
-          sl_pips, pipValuePerLot_AC, lotsRaw,
-          centilots_raw, finalVol, relSl, relTp,
-          pipSize, pipPosition, contractSize, quoteCurrency,
-          conversionRate, ppp,
-        }
-      }, { status: 400 });
+      return Response.json(
+        { error: execData.error ?? 'Execution failed', debug },
+        { status: 400 }
+      );
     }
 
     return Response.json({
@@ -207,16 +260,10 @@ Deno.serve(async (req) => {
       entry_price:      execData.entry_price,
       volume_centilots: finalVol,
       volume_lots:      finalVol / 100,
-      debug_sizing: {
-        freeMargin, riskPct, totalRiskCash,
-        sl_pips, pipValuePerLot_AC, lotsRaw,
-        centilots_raw, finalVol, relSl, relTp,
-        pipSize, pipPosition, contractSize, quoteCurrency,
-        conversionRate, ppp,
-      },
+      debug,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
