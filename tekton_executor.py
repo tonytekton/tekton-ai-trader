@@ -107,8 +107,8 @@ def get_live_pip_value(symbol, account_currency):
     direct   = f"{quote_currency}{acc_currency}"
     indirect = f"{acc_currency}{quote_currency}"
 
-    all_symbols_res = requests.get(f"{BRIDGE_BASE_URL}/symbols", headers=HEADERS)
-    if not all_symbols_res.text.strip(): raise ValueError("Empty response from /symbols")
+    all_symbols_res = requests.get(f"{BRIDGE_BASE_URL}/symbols/list", headers=HEADERS)
+    if not all_symbols_res.text.strip(): raise ValueError("Empty response from /symbols/list")
     available_names = {s["name"].upper() for s in all_symbols_res.json().get("symbols", [])}
 
     if direct in available_names:
