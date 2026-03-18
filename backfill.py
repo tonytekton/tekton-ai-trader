@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import requests
 import psycopg2
 from datetime import datetime
@@ -6,10 +8,10 @@ from datetime import datetime
 # --- CONFIGURATION ---
 DB_HOST = "172.16.64.3"
 DB_NAME = "tekton-trader"
-DB_USER = "postgres" 
-DB_PASS = ")^](XFrJ0@6zUcc{" # <--- Your DB password
+DB_USER    = os.getenv("CLOUD_SQL_DB_USER", "postgres") 
+DB_PASS    = os.getenv("CLOUD_SQL_DB_PASSWORD")
 BRIDGE_URL = "http://localhost:8080/prices/historical"
-BRIDGE_KEY = "DVj7Y1Ax0kI93qEdCC6vqVh74WykbOpyeYDGduVf" # <--- Your Bridge Key
+BRIDGE_KEY = os.getenv("BRIDGE_KEY", "")
 
 # The timeframes based exactly on your DB schema
 TIMEFRAMES = ["5min", "15min", "60min", "4H", "Daily"] 
