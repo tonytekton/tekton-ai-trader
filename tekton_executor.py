@@ -53,7 +53,8 @@ def fetch_settings():
             "risk_pct":                 float(data.get("risk_pct", 0.01)),
             "target_reward":            float(data.get("target_reward", 1.8)),
             "daily_drawdown_limit":     float(data.get("daily_drawdown_limit", 0.05)),
-            "max_session_exposure_pct": float(data.get("max_session_exposure_pct", 4.0))
+            "max_session_exposure_pct": float(data.get("max_session_exposure_pct", 4.0)),
+            "max_lots":                 float(data.get("max_lots", 50.0))
         }
     except Exception as e:
         print(f"⚠️ Settings Fetch Error: {e}")
@@ -111,6 +112,9 @@ def get_live_pip_value(symbol, account_currency):
     if not all_symbols_res.text.strip(): raise ValueError("Empty response from /symbols/list")
     available_names = {s["name"].upper() for s in all_symbols_res.json().get("symbols", [])}
 
+    two_leg = False
+    conv_symbol2 = None
+    invert2 = False
     if direct in available_names:
         conv_symbol = direct
         invert = False
@@ -118,7 +122,17 @@ def get_live_pip_value(symbol, account_currency):
         conv_symbol = indirect
         invert = True
     else:
-        raise ValueError(f"Conversion failed for {symbol}: no symbol for {direct} or {indirect}")
+        # Try cross via USD (e.g. GBPAUD -> GBPUSD * USDEUR)
+        leg1_sym = f"{quote_currency}USD" if f"{quote_currency}USD" in available_names else (f"USD{quote_currency}" if f"USD{quote_currency}" in available_names else None)
+        leg2_sym = f"USD{acc_currency}" if f"USD{acc_currency}" in available_names else (f"{acc_currency}USD" if f"{acc_currency}USD" in available_names else None)
+        if leg1_sym and leg2_sym:
+            conv_symbol  = leg1_sym
+            invert       = leg1_sym.startswith("USD")
+            conv_symbol2 = leg2_sym
+            invert2      = leg2_sym.startswith(acc_currency)
+            two_leg      = True
+        else:
+            raise ValueError(f"Conversion failed for {symbol}: no path {direct}/{indirect} or via USD")
 
     # Fetch price with retry for subscription warm-up
     price_data = {}
@@ -141,8 +155,30 @@ def get_live_pip_value(symbol, account_currency):
     if avg_price == 0:
         raise ValueError(f"Conversion failed for {symbol}: no price for {conv_symbol}")
 
-    conversion_rate = (1.0 / avg_price) if invert else avg_price
-    return pip_size * conversion_rate
+    if not two_leg:
+        conversion_rate = (1.0 / avg_price) if invert else avg_price
+        return pip_size * conversion_rate
+
+    # Two-leg: fetch second price leg
+    price_data2 = {}
+    for attempt in range(5):
+        pr2 = requests.post(f"{BRIDGE_BASE_URL}/prices/current", json={"symbols": [conv_symbol2]}, headers=HEADERS)
+        pj2 = pr2.json()
+        pl2 = pj2.get("prices", [])
+        if pl2:
+            price_data2 = pl2[0]
+            break
+        if conv_symbol2 in ((pj2.get("missing_symbols") or []) + (pj2.get("warming_up_symbols") or [])):
+            print(f"Waiting for price: {conv_symbol2} (attempt {attempt+1}/5)")
+            time.sleep(2)
+        else:
+            break
+    avg_price2 = (price_data2.get("bid_raw", 0) + price_data2.get("ask_raw", 0)) / 2 / 1_000_000
+    if avg_price2 == 0:
+        raise ValueError(f"Conversion failed for {symbol}: no price for {conv_symbol2} (leg 2)")
+    rate1 = (1.0 / avg_price) if invert else avg_price
+    rate2 = (1.0 / avg_price2) if invert2 else avg_price2
+    return pip_size * rate1 * rate2
 
 # ---------------------------------------------------------------------------
 # LOT SIZE CALCULATION
@@ -179,6 +215,13 @@ def calculate_professional_lot_size(symbol, sl_pips):
 
     final_vol = max((protocol_volume // step) * step, min_v)
     final_vol = min(final_vol, max_v)
+
+    # Hard lot cap (max_lots from SQL settings, default 50)
+    max_lots      = settings.get("max_lots", 50.0)
+    max_vol_units = int(max_lots * 100_000)
+    if final_vol > max_vol_units:
+        print(f"WARNING: Vol capped: {final_vol/100_000:.2f} lots -> {max_lots:.0f} lots (max_lots cap)")
+        final_vol = max_vol_units
 
     print(f"📊 Risk: {acc_currency} {total_risk_cash:,.2f} | PipVal/Unit: {pip_value_per_unit:.6f} | Lots: {final_vol/100_000:.4f} | Vol: {final_vol}")
     return final_vol
