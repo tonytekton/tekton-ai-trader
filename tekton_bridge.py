@@ -514,12 +514,13 @@ def system_settings():
             target_reward          = data.get("target_reward", 1.8)
             daily_drawdown_limit   = data.get("daily_drawdown_limit", 0.05)
             max_session_exposure_pct = data.get("max_session_exposure_pct", 4.0)
-            max_lots               = data.get("max_lots", 5000.0)
+            max_lots               = data.get("max_lots", 50.0)
+            min_sl_pips            = data.get("min_sl_pips", 8.0)
 
             cur.execute("""
                 INSERT INTO settings (id, auto_trade, friday_flush, risk_pct, target_reward,
-                                      daily_drawdown_limit, max_session_exposure_pct, max_lots)
-                VALUES (1, %s, %s, %s, %s, %s, %s, %s)
+                                      daily_drawdown_limit, max_session_exposure_pct, max_lots, min_sl_pips)
+                VALUES (1, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (id) DO UPDATE SET
                     auto_trade               = EXCLUDED.auto_trade,
                     friday_flush             = EXCLUDED.friday_flush,
@@ -527,14 +528,15 @@ def system_settings():
                     target_reward            = EXCLUDED.target_reward,
                     daily_drawdown_limit     = EXCLUDED.daily_drawdown_limit,
                     max_session_exposure_pct = EXCLUDED.max_session_exposure_pct,
-                    max_lots                 = EXCLUDED.max_lots
+                    max_lots                 = EXCLUDED.max_lots,
+                    min_sl_pips              = EXCLUDED.min_sl_pips
             """, (auto_trade, friday_flush, risk_pct, target_reward,
-                    daily_drawdown_limit, max_session_exposure_pct, max_lots))
+                    daily_drawdown_limit, max_session_exposure_pct, max_lots, min_sl_pips))
             conn.commit()
         else:
             cur.execute("""
                 SELECT auto_trade, friday_flush, risk_pct, target_reward,
-                       daily_drawdown_limit, max_session_exposure_pct, max_lots
+                       daily_drawdown_limit, max_session_exposure_pct, max_lots, min_sl_pips
                 FROM settings WHERE id = 1
             """)
             row = cur.fetchone()
@@ -547,7 +549,8 @@ def system_settings():
                     "target_reward":            float(row[3]),
                     "daily_drawdown_limit":     float(row[4]),
                     "max_session_exposure_pct": float(row[5]),
-                    "max_lots":                 float(row[6])
+                    "max_lots":                 float(row[6]),
+                    "min_sl_pips":              float(row[7]) if row[7] is not None else 8.0
                 })
         cur.close()
         conn.close()
@@ -559,7 +562,8 @@ def system_settings():
             "target_reward":            float(target_reward),
             "daily_drawdown_limit":     float(daily_drawdown_limit),
             "max_session_exposure_pct": float(max_session_exposure_pct),
-            "max_lots":                 float(max_lots)
+            "max_lots":                 float(max_lots),
+            "min_sl_pips":              float(min_sl_pips)
         })
     except Exception as e:
         print(f"⚠️ system_settings error: {e}")
