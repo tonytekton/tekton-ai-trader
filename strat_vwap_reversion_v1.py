@@ -104,7 +104,7 @@ def get_symbol_specs():
             sym     = s.get("name", "")
             pip_pos = s.get("pipPosition") or 4
             specs[sym] = {
-                "pip_size":    10 ** (-pip_pos),
+                "pip_size":    10 ** -(pip_pos - 1),  # pip = 1 point * 10; pipPos=5 → 0.0001
                 "price_scale": 10 ** pip_pos,
             }
         _symbol_specs_cache = specs
