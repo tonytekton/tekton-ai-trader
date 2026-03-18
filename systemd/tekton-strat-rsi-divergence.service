@@ -11,7 +11,7 @@ WorkingDirectory=/home/tony/tekton-ai-trader
 EnvironmentFile=/home/tony/tekton-ai-trader/.env
 ExecStart=/home/tony/tekton-ai-trader/venv/bin/python /home/tony/tekton-ai-trader/strat_rsi_divergence_v1.py
 Environment=PYTHONUNBUFFERED=1
-Restart=always
+Restart=on-failure
 RestartSec=10
 NoNewPrivileges=true
 
