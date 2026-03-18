@@ -85,7 +85,7 @@ def get_symbol_specs() -> dict:
         for s in symbols:
             sym_name    = s.get("name", "")
             pip_pos     = s.get("pipPosition") or s.get("digits") or 4
-            pip_size    = 10 ** (-pip_pos)        # correct: pipPosition=4 → pip=0.0001
+            pip_size    = 10 ** -(pip_pos - 1)    # pipPosition=5 → pip=0.0001 (1 pip = 10 points)
             price_scale = 10 ** pip_pos
             specs[sym_name] = {"pip_size": pip_size, "price_scale": price_scale}
         _symbol_specs_cache = specs
