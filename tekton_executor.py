@@ -252,12 +252,14 @@ def calculate_professional_lot_size(symbol, sl_pips):
 
     # Hard lot cap (max_lots from SQL settings, default 50)
     max_lots      = settings.get("max_lots", 50.0)
-    max_vol_units = int(max_lots * 100_000)
-    if final_vol > max_vol_units:
-        print(f"WARNING: Vol capped: {final_vol/100_000:.2f} lots -> {max_lots:.0f} lots (max_lots cap)")
-        final_vol = max_vol_units
+    max_vol_cl    = int(max_lots * lot_size_cl)   # centilots equivalent of max_lots
+    if final_vol > max_vol_cl:
+        actual_lots = final_vol / lot_size_cl
+        print(f"WARNING: Vol capped: {actual_lots:.2f} lots -> {max_lots:.0f} lots (max_lots cap)")
+        final_vol = max_vol_cl
 
-    print(f"📊 Risk: {acc_currency} {total_risk_cash:,.2f} | PipVal/Unit: {pip_value_per_unit:.6f} | Lots: {final_vol/100_000:.4f} | Vol: {final_vol}")
+    actual_lots = final_vol / lot_size_cl
+    print(f"📊 Risk: {acc_currency} {total_risk_cash:,.2f} | PipVal/Unit: {pip_value_per_unit:.8f} | Lots: {actual_lots:.4f} | Vol: {final_vol}")
     return final_vol
 
 # ---------------------------------------------------------------------------
