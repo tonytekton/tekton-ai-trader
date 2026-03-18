@@ -76,6 +76,7 @@ def get_pip_size(symbol):
             headers=HEADERS,
             timeout=10
         )
+        if not spec_res.text.strip(): raise ValueError(f"Empty response from /contract/specs for {symbol}")
         spec = spec_res.json().get("contract_specifications", {})
         pip_pos = spec.get("pipPosition", 4)
         return 10 ** (-pip_pos)
@@ -107,6 +108,7 @@ def get_live_pip_value(symbol, account_currency):
     indirect = f"{acc_currency}{quote_currency}"
 
     all_symbols_res = requests.get(f"{BRIDGE_BASE_URL}/symbols", headers=HEADERS)
+    if not all_symbols_res.text.strip(): raise ValueError("Empty response from /symbols")
     available_names = {s["name"].upper() for s in all_symbols_res.json().get("symbols", [])}
 
     if direct in available_names:
@@ -122,6 +124,7 @@ def get_live_pip_value(symbol, account_currency):
     price_data = {}
     for attempt in range(5):
         price_res   = requests.post(f"{BRIDGE_BASE_URL}/prices/current", json={"symbols": [conv_symbol]}, headers=HEADERS)
+        if not price_res.text.strip(): raise ValueError(f"Empty response from /prices/current for {conv_symbol}")
         price_json  = price_res.json()
         prices_list = price_json.get("prices", [])
         if prices_list:
@@ -156,6 +159,7 @@ def calculate_professional_lot_size(symbol, sl_pips):
     risk_pct         = settings.get("risk_pct", 0.01)
 
     acc_res          = requests.get(f"{BRIDGE_BASE_URL}/account/status", headers=HEADERS)
+    if not acc_res.text.strip(): raise ValueError("Empty response from /account/status")
     acc_data         = acc_res.json()
     free_margin      = float(acc_data.get("free_margin", 0))
     acc_currency     = acc_data.get("currency", "EUR")
@@ -167,6 +171,7 @@ def calculate_professional_lot_size(symbol, sl_pips):
     protocol_volume = int(required_lots * 10_000_000)  # 10,000,000 centilots = 1 standard lot
 
     spec_res = requests.post(f"{BRIDGE_BASE_URL}/contract/specs", json={"symbol": symbol}, headers=HEADERS)
+    if not spec_res.text.strip(): raise ValueError(f"Empty response from /contract/specs (lot calc)")
     spec     = spec_res.json().get("contract_specifications", {})
     step     = spec.get("stepVolume_centilots", 10_000_000)
     min_v    = spec.get("minVolume_centilots", 10_000_000)
