@@ -1,12 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
-import { DollarSign, Activity, Zap, RefreshCw, ShieldAlert, TrendingDown, Layers, AlertTriangle, PowerOff } from 'lucide-react';
+import { DollarSign, Activity, Zap, RefreshCw, ShieldAlert, TrendingDown, Layers, AlertTriangle, PowerOff, Calendar } from 'lucide-react';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n, prefix = '$') =>
   n != null ? `${prefix}${parseFloat(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
 
 const fmtPct = (n) => n != null ? `${parseFloat(n).toFixed(2)}%` : '—';
+
+function fmtCountdown(mins) {
+  if (mins < 0) return `${Math.abs(mins)}m ago`;
+  if (mins < 60) return `in ${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `in ${h}h ${m}m` : `in ${h}h`;
+}
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 function MetricCard({ label, value, sub, icon: Icon, color }) {
@@ -62,13 +70,80 @@ function StatusBadge({ online }) {
   );
 }
 
+function CalendarStrip({ events }) {
+  if (!events || events.length === 0) {
+    return (
+      <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <Calendar className="w-4 h-4 text-slate-500" />
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Upcoming News</p>
+        </div>
+        <p className="text-xs text-slate-600">No high-impact events in the next 24 hours.</p>
+      </div>
+    );
+  }
+
+  // Show next 5 events — prioritise HIGH impact, within next 24h
+  const now = Date.now();
+  const next24h = events
+    .filter(e => e.minutes_until > -30 && e.minutes_until < 1440)
+    .sort((a, b) => a.minutes_until - b.minutes_until)
+    .slice(0, 5);
+
+  if (next24h.length === 0) return null;
+
+  // Warn if any HIGH impact event is within 30 minutes
+  const imminentHigh = next24h.find(e => e.impact_level === 'high' && e.minutes_until >= 0 && e.minutes_until <= 30);
+
+  return (
+    <div className={`rounded-xl border p-4 mb-6 ${imminentHigh ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800 bg-slate-900/50'}`}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Calendar className={`w-4 h-4 ${imminentHigh ? 'text-red-400' : 'text-slate-500'}`} />
+          <p className={`text-xs font-semibold uppercase tracking-widest ${imminentHigh ? 'text-red-400' : 'text-slate-500'}`}>
+            Upcoming News {imminentHigh ? '— ⚠️ High Impact Imminent' : ''}
+          </p>
+        </div>
+        <span className="text-[10px] text-slate-600 font-mono">Next 24h</span>
+      </div>
+      <div className="flex flex-col gap-2">
+        {next24h.map(ev => {
+          const isHigh = ev.impact_level === 'high';
+          const isImminent = ev.minutes_until >= 0 && ev.minutes_until <= 30;
+          return (
+            <div
+              key={ev.id}
+              className={`flex items-center justify-between rounded-lg px-3 py-2 border text-xs
+                ${isHigh && isImminent ? 'bg-red-500/10 border-red-500/20' :
+                  isHigh ? 'bg-slate-800/60 border-slate-700/50' :
+                  'bg-slate-900/40 border-slate-800/50'}`}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className={`shrink-0 font-bold px-1.5 py-0.5 rounded text-[10px] border
+                  ${isHigh ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-amber-400 bg-amber-500/10 border-amber-500/20'}`}>
+                  {ev.currency}
+                </span>
+                <span className="text-slate-300 truncate">{ev.indicator_name}</span>
+              </div>
+              <span className={`shrink-0 font-mono font-semibold ml-3 ${isImminent ? 'text-red-400' : 'text-slate-500'}`}>
+                {fmtCountdown(ev.minutes_until)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [metrics, setMetrics]       = useState(null);
-  const [status, setStatus]         = useState(null);   // /account/status — drawdown_pct
-  const [settings, setSettings]     = useState(null);   // settings table
-  const [autopsy, setAutopsy]       = useState(null);   // latest DrawdownAutopsy
-  const [openCount, setOpenCount]   = useState(null);   // open positions count
+  const [status, setStatus]         = useState(null);
+  const [settings, setSettings]     = useState(null);
+  const [autopsy, setAutopsy]       = useState(null);
+  const [openCount, setOpenCount]   = useState(null);
+  const [calendar, setCalendar]     = useState([]);
   const [loading, setLoading]       = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [halting, setHalting]       = useState(false);
@@ -76,10 +151,11 @@ export default function Dashboard() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [mRes, sRes, settRes] = await Promise.allSettled([
+      const [mRes, sRes, settRes, calRes] = await Promise.allSettled([
         base44.functions.invoke('getAccountMetrics'),
         base44.functions.invoke('getAccountStatus'),
         base44.functions.invoke('loadAllSettings'),
+        base44.functions.invoke('getEconomicCalendar'),
       ]);
 
       if (mRes.status === 'fulfilled' && mRes.value?.data) {
@@ -91,6 +167,10 @@ export default function Dashboard() {
       }
       if (settRes.status === 'fulfilled' && settRes.value?.data && !settRes.value.data.error) {
         setSettings(settRes.value.data);
+      }
+      if (calRes.status === 'fulfilled' && calRes.value?.data) {
+        const raw = calRes.value.data?.data ?? calRes.value.data;
+        setCalendar(Array.isArray(raw) ? raw : []);
       }
 
       // Check for active DrawdownAutopsy awaiting review
@@ -153,6 +233,9 @@ export default function Dashboard() {
   const autoTrade     = settings?.auto_trade ?? false;
   const dailyPnl      = metrics?.daily_pnl ?? null;
 
+  // News window warning — any HIGH impact event on a traded currency within 30 min
+  const imminentHighEvents = calendar.filter(e => e.impact_level === 'high' && e.minutes_until >= 0 && e.minutes_until <= 30);
+
   return (
     <div className="min-h-screen p-4 md:p-8 max-w-7xl mx-auto">
 
@@ -182,6 +265,20 @@ export default function Dashboard() {
               Drawdown autopsy is <strong>AWAITING REVIEW</strong>. Trading will remain halted until you approve resumption in the Execution Journal.
             </p>
             <p className="text-xs text-slate-500 mt-1">Triggered: {new Date(autopsy.triggered_at).toLocaleString()}</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── News Window Warning Banner ── */}
+      {imminentHighEvents.length > 0 && (
+        <div className="mb-6 flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+          <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-amber-400">⚠️ High-Impact News Within 30 Minutes</p>
+            <p className="text-xs text-amber-300/70 mt-1">
+              {imminentHighEvents.map(e => `${e.currency} ${e.indicator_name} (${fmtCountdown(e.minutes_until)})`).join(' · ')}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">Consider pausing new entries until the news window clears.</p>
           </div>
         </div>
       )}
@@ -282,6 +379,9 @@ export default function Dashboard() {
         </div>
 
       </div>
+
+      {/* ── Economic Calendar Strip ── */}
+      <CalendarStrip events={calendar} />
 
       {/* ── Footer note ── */}
       <p className="text-xs text-slate-700 text-center">Auto-refreshes every 30s · To change risk settings go to Trading Settings</p>
