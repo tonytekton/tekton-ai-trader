@@ -271,19 +271,26 @@ def is_symbol_already_open(symbol):
 # ---------------------------------------------------------------------------
 def get_current_session_exposure_pct():
     """
-    Returns total current session exposure as a percentage of account equity.
-    Counts all open positions from the bridge and estimates each position's
-    risk as risk_pct (since all positions are sized to exactly risk_pct per trade).
-    Uses live position count × risk_pct as the exposure estimate.
+    Returns true live session exposure as a percentage of account balance.
+    Formula: sum(unrealizedNetPnL) / account_balance * 100
+    Negative = drawdown. Gate fires when loss exceeds max_session_exposure_pct.
+    Also returns open position count for logging.
     """
     try:
-        res = requests.get(f"{BRIDGE_BASE_URL}/positions/list", headers=HEADERS, timeout=10)
-        positions = res.json().get("positions", [])
-        settings = fetch_settings()
-        risk_pct_per_trade = settings.get("risk_pct", 0.01)
-        # Each open position represents exactly risk_pct exposure
-        total_exposure_pct = len(positions) * risk_pct_per_trade * 100
-        return total_exposure_pct, len(positions)
+        # Fetch positions and account status in parallel
+        pos_res = requests.get(f"{BRIDGE_BASE_URL}/positions/list", headers=HEADERS, timeout=10)
+        acc_res = requests.get(f"{BRIDGE_BASE_URL}/account/status", headers=HEADERS, timeout=10)
+        positions = pos_res.json().get("positions", [])
+        account_balance = acc_res.json().get("equity", 0)
+        if account_balance <= 0:
+            print("⚠️ Could not fetch account balance for exposure calc — assuming 0%")
+            return 0.0, len(positions)
+        # Sum unrealised P&L across all open positions (bridge returns cents)
+        total_unrealised_cents = sum(p.get("unrealizedNetPnL_cents", 0) for p in positions)
+        total_unrealised_eur   = total_unrealised_cents / 100.0
+        # Exposure as % of balance — negative means drawdown
+        exposure_pct = (total_unrealised_eur / account_balance) * 100
+        return exposure_pct, len(positions)
     except Exception as e:
         print(f"⚠️ get_current_session_exposure_pct error: {e} — assuming 0%")
         return 0.0, 0
@@ -349,10 +356,12 @@ def poll_signals():
                 continue
 
             # --- SESSION EXPOSURE GATE ---
+            # max_session_exposure_pct = max drawdown % allowed across all open positions
+            # Gate fires when live unrealised loss exceeds the limit (e.g. -4.0%)
             max_exposure = settings.get("max_session_exposure_pct", 4.0)
             current_exposure, open_count = get_current_session_exposure_pct()
-            if current_exposure >= max_exposure:
-                print(f"🛑 Session exposure cap reached: {current_exposure:.1f}% / {max_exposure:.1f}% max ({open_count} open positions). No new trades.")
+            if current_exposure <= -abs(max_exposure):
+                print(f"🛑 Session exposure cap reached: {current_exposure:.2f}% live drawdown / -{max_exposure:.1f}% limit ({open_count} open positions). No new trades.")
                 time.sleep(30)
                 continue
 
