@@ -1,71 +1,79 @@
 #!/bin/bash
-# restart.sh — Clean restart of all Tekton processes
-# Kills ALL instances regardless of how they were launched, then starts fresh
+# restart.sh — Clean restart of all Tekton processes via systemd
+# Single source of truth for starting/stopping the entire stack
 
 set -e
 cd ~/tekton-ai-trader
 
-echo "🛑 Stopping all Tekton processes..."
-
-SCRIPTS=(
-    "tekton_bridge.py"
-    "tekton_executor.py"
-    "tekton_monitor.py"
-    "strat_ict_fvg_v1.py"
-    "strat_ema_pullback_v1.py"
-    "strat_session_orb_v1.py"
-    "strat_vwap_reversion_v1.py"
-    "strat_breakout_retest_v1.py"
-    "strat_rsi_divergence_v1.py"
-    "strat_lester_v1.py"
+# All managed services
+SERVICES=(
+    "tekton-ai-trader-bridge"
+    "tekton-executor"
+    "tekton-monitor"
+    "tekton-strategy"
+    "tekton-strat-ema-pullback"
+    "tekton-strat-session-orb"
+    "tekton-strat-vwap-reversion"
+    "tekton-strat-breakout-retest"
+    "tekton-strat-rsi-divergence"
+    "tekton-strat-lester"
 )
 
-for script in "${SCRIPTS[@]}"; do
-    pkill -f "$script" 2>/dev/null && echo "  ✅ Killed $script" || echo "  ⏭  $script not running"
+echo "🛑 Stopping all Tekton services..."
+for svc in "${SERVICES[@]}"; do
+    sudo systemctl stop "$svc" 2>/dev/null && echo "  ✅ Stopped $svc" || echo "  ⏭  $svc not running"
 done
 
-# Wait and verify all dead
-sleep 3
-STILL_RUNNING=$(ps aux | grep -E "tekton_|strat_" | grep -v grep | wc -l)
-if [ "$STILL_RUNNING" -gt 0 ]; then
-    echo "⚠️  Force killing stragglers..."
-    ps aux | grep -E "tekton_|strat_" | grep -v grep | awk '{print $2}' | xargs kill -9 2>/dev/null
-    sleep 2
-fi
+# Kill any orphan nohup processes not managed by systemd
+echo ""
+echo "🧹 Cleaning up any orphan processes..."
+pkill -f "tekton_bridge.py"      2>/dev/null || true
+pkill -f "tekton_executor.py"    2>/dev/null || true
+pkill -f "tekton_monitor.py"     2>/dev/null || true
+pkill -f "strat_ict_fvg_v1.py"  2>/dev/null || true
+pkill -f "strat_ema_pullback"    2>/dev/null || true
+pkill -f "strat_session_orb"     2>/dev/null || true
+pkill -f "strat_vwap_reversion"  2>/dev/null || true
+pkill -f "strat_breakout_retest" 2>/dev/null || true
+pkill -f "strat_rsi_divergence"  2>/dev/null || true
+pkill -f "strat_lester"          2>/dev/null || true
+sleep 2
 
 echo ""
 echo "🚀 Starting Tekton services..."
 
 # Bridge first — everything depends on it
-nohup python3 -u tekton_bridge.py >> bridge.log 2>&1 &
-echo "  ✅ Bridge started (PID $!)"
+sudo systemctl start tekton-ai-trader-bridge
+echo "  ✅ Bridge started"
 sleep 5  # Give bridge time to authenticate with cTrader
 
 # Core services
-nohup python3 -u tekton_executor.py >> executor.log 2>&1 &
-echo "  ✅ Executor started (PID $!)"
-
-nohup python3 -u tekton_monitor.py >> monitor.log 2>&1 &
-echo "  ✅ Monitor started (PID $!)"
-
+sudo systemctl start tekton-executor
+echo "  ✅ Executor started"
+sudo systemctl start tekton-monitor
+echo "  ✅ Monitor started"
 sleep 2
 
 # Strategies
-nohup python3 -u strat_ict_fvg_v1.py        >> strat_fvg.log    2>&1 & echo "  ✅ FVG started (PID $!)"
-nohup python3 -u strat_ema_pullback_v1.py    >> strat_eps.log    2>&1 & echo "  ✅ EPS started (PID $!)"
-nohup python3 -u strat_session_orb_v1.py     >> strat_sorb.log   2>&1 & echo "  ✅ SORB started (PID $!)"
-nohup python3 -u strat_vwap_reversion_v1.py  >> strat_vwap.log   2>&1 & echo "  ✅ VWAP started (PID $!)"
-nohup python3 -u strat_breakout_retest_v1.py >> strat_brt.log    2>&1 & echo "  ✅ BRT started (PID $!)"
-nohup python3 -u strat_rsi_divergence_v1.py  >> strat_rsid.log   2>&1 & echo "  ✅ RSID started (PID $!)"
-nohup python3 -u strat_lester_v1.py          >> strat_lester.log 2>&1 & echo "  ✅ Lester started (PID $!)"
+for svc in tekton-strategy tekton-strat-ema-pullback tekton-strat-session-orb \
+           tekton-strat-vwap-reversion tekton-strat-breakout-retest \
+           tekton-strat-rsi-divergence tekton-strat-lester; do
+    sudo systemctl start "$svc"
+    echo "  ✅ $svc started"
+done
 
 sleep 2
 
 echo ""
-echo "📊 Process check:"
-for pid in $(ps aux | grep -E "tekton_|strat_" | grep -v grep | awk '{print $2}'); do
-    echo "  $pid: $(cat /proc/$pid/cmdline 2>/dev/null | tr '\0' ' ')"
-done | sort -t: -k2
+echo "📊 Service status:"
+for svc in "${SERVICES[@]}"; do
+    STATUS=$(sudo systemctl is-active "$svc" 2>/dev/null)
+    if [ "$STATUS" = "active" ]; then
+        echo "  🟢 $svc"
+    else
+        echo "  🔴 $svc ($STATUS)"
+    fi
+done
 
 echo ""
 echo "✅ Tekton fully restarted — $(date '+%Y-%m-%d %H:%M:%S')"
