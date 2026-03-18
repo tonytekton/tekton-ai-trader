@@ -241,7 +241,7 @@ def is_on_cooldown(symbol: str, direction: str) -> bool:
         cur  = conn.cursor()
         cur.execute("""
             SELECT created_at FROM signals
-            WHERE symbol = %s AND signal_type = %s AND strategy = 'Tekton-SMC-v1'
+            WHERE symbol = %s AND signal_type = %s AND strategy = 'Tekton-ICT-FVG-v1'
             ORDER BY created_at DESC LIMIT 1;
         """, (symbol, direction))
         row = cur.fetchone()
@@ -437,7 +437,7 @@ def save_signal(symbol: str, direction: str, reason: str,
         cur.execute("""
             INSERT INTO signals
               (symbol, strategy, signal_type, timeframe, confidence_score, status, sl_pips, tp_pips)
-            VALUES (%s, 'Tekton-SMC-v1', %s, '15min', %s, 'PENDING', %s, %s);
+            VALUES (%s, 'Tekton-ICT-FVG-v1', %s, '15min', %s, 'PENDING', %s, %s);
         """, (symbol, direction, int(confidence), float(sl_pips), float(tp_pips)))
         conn.commit()
         cur.close()
