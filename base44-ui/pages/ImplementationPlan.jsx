@@ -63,15 +63,6 @@ const PHASES = [
     ],
   },
   {
-    id: 'p7', title: 'Phase 7 — Strategy Expansion', color: 'blue',
-    desc: 'After all core phases are complete, expand the strategy library.',
-    tasks: [
-      { id: 't7_1', title: 'Design new strategy script structure', detail: 'Create a standardized template for new strategy scripts', file: 'Strategy templates' },
-      { id: 't7_2', title: 'Implement first additional strategy', detail: 'Build and test a second trading strategy', file: 'strat_*.py' },
-      { id: 't7_3', title: 'Document strategy onboarding process', detail: 'Create guides for adding new strategies', file: 'SystemContext page + README' },
-    ],
-  },
-  {
     id: 'p6', title: 'Phase 6 — End-to-End Smoke Test', color: 'red',
     desc: 'Full system integration test after all phases complete.',
     tasks: [
@@ -80,6 +71,57 @@ const PHASES = [
       { id: 't6_3', title: 'Confirm executor picks up signal and executes', detail: 'Watch combined_trades.log. Signal status: PENDING → EXECUTED', file: 'combined_trades.log + DB' },
       { id: 't6_4', title: 'Confirm execution appears in Execution Journal', detail: 'New trade entry should be visible with correct symbol, volume, SL/TP', file: 'Base44 UI → Executions page' },
       { id: 't6_5', title: 'Set AUTO_TRADE = false and confirm no new executions', detail: 'Toggle off → insert another test signal → confirm executor skips it', file: 'Base44 UI + DB + combined_trades.log' },
+    ],
+  },
+  {
+    id: 'p7', title: 'Phase 7 — Strategy Expansion', color: 'blue',
+    desc: 'Deploy and validate the full strategy library: ICT FVG, EMA Pullback, Session ORB, VWAP Reversion, Breakout Retest, RSI Divergence, Lester LSV.',
+    tasks: [
+      { id: 't7_1', title: 'Verify all 7 strategy services running on VM', detail: 'sudo systemctl status tekton-strat-*.service', file: 'VM systemd' },
+      { id: 't7_2', title: 'Confirm MIN_RR=1.5 gate active on all strategies', detail: 'Review each strat_*.py — confirm tp_pips/sl_pips >= 1.5 check before signal insert', file: 'All strat_*.py files' },
+      { id: 't7_3', title: 'Verify confidence_score stored as integer (0-100)', detail: 'SELECT strategy, confidence_score FROM signals ORDER BY created_at DESC LIMIT 20', file: 'PostgreSQL' },
+      { id: 't7_4', title: 'Validate session exposure cap gate in executor', detail: 'Confirm 🛑 log appears when open positions × risk_pct >= max_session_exposure_pct', file: 'combined_trades.log' },
+      { id: 't7_5', title: 'Document strategy onboarding process', detail: 'Update SystemContext page with strategy checklist and signal schema rules', file: 'SystemContext page + README' },
+    ],
+  },
+  {
+    id: 'p8', title: 'Phase 8 — Economic Calendar (Passive)', color: 'orange',
+    desc: 'Integrate ForexFactory economic calendar into the UI. Display upcoming high-impact events on the Dashboard and Analytics page. No trade gating yet.',
+    tasks: [
+      { id: 't8_1', title: 'Create economic_events table in PostgreSQL', detail: 'CREATE TABLE economic_events (id SERIAL PRIMARY KEY, event_date TIMESTAMPTZ, currency VARCHAR(10), indicator_name TEXT, impact_level VARCHAR(10), source VARCHAR(50) DEFAULT \'forexfactory\', created_at TIMESTAMPTZ DEFAULT NOW())', file: 'PostgreSQL (tekton-trader DB)' },
+      { id: 't8_2', title: 'Write tekton_calendar.py VM fetcher script', detail: 'Fetches ForexFactory XML feed (nfs.faireconomy.media/ff_calendar_thisweek.xml), parses medium+high impact events, upserts to economic_events table. Port from V3 logic.', file: 'tekton_calendar.py (new)' },
+      { id: 't8_3', title: 'Add cron job for calendar refresh', detail: 'Run every 6 hours: 0 */6 * * * /path/to/venv/bin/python /opt/tekton/tekton_calendar.py', file: 'crontab' },
+      { id: 't8_4', title: 'Add GET /calendar/events bridge endpoint', detail: 'Query economic_events WHERE event_date BETWEEN NOW()-1hr AND NOW()+7days, return JSON array ordered by event_date', file: 'tekton_bridge.py' },
+      { id: 't8_5', title: 'Deploy getEconomicCalendar Base44 backend function', detail: 'Proxies GET /calendar/events from bridge. Returns events array to UI.', file: 'Base44 backend function' },
+      { id: 't8_6', title: 'Add Economic Calendar widget to Dashboard', detail: 'Strip showing next 3 high-impact events today/tomorrow. Coloured by impact (red=high, amber=medium). Shows time until event.', file: 'Base44 UI → Dashboard page' },
+      { id: 't8_7', title: 'Add full Economic Calendar view to Analytics page', detail: 'Grouped by day. All currencies. Countdown timers. 7-day view.', file: 'Base44 UI → Analytics page' },
+      { id: 't8_8', title: 'Add manual import fallback', detail: 'Port V3 manualCalendarImport function — accepts Myfxbook XML or tab-separated text, writes to SQL economic_events table', file: 'tekton_calendar.py + Base44 backend function' },
+    ],
+  },
+  {
+    id: 'p9', title: 'Phase 9 — Economic Calendar (Active Gating)', color: 'red',
+    desc: 'Wire the economic calendar into the executor and monitor. Block new trades and tighten position management around high-impact news events.',
+    tasks: [
+      { id: 't9_1', title: 'Add news_filter_enabled column to settings table', detail: 'ALTER TABLE settings ADD COLUMN news_filter_enabled BOOLEAN DEFAULT TRUE; ALTER TABLE settings ADD COLUMN news_buffer_mins INT DEFAULT 15;', file: 'PostgreSQL (tekton-trader DB)' },
+      { id: 't9_2', title: 'Add news_filter_enabled + news_buffer_mins to TradingSettings UI', detail: 'Toggle + number input. Saves via saveAllSettings. Hint: "Block new trades within X min of high-impact events"', file: 'Base44 UI → TradingSettings page' },
+      { id: 't9_3', title: 'Add is_news_window() helper to tekton_executor.py', detail: 'Queries economic_events for any HIGH impact event on traded currency within ±news_buffer_mins. Returns True/False.', file: 'tekton_executor.py' },
+      { id: 't9_4', title: 'Gate signal execution on news window check', detail: 'Before executing any signal: if news_filter_enabled and is_news_window(currency): log skip reason, leave signal PENDING, retry after window passes', file: 'tekton_executor.py' },
+      { id: 't9_5', title: 'Add news awareness to tekton_monitor.py', detail: 'If position currency has HIGH impact event within 10 min: set intervention bias to HOLD. No ADJUST_SL or ADJUST_TP during news window.', file: 'tekton_monitor.py' },
+      { id: 't9_6', title: 'Test news gate with simulated upcoming event', detail: 'Insert a test high-impact event 5 min from now in economic_events. Fire a test signal. Confirm executor skips it with news gate log.', file: 'PostgreSQL + combined_trades.log' },
+      { id: 't9_7', title: 'Add news window indicator to Dashboard', detail: 'If any HIGH impact event for an open position currency is within 30 min: show amber warning banner on Command Center.', file: 'Base44 UI → Dashboard page' },
+    ],
+  },
+  {
+    id: 'p10', title: 'Phase 10 — Analytics Page', color: 'purple',
+    desc: 'Build a dedicated Analytics page with AI-driven performance attribution and recommendations. Dashboard shows exec summary; Analytics goes deep.',
+    tasks: [
+      { id: 't10_1', title: 'Create getAnalytics Base44 backend function', detail: 'Queries signals + executions from SQL. Returns: win_rate per strategy, avg_r per strategy, profit_factor, confidence_vs_r correlation, symbol breakdown, session breakdown.', file: 'Base44 backend function' },
+      { id: 't10_2', title: 'Build Analytics page — Strategy Performance section', detail: 'Table: strategy | signals | win_rate | avg_r | profit_factor | status (Active/Underperforming). Sortable.', file: 'Base44 UI → Analytics page (new)' },
+      { id: 't10_3', title: 'Build Analytics page — Confidence vs R scatter', detail: 'Show correlation between confidence_score and actual outcome_r. Does high confidence = better results?', file: 'Base44 UI → Analytics page' },
+      { id: 't10_4', title: 'Build Analytics page — Symbol/Session breakdown', detail: 'Bar charts: P&L by symbol, P&L by session (London/NY/Asian). Where is money made vs lost?', file: 'Base44 UI → Analytics page' },
+      { id: 't10_5', title: 'Build AI Recommendations section', detail: 'Lester analyses current stats and generates 3-5 plain English recommendations. Stored in a AnalyticsSnapshot entity. Refreshed on demand.', file: 'Base44 UI → Analytics page + Base44 backend function' },
+      { id: 't10_6', title: 'Add Key Insights strip to Dashboard', detail: 'Show latest 3 AI recommendations as bullet points on Command Center. Read from AnalyticsSnapshot entity. Updated when Analytics page is refreshed.', file: 'Base44 UI → Dashboard page' },
+      { id: 't10_7', title: 'Add News Correlation analysis to Analytics page', detail: 'For each closed trade: was it within 30 min of a high-impact event? Show win rate inside vs outside news windows.', file: 'Base44 UI → Analytics page' },
     ],
   },
 ];
@@ -98,6 +140,7 @@ const PHASE_COLORS = {
   yellow: 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10',
   green:  'text-emerald-400 border-emerald-500/20 bg-emerald-500/10',
   red:    'text-red-400 border-red-500/20 bg-red-500/10',
+  orange: 'text-orange-400 border-orange-500/20 bg-orange-500/10',
 };
 
 export default function ImplementationPlan() {
@@ -146,7 +189,7 @@ export default function ImplementationPlan() {
         <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 shrink-0"><ClipboardList className="w-6 h-6 text-blue-400" /></div>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Implementation Plan</h1>
-          <p className="text-slate-500 text-sm mt-0.5">v4.7.0 — All Phases Complete</p>
+          <p className="text-slate-500 text-sm mt-0.5">v4.7.0 — Phases 1–10</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={loadStatus} className="p-2 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors"><RefreshCw className="w-4 h-4" /></button>
