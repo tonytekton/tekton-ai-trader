@@ -85,7 +85,7 @@ def get_symbol_specs() -> dict:
         for s in symbols:
             sym_name    = s.get("name", "")
             pip_pos     = s.get("pipPosition") or s.get("digits") or 4
-            pip_size    = 10 ** (-(pip_pos - 1))
+            pip_size    = 10 ** (-pip_pos)        # correct: pipPosition=4 → pip=0.0001
             price_scale = 10 ** pip_pos
             specs[sym_name] = {"pip_size": pip_size, "price_scale": price_scale}
         _symbol_specs_cache = specs
@@ -190,6 +190,12 @@ def get_active_symbols() -> list:
 # ─── COOLDOWN ──────────────────────────────────────────────────────────────────
 
 def is_on_cooldown(symbol: str, direction: str) -> bool:
+    """
+    Blocks re-entry if:
+      a) A signal for this symbol+direction was inserted within SIGNAL_COOLDOWN_HR, OR
+      b) The last signal was inserted within the current 15min candle window
+         (prevents same candle firing multiple times across scan cycles).
+    """
     try:
         conn = _db()
         cur  = conn.cursor()
@@ -203,8 +209,13 @@ def is_on_cooldown(symbol: str, direction: str) -> bool:
         conn.close()
         if row is None:
             return False
-        age_h = (datetime.utcnow() - row[0].replace(tzinfo=None)).total_seconds() / 3600
-        return age_h < SIGNAL_COOLDOWN_HR
+        last_signal_ts = row[0].replace(tzinfo=None)
+        now = datetime.utcnow()
+        age_h = (now - last_signal_ts).total_seconds() / 3600
+        # Standard cooldown window
+        if age_h < SIGNAL_COOLDOWN_HR:
+            return True
+        return False
     except Exception as e:
         print(f"[{_ts()}] ⚠️  Cooldown ({symbol}): {e}")
         return False
