@@ -499,7 +499,8 @@ def get_account_summary():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route("/data/system-settings", methods=["GET", "POST"])
+@app.route("/data/settings", methods=["GET", "POST"])
+@app.route("/data/system-settings", methods=["GET", "POST"])  # legacy alias
 @require_auth
 def system_settings():
     try:
