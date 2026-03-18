@@ -7,6 +7,7 @@ export default function TradingSettings() {
     risk_pct_display: 1.0,
     target_reward: 1.8,
     drawdown_display: 5.0,
+    max_session_exposure_pct: 4.0,
     auto_trade: false,
     friday_flush: false,
   });
@@ -19,11 +20,12 @@ export default function TradingSettings() {
       const d = res.data;
       if (d && !d.error) {
         setForm({
-          risk_pct_display: d.risk_pct != null ? parseFloat((d.risk_pct * 100).toPrecision(6)) : 1.0,
-          target_reward:    d.target_reward ?? 1.8,
-          drawdown_display: d.daily_drawdown_limit != null ? parseFloat((d.daily_drawdown_limit * 100).toPrecision(6)) : 5.0,
-          auto_trade:       d.auto_trade   ?? false,
-          friday_flush:     d.friday_flush ?? false,
+          risk_pct_display:         d.risk_pct != null ? parseFloat((d.risk_pct * 100).toPrecision(6)) : 1.0,
+          target_reward:            d.target_reward ?? 1.8,
+          drawdown_display:         d.daily_drawdown_limit != null ? parseFloat((d.daily_drawdown_limit * 100).toPrecision(6)) : 5.0,
+          max_session_exposure_pct: d.max_session_exposure_pct ?? 4.0,
+          auto_trade:               d.auto_trade   ?? false,
+          friday_flush:             d.friday_flush ?? false,
         });
       }
     }).finally(() => setLoading(false));
@@ -35,24 +37,26 @@ export default function TradingSettings() {
   const handleSave = async () => {
     setSaving(true);
     await base44.functions.invoke('saveAllSettings', {
-      auto_trade:           form.auto_trade,
-      friday_flush:         form.friday_flush,
-      risk_pct:             form.risk_pct_display / 100,
-      target_reward:        form.target_reward,
-      daily_drawdown_limit: form.drawdown_display / 100,
+      auto_trade:                form.auto_trade,
+      friday_flush:              form.friday_flush,
+      risk_pct:                  form.risk_pct_display / 100,
+      target_reward:             form.target_reward,
+      daily_drawdown_limit:      form.drawdown_display / 100,
+      max_session_exposure_pct:  form.max_session_exposure_pct,
     });
     setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
 
   const numericFields = [
-    { key: 'risk_pct_display',  label: 'Risk Percentage (%)',      hint: 'e.g. 1.0 = 1% risk per trade',  step: '0.1', suffix: '%' },
-    { key: 'target_reward',     label: 'Target Reward',            hint: 'e.g. 1.8 = 1:1.8 RR',           step: '0.1', suffix: null },
-    { key: 'drawdown_display',  label: 'Daily Drawdown Limit (%)', hint: 'e.g. 5.0 = 5% max daily loss',  step: '0.1', suffix: '%' },
+    { key: 'risk_pct_display',         label: 'Risk Percentage (%)',         hint: 'e.g. 1.0 = 1% risk per trade',                  step: '0.1', suffix: '%' },
+    { key: 'target_reward',            label: 'Target Reward',               hint: 'e.g. 1.8 = 1:1.8 RR',                           step: '0.1', suffix: null },
+    { key: 'drawdown_display',         label: 'Daily Drawdown Limit (%)',    hint: 'e.g. 5.0 = 5% max daily loss',                  step: '0.1', suffix: '%' },
+    { key: 'max_session_exposure_pct', label: 'Max Session Exposure (%)',    hint: 'e.g. 4.0 = max 4% total open risk at any time', step: '0.1', suffix: '%' },
   ];
 
   const toggleFields = [
-    { key: 'auto_trade',   label: 'Auto Trade',   hint: 'Enable autonomous trade execution',         activeColor: 'emerald' },
+    { key: 'auto_trade',   label: 'Auto Trade',   hint: 'Enable autonomous trade execution',          activeColor: 'emerald' },
     { key: 'friday_flush', label: 'Friday Flush', hint: 'Close all positions at 16:00 UK on Fridays', activeColor: 'amber' },
   ];
 
