@@ -45,30 +45,51 @@ export default function Executions() {
         </button>
       </div>
       {error && (<div className="mb-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2"><AlertTriangle className="w-4 h-4 shrink-0" />{error}</div>)}
+      <div className="flex items-center gap-2 mb-4 text-xs text-slate-600">
+        <div className="w-3 h-3 rounded-sm bg-red-500/20 border border-red-500/40" />
+        <span>Red rows = manually opened trade (no signal UUID in comment)</span>
+      </div>
       <div className="card-dark overflow-hidden">
         <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full text-sm">
-            <thead><tr className="border-b border-slate-800">{['Pos ID','Signal UUID','Symbol','Side','Lots','Entry','Close','SL','TP','P&L','Status','Open Time','Close Time'].map(h => (<th key={h} className="px-4 py-3 text-left text-[11px] font-semibold tracking-widest uppercase text-slate-600">{h}</th>))}</tr></thead>
+            <thead>
+              <tr className="border-b border-slate-800">
+                {['Pos ID', 'Signal UUID', 'Symbol', 'Side', 'Lots', 'Entry', 'Close', 'SL', 'TP', 'P&L', 'Status', 'Open Time', 'Close Time'].map(h => (
+                  <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold tracking-widest uppercase text-slate-600">{h}</th>
+                ))}
+              </tr>
+            </thead>
             <tbody>
-              {loading && executions.length === 0 ? (Array(8).fill(0).map((_, i) => (<tr key={i} className="border-b border-slate-800/50 shimmer">{Array(13).fill(0).map((_, j) => (<td key={j} className="px-4 py-4"><div className="h-3 bg-slate-800 rounded w-full" /></td>))}</tr>)))
-              : executions.length === 0 ? (<tr><td colSpan={13} className="px-4 py-12 text-center text-slate-600">No executions found</td></tr>)
-              : executions.map((ex) => { const manual = isManual(ex); return (
-                <tr key={ex.id} className={`border-b transition-colors ${manual ? 'border-red-500/20 bg-red-500/5 hover:bg-red-500/10' : 'border-slate-800/50 hover:bg-slate-800/40'}`}>
-                  <td className="px-4 py-3.5 font-mono text-xs text-slate-600">{ex.position_id || '—'}</td>
-                  <td className="px-4 py-3.5">{manual ? (<span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-400"><AlertTriangle className="w-3 h-3" />MANUAL</span>) : (<span className="font-mono text-xs text-slate-500">{ex.signal_uuid?.slice(0,16)}…</span>)}</td>
-                  <td className="px-4 py-3.5 font-semibold text-slate-200">{ex.symbol || '—'}</td>
-                  <td className="px-4 py-3.5"><span className={`text-xs font-bold ${ex.side === 'BUY' || ex.side === 'LONG' ? 'text-emerald-400' : 'text-red-400'}`}>{ex.side || '—'}</span></td>
-                  <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{ex.volume ?? '—'}</td>
-                  <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{fmtPrice(ex.entry_price, ex.digits)}</td>
-                  <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{fmtPrice(ex.close_price, ex.digits)}</td>
-                  <td className="px-4 py-3.5 text-red-400 font-mono text-xs">{ex.stop_loss ? (ex.stop_loss / Math.pow(10, ex.digits || 5)).toFixed(ex.digits || 5) : '—'}</td>
-                  <td className="px-4 py-3.5 text-emerald-400 font-mono text-xs">{ex.take_profit ? (ex.take_profit / Math.pow(10, ex.digits || 5)).toFixed(ex.digits || 5) : '—'}</td>
-                  <td className={`px-4 py-3.5 font-semibold font-mono text-xs ${pnlColor(ex.pnl)}`}>{fmt(ex.pnl)}</td>
-                  <td className="px-4 py-3.5"><span className={`text-xs px-2 py-0.5 rounded-full border font-semibold ${ex.status === 'open' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : ex.status === 'closed' ? 'bg-slate-700 text-slate-400 border-slate-600' : 'bg-slate-800 text-slate-500 border-slate-700'}`}>{ex.status || '—'}</span></td>
-                  <td className="px-4 py-3.5 text-slate-600 text-xs whitespace-nowrap">{ex.created_at ? new Date(ex.created_at).toLocaleString() : '—'}</td>
-                  <td className="px-4 py-3.5 text-slate-600 text-xs whitespace-nowrap">{ex.closed_at ? new Date(ex.closed_at).toLocaleString() : '—'}</td>
-                </tr>
-              );})}
+              {loading && executions.length === 0 ? (
+                Array(8).fill(0).map((_, i) => (
+                  <tr key={i} className="border-b border-slate-800/50 shimmer">
+                    {Array(13).fill(0).map((_, j) => (<td key={j} className="px-4 py-4"><div className="h-3 bg-slate-800 rounded w-full" /></td>))}
+                  </tr>
+                ))
+              ) : executions.length === 0 ? (
+                <tr><td colSpan={13} className="px-4 py-12 text-center text-slate-600">No executions found</td></tr>
+              ) : (
+                executions.map((ex) => {
+                  const manual = isManual(ex);
+                  return (
+                    <tr key={ex.id} className={`border-b transition-colors ${manual ? 'border-red-500/20 bg-red-500/5 hover:bg-red-500/10' : 'border-slate-800/50 hover:bg-slate-800/40'}`}>
+                      <td className="px-4 py-3.5 font-mono text-xs text-slate-600">{ex.position_id || '—'}</td>
+                      <td className="px-4 py-3.5">{manual ? (<span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-400"><AlertTriangle className="w-3 h-3" />MANUAL</span>) : (<span className="font-mono text-xs text-slate-500">{ex.signal_uuid?.slice(0,16)}…</span>)}</td>
+                      <td className="px-4 py-3.5 font-semibold text-slate-200">{ex.symbol || '—'}</td>
+                      <td className="px-4 py-3.5"><span className={`text-xs font-bold ${ex.side === 'BUY' || ex.side === 'LONG' ? 'text-emerald-400' : 'text-red-400'}`}>{ex.side || '—'}</span></td>
+                      <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{ex.volume ?? '—'}</td>
+                      <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{fmtPrice(ex.entry_price, ex.digits)}</td>
+                      <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{fmtPrice(ex.close_price, ex.digits)}</td>
+                      <td className="px-4 py-3.5 text-red-400 font-mono text-xs">{ex.stop_loss ? (ex.stop_loss / Math.pow(10, ex.digits || 5)).toFixed(ex.digits || 5) : '—'}</td>
+                      <td className="px-4 py-3.5 text-emerald-400 font-mono text-xs">{ex.take_profit ? (ex.take_profit / Math.pow(10, ex.digits || 5)).toFixed(ex.digits || 5) : '—'}</td>
+                      <td className={`px-4 py-3.5 font-semibold font-mono text-xs ${pnlColor(ex.pnl)}`}>{fmt(ex.pnl)}</td>
+                      <td className="px-4 py-3.5"><span className={`text-xs px-2 py-0.5 rounded-full border font-semibold ${ex.status === 'open' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : ex.status === 'closed' ? 'bg-slate-700 text-slate-400 border-slate-600' : 'bg-slate-800 text-slate-500 border-slate-700'}`}>{ex.status || '—'}</span></td>
+                      <td className="px-4 py-3.5 text-slate-600 text-xs whitespace-nowrap">{ex.created_at ? new Date(ex.created_at).toLocaleString() : '—'}</td>
+                      <td className="px-4 py-3.5 text-slate-600 text-xs whitespace-nowrap">{ex.closed_at ? new Date(ex.closed_at).toLocaleString() : '—'}</td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
