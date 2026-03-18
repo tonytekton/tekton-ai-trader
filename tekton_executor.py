@@ -324,6 +324,12 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
             print(f"❌ Execution Failed: {result.get('error')}")
             return False
 
+    except ValueError as e:
+        if "Conversion failed" in str(e):
+            print(f"⚠️ UNSUPPORTED symbol {symbol}: {e} — marking FAILED (will not retry)")
+        else:
+            print(f"❌ CRITICAL ERROR in execute_trade: {e}")
+        return False
     except Exception as e:
         print(f"❌ CRITICAL ERROR in execute_trade: {e}")
         return False
@@ -374,7 +380,8 @@ def poll_signals():
                     cur.execute("UPDATE signals SET status = 'EXECUTING' WHERE signal_uuid = %s", (str(s_uuid),))
                     conn.commit()
 
-                    if execute_trade(s_uuid, sym, s_type, tf, float(sl_pips), float(tp_pips)):
+                    result = execute_trade(s_uuid, sym, s_type, tf, float(sl_pips), float(tp_pips))
+                    if result:
                         cur.execute("UPDATE signals SET status = 'COMPLETED' WHERE signal_uuid = %s", (str(s_uuid),))
                     else:
                         cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
