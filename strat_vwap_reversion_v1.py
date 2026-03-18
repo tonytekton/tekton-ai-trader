@@ -102,10 +102,11 @@ def get_symbol_specs():
         specs = {}
         for s in resp.json().get("symbols", []):
             sym     = s.get("name", "")
-            pip_pos = s.get("pipPosition"); pip_pos = 5 if not pip_pos else pip_pos
+            digits      = s.get("digits") or 5
+            pip_pos     = s.get("pipPosition")
             specs[sym] = {
-                "pip_size":    10 ** -(pip_pos - 1),  # pip = 1 point * 10; pipPos=5 → 0.0001
-                "price_scale": 10 ** pip_pos,
+                "pip_size":    10 ** (-pip_pos) if pip_pos else 10 ** -(digits - 1),
+                "price_scale": 10 ** digits,
             }
         _symbol_specs_cache = specs
         _specs_cache_ts     = now
