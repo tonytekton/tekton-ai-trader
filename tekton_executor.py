@@ -63,23 +63,55 @@ def _cache_set(key, value):
 # SETTINGS  —  single source of truth: /data/system-settings
 # ---------------------------------------------------------------------------
 def fetch_settings():
-    """Fetches live trading settings from the bridge."""
+    """
+    Fetches live trading settings.
+    Primary: bridge /data/system-settings (proxies SQL row id=1).
+    Fallback: direct SQL if bridge unavailable.
+    Never raises — always returns a safe dict.
+    """
     try:
         response = requests.get(f"{BRIDGE_BASE_URL}/data/system-settings", headers=HEADERS, timeout=10)
         response.raise_for_status()
         data = response.json()
         return {
-            "auto_trade":               data.get("auto_trade", False),
-            "friday_flush":             data.get("friday_flush", False),
+            "auto_trade":               bool(data.get("auto_trade", False)),
+            "friday_flush":             bool(data.get("friday_flush", False)),
             "risk_pct":                 float(data.get("risk_pct", 0.01)),
             "target_reward":            float(data.get("target_reward", 1.8)),
             "daily_drawdown_limit":     float(data.get("daily_drawdown_limit", 0.05)),
             "max_session_exposure_pct": float(data.get("max_session_exposure_pct", 4.0)),
-            "max_lots":                 float(data.get("max_lots", 50.0))
+            "max_lots":                 float(data.get("max_lots", 50.0)),
+            "min_sl_pips":              float(data.get("min_sl_pips", 8.0))
         }
-    except Exception as e:
-        print(f"⚠️ Settings Fetch Error: {e}")
-        raise
+    except Exception as bridge_err:
+        print(f"⚠️ Settings bridge unavailable: {bridge_err} — falling back to direct SQL")
+        try:
+            conn = psycopg2.connect(**DB_PARAMS)
+            cur  = conn.cursor()
+            cur.execute("SELECT auto_trade, friday_flush, risk_pct, target_reward, daily_drawdown_limit, max_session_exposure_pct, max_lots FROM settings WHERE id=1")
+            row = cur.fetchone()
+            cur.close(); conn.close()
+            if row:
+                print("✅ Settings loaded from SQL directly")
+                return {
+                    "auto_trade":               bool(row[0]),
+                    "friday_flush":             bool(row[1]),
+                    "risk_pct":                 float(row[2]),
+                    "target_reward":            float(row[3]),
+                    "daily_drawdown_limit":     float(row[4]),
+                    "max_session_exposure_pct": float(row[5]),
+                    "max_lots":                 float(row[6]),
+                    "min_sl_pips":              8.0
+                }
+        except Exception as sql_err:
+            print(f"⚠️ Settings SQL fallback failed: {sql_err} — using safe hardcoded defaults")
+        print("⚠️ Using hardcoded safe defaults — auto_trade=False, max_lots=50")
+        return {
+            "auto_trade": False, "friday_flush": False,
+            "risk_pct": 0.01, "target_reward": 1.8,
+            "daily_drawdown_limit": 0.05, "max_session_exposure_pct": 4.0,
+            "max_lots": 50.0, "min_sl_pips": 8.0
+        }
 
 # ---------------------------------------------------------------------------
 # PIP SIZE  —  always from bridge, never hardcoded
@@ -443,8 +475,19 @@ def poll_signals():
             if signal:
                 s_uuid, sym, s_type, tf, sl_pips, tp_pips = signal
 
+                min_sl = settings.get("min_sl_pips", 8.0)
+                rr = float(tp_pips) / float(sl_pips) if float(sl_pips) > 0 else 0
+
                 if sl_pips <= 0 or tp_pips <= 0:
                     print(f"⚠️ Invalid SL/TP for {sym}: sl={sl_pips} tp={tp_pips}. Marking FAILED.")
+                    cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
+                    conn.commit()
+                elif float(sl_pips) < min_sl:
+                    print(f"🚫 SL too tight for {sym}: {sl_pips}p < {min_sl}p minimum. Marking FAILED.")
+                    cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
+                    conn.commit()
+                elif rr < 1.5:
+                    print(f"🚫 RR too low for {sym}: {rr:.2f} < 1.5 minimum. Marking FAILED.")
                     cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
                     conn.commit()
                 else:
