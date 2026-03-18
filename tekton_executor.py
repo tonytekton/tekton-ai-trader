@@ -48,11 +48,12 @@ def fetch_settings():
         response.raise_for_status()
         data = response.json()
         return {
-            "auto_trade":           data.get("auto_trade", False),
-            "friday_flush":         data.get("friday_flush", False),
-            "risk_pct":             float(data.get("risk_pct", 0.01)),
-            "target_reward":        float(data.get("target_reward", 1.8)),
-            "daily_drawdown_limit": float(data.get("daily_drawdown_limit", 0.05))
+            "auto_trade":               data.get("auto_trade", False),
+            "friday_flush":             data.get("friday_flush", False),
+            "risk_pct":                 float(data.get("risk_pct", 0.01)),
+            "target_reward":            float(data.get("target_reward", 1.8)),
+            "daily_drawdown_limit":     float(data.get("daily_drawdown_limit", 0.05)),
+            "max_session_exposure_pct": float(data.get("max_session_exposure_pct", 4.0))
         }
     except Exception as e:
         print(f"⚠️ Settings Fetch Error: {e}")
@@ -178,49 +179,47 @@ def calculate_professional_lot_size(symbol, sl_pips):
     return final_vol
 
 # ---------------------------------------------------------------------------
-# DUPLICATE CHECK  (per symbol + strategy — allows different strategies on same symbol)
+# DUPLICATE CHECK
 # ---------------------------------------------------------------------------
-def is_symbol_already_open(symbol, strategy):
-    """
-    Returns True if THIS strategy already has an open trade on this symbol.
-    Different strategies may trade the same symbol simultaneously.
-    """
+def is_symbol_already_open(symbol):
+    """Checks if a position for this symbol is already open."""
     try:
-        # 1. Get live open positions from bridge
         res = requests.get(f"{BRIDGE_BASE_URL}/positions/list", headers=HEADERS, timeout=10)
         positions = res.json().get("positions", [])
-        open_symbols = {p.get("symbol") for p in positions}
-
-        if symbol not in open_symbols:
-            return False  # No open position for this symbol at all
-
-        # 2. Symbol IS open — check if it belongs to THIS strategy
-        conn = psycopg2.connect(**DB_PARAMS)
-        cur  = conn.cursor()
-        cur.execute("""
-            SELECT 1 FROM signals
-            WHERE symbol = %s
-              AND strategy = %s
-              AND status IN ('EXECUTING', 'COMPLETED')
-            ORDER BY created_at DESC
-            LIMIT 1;
-        """, (symbol, strategy))
-        row = cur.fetchone()
-        cur.close()
-        conn.close()
-        return row is not None
-
+        return any(p.get("symbol") == symbol for p in positions)
     except Exception as e:
         print(f"⚠️ is_symbol_already_open error: {e}")
         return False
 
 # ---------------------------------------------------------------------------
+# SESSION EXPOSURE CHECK
+# ---------------------------------------------------------------------------
+def get_current_session_exposure_pct():
+    """
+    Returns total current session exposure as a percentage of account equity.
+    Counts all open positions from the bridge and estimates each position's
+    risk as risk_pct (since all positions are sized to exactly risk_pct per trade).
+    Uses live position count × risk_pct as the exposure estimate.
+    """
+    try:
+        res = requests.get(f"{BRIDGE_BASE_URL}/positions/list", headers=HEADERS, timeout=10)
+        positions = res.json().get("positions", [])
+        settings = fetch_settings()
+        risk_pct_per_trade = settings.get("risk_pct", 0.01)
+        # Each open position represents exactly risk_pct exposure
+        total_exposure_pct = len(positions) * risk_pct_per_trade * 100
+        return total_exposure_pct, len(positions)
+    except Exception as e:
+        print(f"⚠️ get_current_session_exposure_pct error: {e} — assuming 0%")
+        return 0.0, 0
+
+# ---------------------------------------------------------------------------
 # TRADE EXECUTION
 # ---------------------------------------------------------------------------
-def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips, strategy="unknown"):
+def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
     try:
-        if is_symbol_already_open(symbol, strategy):
-            print(f"🚫 {symbol} already open for {strategy}. Skipping.")
+        if is_symbol_already_open(symbol):
+            print(f"🚫 {symbol} already open. Skipping.")
             return True
 
         vol = calculate_professional_lot_size(symbol, sl_pips)
@@ -268,11 +267,19 @@ def poll_signals():
                 time.sleep(30)
                 continue
 
+            # --- SESSION EXPOSURE GATE ---
+            max_exposure = settings.get("max_session_exposure_pct", 4.0)
+            current_exposure, open_count = get_current_session_exposure_pct()
+            if current_exposure >= max_exposure:
+                print(f"🛑 Session exposure cap reached: {current_exposure:.1f}% / {max_exposure:.1f}% max ({open_count} open positions). No new trades.")
+                time.sleep(30)
+                continue
+
             conn = psycopg2.connect(**DB_PARAMS)
             cur  = conn.cursor()
 
             cur.execute("""
-                SELECT signal_uuid, symbol, signal_type, timeframe, sl_pips, tp_pips, strategy
+                SELECT signal_uuid, symbol, signal_type, timeframe, sl_pips, tp_pips
                 FROM signals
                 WHERE status = 'PENDING'
                 AND sl_pips IS NOT NULL
@@ -282,7 +289,7 @@ def poll_signals():
             signal = cur.fetchone()
 
             if signal:
-                s_uuid, sym, s_type, tf, sl_pips, tp_pips, strategy = signal
+                s_uuid, sym, s_type, tf, sl_pips, tp_pips = signal
 
                 if sl_pips <= 0 or tp_pips <= 0:
                     print(f"⚠️ Invalid SL/TP for {sym}: sl={sl_pips} tp={tp_pips}. Marking FAILED.")
@@ -292,7 +299,7 @@ def poll_signals():
                     cur.execute("UPDATE signals SET status = 'EXECUTING' WHERE signal_uuid = %s", (str(s_uuid),))
                     conn.commit()
 
-                    if execute_trade(s_uuid, sym, s_type, tf, float(sl_pips), float(tp_pips), strategy):
+                    if execute_trade(s_uuid, sym, s_type, tf, float(sl_pips), float(tp_pips)):
                         cur.execute("UPDATE signals SET status = 'COMPLETED' WHERE signal_uuid = %s", (str(s_uuid),))
                     else:
                         cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
