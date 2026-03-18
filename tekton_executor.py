@@ -136,7 +136,7 @@ def get_live_pip_value(symbol, account_currency):
 
     # Fetch price with retry for subscription warm-up
     price_data = {}
-    for attempt in range(5):
+    for attempt in range(15):
         price_res   = requests.post(f"{BRIDGE_BASE_URL}/prices/current", json={"symbols": [conv_symbol]}, headers=HEADERS)
         if not price_res.text.strip(): raise ValueError(f"Empty response from /prices/current for {conv_symbol}")
         price_json  = price_res.json()
