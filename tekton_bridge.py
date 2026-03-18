@@ -553,6 +553,44 @@ def system_settings():
     except Exception as e:
         print(f"⚠️ system_settings error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/calendar/events", methods=["GET"])
+@require_auth
+def get_calendar_events():
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, event_date, currency, indicator_name, impact_level, source
+            FROM economic_events
+            WHERE event_date BETWEEN NOW() - INTERVAL '1 hour' AND NOW() + INTERVAL '7 days'
+            ORDER BY event_date ASC
+        """)
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        events = []
+        import datetime
+        now = datetime.datetime.now(datetime.timezone.utc)
+        for row in rows:
+            event_dt = row[1]
+            if event_dt.tzinfo is None:
+                event_dt = event_dt.replace(tzinfo=datetime.timezone.utc)
+            minutes_until = int((event_dt - now).total_seconds() / 60)
+            events.append({
+                "id":             row[0],
+                "event_date":     event_dt.isoformat(),
+                "currency":       row[2],
+                "indicator_name": row[3],
+                "impact_level":   row[4],
+                "source":         row[5],
+                "minutes_until":  minutes_until,
+            })
+        return jsonify({"success": True, "events": events, "count": len(events)})
+    except Exception as e:
+        print(f"⚠️ get_calendar_events error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
         
 @app.route("/proxy/executions", methods=["GET"])
 @require_auth
