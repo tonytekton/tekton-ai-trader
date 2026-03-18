@@ -39,6 +39,27 @@ INDEX_QUOTE_MAP = {
 POINTS_PER_PIP = 10
 
 # ---------------------------------------------------------------------------
+# IN-MEMORY CACHE  —  reduces cTrader API calls significantly
+# ---------------------------------------------------------------------------
+# contract specs never change mid-session → cached forever (cleared on restart)
+# conversion prices change slowly         → 5-minute TTL
+# account status (free margin, equity)    → 30-second TTL
+_cache = {}
+
+def _cache_get(key, ttl_seconds=None):
+    """Return cached value if fresh, else None."""
+    entry = _cache.get(key)
+    if entry is None:
+        return None
+    if ttl_seconds is not None and (time.time() - entry["ts"]) > ttl_seconds:
+        return None
+    return entry["value"]
+
+def _cache_set(key, value):
+    """Store value with current timestamp."""
+    _cache[key] = {"value": value, "ts": time.time()}
+
+# ---------------------------------------------------------------------------
 # SETTINGS  —  single source of truth: /data/system-settings
 # ---------------------------------------------------------------------------
 def fetch_settings():
@@ -63,6 +84,27 @@ def fetch_settings():
 # ---------------------------------------------------------------------------
 # PIP SIZE  —  always from bridge, never hardcoded
 # ---------------------------------------------------------------------------
+def get_contract_specs(symbol):
+    """
+    Returns full contract spec dict for symbol.
+    Cached forever — specs never change mid-session.
+    """
+    cache_key = f"specs:{symbol}"
+    cached = _cache_get(cache_key)  # no TTL = permanent until restart
+    if cached is not None:
+        return cached
+    spec_res = requests.post(
+        f"{BRIDGE_BASE_URL}/contract/specs",
+        json={"symbol": symbol},
+        headers=HEADERS,
+        timeout=10
+    )
+    if not spec_res.text.strip(): raise ValueError(f"Empty response from /contract/specs for {symbol}")
+    spec = spec_res.json().get("contract_specifications", {})
+    _cache_set(cache_key, spec)
+    print(f"📦 Cache MISS specs:{symbol} — fetched from bridge")
+    return spec
+
 def get_pip_size(symbol):
     """
     Returns pip size derived from live bridge pipPosition.
@@ -71,14 +113,7 @@ def get_pip_size(symbol):
          pipPosition=2 → pip_size=0.01   (JPY pairs, indices)
     """
     try:
-        spec_res = requests.post(
-            f"{BRIDGE_BASE_URL}/contract/specs",
-            json={"symbol": symbol},
-            headers=HEADERS,
-            timeout=10
-        )
-        if not spec_res.text.strip(): raise ValueError(f"Empty response from /contract/specs for {symbol}")
-        spec = spec_res.json().get("contract_specifications", {})
+        spec = get_contract_specs(symbol)
         pip_pos = spec.get("pipPosition", 4)
         return 10 ** (-pip_pos)
     except Exception as e:
@@ -134,22 +169,29 @@ def get_live_pip_value(symbol, account_currency):
         else:
             raise ValueError(f"Conversion failed for {symbol}: no path {direct}/{indirect} or via USD")
 
-    # Fetch price with retry for subscription warm-up
+    # Fetch price with retry for subscription warm-up (5-min cache TTL)
     price_data = {}
-    for attempt in range(15):
-        price_res   = requests.post(f"{BRIDGE_BASE_URL}/prices/current", json={"symbols": [conv_symbol]}, headers=HEADERS)
-        if not price_res.text.strip(): raise ValueError(f"Empty response from /prices/current for {conv_symbol}")
-        price_json  = price_res.json()
-        prices_list = price_json.get("prices", [])
-        if prices_list:
-            price_data = prices_list[0]
-            break
-        warming = (price_json.get("missing_symbols") or []) + (price_json.get("warming_up_symbols") or [])
-        if conv_symbol in warming:
-            print(f"⏳ Waiting for price subscription: {conv_symbol} (attempt {attempt+1}/5)")
-            time.sleep(2)
-        else:
-            break
+    cache_key_price = f"price:{conv_symbol}"
+    cached_price = _cache_get(cache_key_price, ttl_seconds=300)
+    if cached_price is not None:
+        price_data = cached_price
+    else:
+        for attempt in range(15):
+            price_res   = requests.post(f"{BRIDGE_BASE_URL}/prices/current", json={"symbols": [conv_symbol]}, headers=HEADERS)
+            if not price_res.text.strip(): raise ValueError(f"Empty response from /prices/current for {conv_symbol}")
+            price_json  = price_res.json()
+            prices_list = price_json.get("prices", [])
+            if prices_list:
+                price_data = prices_list[0]
+                _cache_set(cache_key_price, price_data)
+                print(f"📦 Cache MISS price:{conv_symbol} — fetched from bridge")
+                break
+            warming = (price_json.get("missing_symbols") or []) + (price_json.get("warming_up_symbols") or [])
+            if conv_symbol in warming:
+                print(f"⏳ Waiting for price subscription: {conv_symbol} (attempt {attempt+1}/5)")
+                time.sleep(2)
+            else:
+                break
 
     avg_price = (price_data.get("bid_raw", 0) + price_data.get("ask_raw", 0)) / 2 / 100_000
 
@@ -186,20 +228,27 @@ def get_live_pip_value(symbol, account_currency):
         conversion_rate = (1.0 / avg_price) if invert else avg_price
         return pip_size * conversion_rate
 
-    # Two-leg: fetch second price leg
+    # Two-leg: fetch second price leg (5-min cache TTL)
     price_data2 = {}
-    for attempt in range(5):
-        pr2 = requests.post(f"{BRIDGE_BASE_URL}/prices/current", json={"symbols": [conv_symbol2]}, headers=HEADERS)
-        pj2 = pr2.json()
-        pl2 = pj2.get("prices", [])
-        if pl2:
-            price_data2 = pl2[0]
-            break
-        if conv_symbol2 in ((pj2.get("missing_symbols") or []) + (pj2.get("warming_up_symbols") or [])):
-            print(f"Waiting for price: {conv_symbol2} (attempt {attempt+1}/5)")
-            time.sleep(2)
-        else:
-            break
+    cache_key_price2 = f"price:{conv_symbol2}"
+    cached_price2 = _cache_get(cache_key_price2, ttl_seconds=300)
+    if cached_price2 is not None:
+        price_data2 = cached_price2
+    else:
+        for attempt in range(5):
+            pr2 = requests.post(f"{BRIDGE_BASE_URL}/prices/current", json={"symbols": [conv_symbol2]}, headers=HEADERS)
+            pj2 = pr2.json()
+            pl2 = pj2.get("prices", [])
+            if pl2:
+                price_data2 = pl2[0]
+                _cache_set(cache_key_price2, price_data2)
+                print(f"📦 Cache MISS price:{conv_symbol2} — fetched from bridge")
+                break
+            if conv_symbol2 in ((pj2.get("missing_symbols") or []) + (pj2.get("warming_up_symbols") or [])):
+                print(f"Waiting for price: {conv_symbol2} (attempt {attempt+1}/5)")
+                time.sleep(2)
+            else:
+                break
     avg_price2 = (price_data2.get("bid_raw", 0) + price_data2.get("ask_raw", 0)) / 2 / 100_000
     if avg_price2 == 0:
         raise ValueError(f"Conversion failed for {symbol}: no price for {conv_symbol2} (leg 2)")
@@ -221,9 +270,15 @@ def calculate_professional_lot_size(symbol, sl_pips):
     settings         = fetch_settings()
     risk_pct         = settings.get("risk_pct", 0.01)
 
-    acc_res          = requests.get(f"{BRIDGE_BASE_URL}/account/status", headers=HEADERS)
-    if not acc_res.text.strip(): raise ValueError("Empty response from /account/status")
-    acc_data         = acc_res.json()
+    cached_acc = _cache_get("account_status", ttl_seconds=30)
+    if cached_acc is not None:
+        acc_data = cached_acc
+    else:
+        acc_res  = requests.get(f"{BRIDGE_BASE_URL}/account/status", headers=HEADERS)
+        if not acc_res.text.strip(): raise ValueError("Empty response from /account/status")
+        acc_data = acc_res.json()
+        _cache_set("account_status", acc_data)
+        print(f"📦 Cache MISS account_status — fetched from bridge")
     free_margin      = float(acc_data.get("free_margin", 0))
     acc_currency     = acc_data.get("currency", "EUR")
 
@@ -236,9 +291,7 @@ def calculate_professional_lot_size(symbol, sl_pips):
     # cTrader volume is in centilots where lotSize_centilots centilots = 1 lot
     required_units  = total_risk_cash / (sl_pips * pip_value_per_unit)
 
-    spec_res = requests.post(f"{BRIDGE_BASE_URL}/contract/specs", json={"symbol": symbol}, headers=HEADERS)
-    if not spec_res.text.strip(): raise ValueError(f"Empty response from /contract/specs (lot calc)")
-    spec          = spec_res.json().get("contract_specifications", {})
+    spec          = get_contract_specs(symbol)   # cached — no extra API call
     lot_size_cl   = spec.get("lotSize_centilots", 10_000_000)   # centilots per 1 standard lot
     step          = spec.get("stepVolume_centilots", 100_000)
     min_v         = spec.get("minVolume_centilots", 100_000)
