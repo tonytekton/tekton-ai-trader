@@ -151,7 +151,8 @@ def get_live_pip_value(symbol, account_currency):
         else:
             break
 
-    avg_price = (price_data.get("bid_raw", 0) + price_data.get("ask_raw", 0)) / 2 / 1_000_000
+    digits1   = price_data.get("digits", 5)
+    avg_price = (price_data.get("bid_raw", 0) + price_data.get("ask_raw", 0)) / 2 / (10 ** (digits1 - 1))
 
     # If single-leg price unavailable (e.g. EURAUD warming up), fall through to two-leg USD cross
     if avg_price == 0 and not two_leg:
@@ -173,7 +174,8 @@ def get_live_pip_value(symbol, account_currency):
                     price_data = pl[0]
                     break
                 time.sleep(2)
-            avg_price = (price_data.get("bid_raw", 0) + price_data.get("ask_raw", 0)) / 2 / 1_000_000
+            digits1   = price_data.get("digits", 5)
+            avg_price = (price_data.get("bid_raw", 0) + price_data.get("ask_raw", 0)) / 2 / (10 ** (digits1 - 1))
             if avg_price == 0:
                 raise ValueError(f"Conversion failed for {symbol}: no price for {conv_symbol} (USD fallback leg 1)")
         else:
@@ -200,7 +202,8 @@ def get_live_pip_value(symbol, account_currency):
             time.sleep(2)
         else:
             break
-    avg_price2 = (price_data2.get("bid_raw", 0) + price_data2.get("ask_raw", 0)) / 2 / 1_000_000
+    digits2    = price_data2.get("digits", 5)
+    avg_price2 = (price_data2.get("bid_raw", 0) + price_data2.get("ask_raw", 0)) / 2 / (10 ** (digits2 - 1))
     if avg_price2 == 0:
         raise ValueError(f"Conversion failed for {symbol}: no price for {conv_symbol2} (leg 2)")
     rate1 = (1.0 / avg_price) if invert else avg_price
