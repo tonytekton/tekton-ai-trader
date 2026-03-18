@@ -66,20 +66,34 @@ echo "   ✅ RSI Divergence (PID $!)"
 nohup python3 -u strat_lester_v1.py           >> strat_lester.log  2>&1 &
 echo "   ✅ Lester LSV (PID $!)"
 
-# ── 5. Backfill cron — ensure registered ─────────────────────────────────────
-echo "5️⃣  Backfill cron..."
+# ── 5. Cron jobs — ensure both are registered ────────────────────────────────
+echo "5️⃣  Cron jobs..."
 
-CRON_JOB="*/15 * * * * cd /home/tony/tekton-ai-trader && python3 tekton_backfill.py >> /home/tony/tekton-ai-trader/combined_trades.log 2>&1"
 CURRENT_CRON=$(crontab -l 2>/dev/null || true)
+BACKFILL_JOB="*/15 * * * * cd /home/tony/tekton-ai-trader && python3 tekton_backfill.py >> /home/tony/tekton-ai-trader/combined_trades.log 2>&1"
+REPORT_JOB="0 22 * * * /usr/bin/python3 /home/tony/tekton-ai-trader/tekton_daily_report.py >> /home/tony/tekton-ai-trader/reports.log 2>&1"
+
+UPDATED_CRON="$CURRENT_CRON"
 
 if echo "$CURRENT_CRON" | grep -q "tekton_backfill.py"; then
-    echo "   ✅ Backfill cron already registered"
+    echo "   ✅ Backfill cron already registered (every 15 min)"
 else
-    # Remove any old broken backfill entry, add the correct one
-    NEW_CRON=$(echo "$CURRENT_CRON" | grep -v "backfill" || true)
-    (echo "$NEW_CRON"; echo "$CRON_JOB") | crontab -
+    UPDATED_CRON=$(echo "$UPDATED_CRON" | grep -v "backfill" || true)
+    UPDATED_CRON="$UPDATED_CRON
+$BACKFILL_JOB"
     echo "   ✅ Backfill cron registered (every 15 min)"
 fi
+
+if echo "$CURRENT_CRON" | grep -q "tekton_daily_report.py"; then
+    echo "   ✅ Daily report cron already registered (22:00 UTC)"
+else
+    UPDATED_CRON=$(echo "$UPDATED_CRON" | grep -v "daily_report" || true)
+    UPDATED_CRON="$UPDATED_CRON
+$REPORT_JOB"
+    echo "   ✅ Daily report cron registered (22:00 UTC)"
+fi
+
+echo "$UPDATED_CRON" | crontab -
 
 # ── 6. Run backfill immediately on startup ────────────────────────────────────
 echo "6️⃣  Running backfill now to catch up on any missed candles..."
@@ -107,3 +121,4 @@ echo "   RSID     → tail -f strat_rsid.log"
 echo "   Lester   → tail -f strat_lester.log"
 echo "   Backfill → tail -f combined_trades.log"
 echo "─────────────────────────────────────────────────────"
+
