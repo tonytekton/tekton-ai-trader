@@ -180,6 +180,10 @@ def get_active_symbols() -> list:
             ORDER BY a.symbol;
         """)
         symbols = [row[0] for row in cur.fetchall()]
+        cur.execute("SELECT banned_symbols FROM settings WHERE id = 1;")
+        brow = cur.fetchone()
+        banned = set(brow[0].split(",")) if brow and brow[0] else set()
+        symbols = [s for s in symbols if s not in banned]
         cur.close()
         conn.close()
         return symbols
