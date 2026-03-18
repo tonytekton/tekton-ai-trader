@@ -508,47 +508,58 @@ def system_settings():
         cur = conn.cursor()
         if request.method == "POST":
             data = request.get_json()
-            auto_trade = data.get("auto_trade", data.get("autoTrade", False))
-            friday_flush = data.get("friday_flush", data.get("fridayFlush", False))
-            risk_pct = data.get("risk_pct", 0.01)
-            target_reward = data.get("target_reward", 1.8)
-            daily_drawdown_limit = data.get("daily_drawdown_limit", 0.05)
-            
+            auto_trade             = data.get("auto_trade", data.get("autoTrade", False))
+            friday_flush           = data.get("friday_flush", data.get("fridayFlush", False))
+            risk_pct               = data.get("risk_pct", 0.01)
+            target_reward          = data.get("target_reward", 1.8)
+            daily_drawdown_limit   = data.get("daily_drawdown_limit", 0.05)
+            max_session_exposure_pct = data.get("max_session_exposure_pct", 4.0)
+            max_lots               = data.get("max_lots", 5000.0)
+
             cur.execute("""
-                INSERT INTO settings (id, auto_trade, friday_flush, risk_pct, target_reward, daily_drawdown_limit)
-                VALUES (1, %s, %s, %s, %s, %s)
+                INSERT INTO settings (id, auto_trade, friday_flush, risk_pct, target_reward,
+                                      daily_drawdown_limit, max_session_exposure_pct, max_lots)
+                VALUES (1, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (id) DO UPDATE SET
-                    auto_trade = EXCLUDED.auto_trade,
-                    friday_flush = EXCLUDED.friday_flush,
-                    risk_pct = EXCLUDED.risk_pct,
-                    target_reward = EXCLUDED.target_reward,
-                    daily_drawdown_limit = EXCLUDED.daily_drawdown_limit
-            """, (auto_trade, friday_flush, risk_pct, target_reward, daily_drawdown_limit))
+                    auto_trade               = EXCLUDED.auto_trade,
+                    friday_flush             = EXCLUDED.friday_flush,
+                    risk_pct                 = EXCLUDED.risk_pct,
+                    target_reward            = EXCLUDED.target_reward,
+                    daily_drawdown_limit     = EXCLUDED.daily_drawdown_limit,
+                    max_session_exposure_pct = EXCLUDED.max_session_exposure_pct,
+                    max_lots                 = EXCLUDED.max_lots
+            """, (auto_trade, friday_flush, risk_pct, target_reward,
+                    daily_drawdown_limit, max_session_exposure_pct, max_lots))
             conn.commit()
         else:
             cur.execute("""
-                SELECT auto_trade, friday_flush, risk_pct, target_reward, daily_drawdown_limit
+                SELECT auto_trade, friday_flush, risk_pct, target_reward,
+                       daily_drawdown_limit, max_session_exposure_pct, max_lots
                 FROM settings WHERE id = 1
             """)
             row = cur.fetchone()
             if row:
                 return jsonify({
                     "success": True,
-                    "auto_trade": row[0],
-                    "friday_flush": row[1],
-                    "risk_pct": float(row[2]),
-                    "target_reward": float(row[3]),
-                    "daily_drawdown_limit": float(row[4])
+                    "auto_trade":               row[0],
+                    "friday_flush":             row[1],
+                    "risk_pct":                 float(row[2]),
+                    "target_reward":            float(row[3]),
+                    "daily_drawdown_limit":     float(row[4]),
+                    "max_session_exposure_pct": float(row[5]),
+                    "max_lots":                 float(row[6])
                 })
         cur.close()
         conn.close()
         return jsonify({
             "success": True,
-            "auto_trade": auto_trade,
-            "friday_flush": friday_flush,
-            "risk_pct": float(risk_pct),
-            "target_reward": float(target_reward),
-            "daily_drawdown_limit": float(daily_drawdown_limit)
+            "auto_trade":               auto_trade,
+            "friday_flush":             friday_flush,
+            "risk_pct":                 float(risk_pct),
+            "target_reward":            float(target_reward),
+            "daily_drawdown_limit":     float(daily_drawdown_limit),
+            "max_session_exposure_pct": float(max_session_exposure_pct),
+            "max_lots":                 float(max_lots)
         })
     except Exception as e:
         print(f"⚠️ system_settings error: {e}")
