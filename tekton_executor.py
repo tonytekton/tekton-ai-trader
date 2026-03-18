@@ -230,15 +230,22 @@ def calculate_professional_lot_size(symbol, sl_pips):
     total_risk_cash    = free_margin * risk_pct
     pip_value_per_unit = get_live_pip_value(symbol, acc_currency)
 
-    required_lots   = total_risk_cash / (sl_pips * pip_value_per_unit)
-    protocol_volume = int(required_lots)  # volume in cTrader units; pip_value_per_unit * units * sl_pips = risk_cash
+    # pip_value_per_unit = pip value for 1 raw unit in account currency
+    # required_units = how many raw units to risk exactly risk_cash over sl_pips
+    # 1 standard lot = 100,000 raw units
+    # cTrader volume is in centilots where lotSize_centilots centilots = 1 lot
+    required_units  = total_risk_cash / (sl_pips * pip_value_per_unit)
 
     spec_res = requests.post(f"{BRIDGE_BASE_URL}/contract/specs", json={"symbol": symbol}, headers=HEADERS)
     if not spec_res.text.strip(): raise ValueError(f"Empty response from /contract/specs (lot calc)")
-    spec     = spec_res.json().get("contract_specifications", {})
-    step     = spec.get("stepVolume_centilots", 10_000_000)
-    min_v    = spec.get("minVolume_centilots", 10_000_000)
-    max_v    = spec.get("maxVolume_centilots", 10_000_000_000)
+    spec          = spec_res.json().get("contract_specifications", {})
+    lot_size_cl   = spec.get("lotSize_centilots", 10_000_000)   # centilots per 1 standard lot
+    step          = spec.get("stepVolume_centilots", 100_000)
+    min_v         = spec.get("minVolume_centilots", 100_000)
+    max_v         = spec.get("maxVolume_centilots", 10_000_000_000)
+
+    # Convert raw units → centilots  (100,000 raw units = 1 lot = lot_size_cl centilots)
+    protocol_volume = int(required_units * lot_size_cl / 100_000)
 
     final_vol = max((protocol_volume // step) * step, min_v)
     final_vol = min(final_vol, max_v)
