@@ -236,7 +236,7 @@ def insert_signal(symbol, direction, sl_pips, tp_pips, confidence, reason):
             VALUES (%s,%s,%s,'15min',%s,%s,%s,'PENDING')
             RETURNING signal_uuid;
         """, (symbol, STRATEGY_NAME, direction,
-              float(round(confidence / 100, 2)), float(round(sl_pips, 1)), float(round(tp_pips, 1))))
+              int(confidence), float(round(sl_pips, 1)), float(round(tp_pips, 1))))
         uuid = cur.fetchone()[0]
         conn.commit(); cur.close(); conn.close()
         msg = (f"{direction} {symbol} | SL:{sl_pips:.1f}p TP:{tp_pips:.1f}p "
