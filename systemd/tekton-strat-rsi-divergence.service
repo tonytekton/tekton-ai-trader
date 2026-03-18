@@ -1,0 +1,19 @@
+[Unit]
+Description=Tekton Strategy RSI Divergence v1
+After=network-online.target tekton-ai-trader-bridge.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tony
+Group=tony
+WorkingDirectory=/home/tony/tekton-ai-trader
+EnvironmentFile=/home/tony/tekton-ai-trader/.env
+ExecStart=/home/tony/tekton-ai-trader/venv/bin/python /home/tony/tekton-ai-trader/strat_rsi_divergence_v1.py
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
