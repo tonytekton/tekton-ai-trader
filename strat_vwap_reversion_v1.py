@@ -196,6 +196,10 @@ def get_active_symbols():
             GROUP BY symbol HAVING COUNT(*) >= 30 ORDER BY symbol;
         """)
         syms = [r[0] for r in cur.fetchall()]
+        cur.execute("SELECT banned_symbols FROM settings WHERE id = 1;")
+        brow = cur.fetchone()
+        banned = set(brow[0].split(",")) if brow and brow[0] else set()
+        syms = [s for s in syms if s not in banned]
         cur.close(); conn.close()
         return [s for s in syms if s in PREFERRED_SYMBOLS]
     except Exception as e:
