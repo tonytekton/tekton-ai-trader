@@ -13,6 +13,7 @@ Deno.serve(async (req) => {
       risk_pct,
       target_reward,
       daily_drawdown_limit,
+      max_session_exposure_pct,
     } = body;
 
     const bridgeUrl = Deno.env.get('BRIDGE_URL');
@@ -21,7 +22,14 @@ Deno.serve(async (req) => {
     const res = await fetch(`${bridgeUrl}/data/settings`, {
       method: 'POST',
       headers: { 'X-Bridge-Key': bridgeKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ auto_trade, friday_flush, risk_pct, target_reward, daily_drawdown_limit }),
+      body: JSON.stringify({
+        auto_trade,
+        friday_flush,
+        risk_pct,
+        target_reward,
+        daily_drawdown_limit,
+        max_session_exposure_pct,
+      }),
     });
 
     const data = await res.json();
