@@ -148,9 +148,9 @@ def calculate_professional_lot_size(symbol, sl_pips):
     """
     Calculates volume in centilots based on live equity and risk %.
 
-    cTrader volume units: centilots (100 = 1 standard lot).
+    cTrader volume units: raw units where 100000 = 1 standard lot.
     Formula: required_lots = risk_cash / (sl_pips * pip_value_per_lot)
-             centilots = required_lots * 100
+             volume = required_lots * 100000
     """
     settings         = fetch_settings()
     risk_pct         = settings.get("risk_pct", 0.01)
@@ -164,18 +164,18 @@ def calculate_professional_lot_size(symbol, sl_pips):
     pip_value_per_unit = get_live_pip_value(symbol, acc_currency)
 
     required_lots   = total_risk_cash / (sl_pips * pip_value_per_unit)
-    protocol_volume = int(required_lots * 100)
+    protocol_volume = int(required_lots * 100000)  # 100000 raw units = 1 standard lot in cTrader
 
     spec_res = requests.post(f"{BRIDGE_BASE_URL}/contract/specs", json={"symbol": symbol}, headers=HEADERS)
     spec     = spec_res.json().get("contract_specifications", {})
-    step     = spec.get("stepVolume_centilots", 100)
-    min_v    = spec.get("minVolume_centilots", 100)
-    max_v    = spec.get("maxVolume_centilots", 100_000)
+    step     = spec.get("stepVolume_centilots", 100000)
+    min_v    = spec.get("minVolume_centilots", 100000)
+    max_v    = spec.get("maxVolume_centilots", 100_000_000)
 
     final_vol = max((protocol_volume // step) * step, min_v)
     final_vol = min(final_vol, max_v)
 
-    print(f"📊 Risk: {acc_currency} {total_risk_cash:,.2f} | PipVal/Unit: {pip_value_per_unit:.6f} | Lots: {final_vol/100:.2f} | Vol: {final_vol}")
+    print(f"📊 Risk: {acc_currency} {total_risk_cash:,.2f} | PipVal/Unit: {pip_value_per_unit:.6f} | Lots: {final_vol/100000:.2f} | Vol: {final_vol}")
     return final_vol
 
 # ---------------------------------------------------------------------------
