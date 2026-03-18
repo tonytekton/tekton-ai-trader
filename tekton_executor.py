@@ -152,6 +152,33 @@ def get_live_pip_value(symbol, account_currency):
             break
 
     avg_price = (price_data.get("bid_raw", 0) + price_data.get("ask_raw", 0)) / 2 / 1_000_000
+
+    # If single-leg price unavailable (e.g. EURAUD warming up), fall through to two-leg USD cross
+    if avg_price == 0 and not two_leg:
+        print(f"⚠️ No price for {conv_symbol} — falling back to USD cross-rate")
+        leg1_sym = f"{quote_currency}USD" if f"{quote_currency}USD" in available_names else (f"USD{quote_currency}" if f"USD{quote_currency}" in available_names else None)
+        leg2_sym = f"USD{acc_currency}" if f"USD{acc_currency}" in available_names else (f"{acc_currency}USD" if f"{acc_currency}USD" in available_names else None)
+        if leg1_sym and leg2_sym:
+            conv_symbol  = leg1_sym
+            invert       = leg1_sym.startswith("USD")
+            conv_symbol2 = leg2_sym
+            invert2      = leg2_sym.startswith(acc_currency)
+            two_leg      = True
+            # Re-fetch leg1 price
+            price_data = {}
+            for attempt in range(5):
+                pr = requests.post(f"{BRIDGE_BASE_URL}/prices/current", json={"symbols": [conv_symbol]}, headers=HEADERS)
+                pl = pr.json().get("prices", [])
+                if pl:
+                    price_data = pl[0]
+                    break
+                time.sleep(2)
+            avg_price = (price_data.get("bid_raw", 0) + price_data.get("ask_raw", 0)) / 2 / 1_000_000
+            if avg_price == 0:
+                raise ValueError(f"Conversion failed for {symbol}: no price for {conv_symbol} (USD fallback leg 1)")
+        else:
+            raise ValueError(f"Conversion failed for {symbol}: no price for {conv_symbol} and no USD cross available")
+
     if avg_price == 0:
         raise ValueError(f"Conversion failed for {symbol}: no price for {conv_symbol}")
 
