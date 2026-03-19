@@ -1001,10 +1001,12 @@ def execute_trade():
 
         rel_sl = data.get("rel_sl")
         rel_tp = data.get("rel_tp")
+        # relativeStopLoss/TP must be float pips (1dp), NOT int.
+        # int() truncation was accepted by cTrader but silently dropped the SL/TP.
         if rel_sl:
-            req.relativeStopLoss = int(rel_sl)
+            req.relativeStopLoss = round(float(rel_sl), 1)
         if rel_tp:
-            req.relativeTakeProfit = int(rel_tp)
+            req.relativeTakeProfit = round(float(rel_tp), 1)
 
         d_exec, client_msg_id = defer.Deferred(), str(uuid.uuid4())
         pending_requests[client_msg_id] = d_exec
