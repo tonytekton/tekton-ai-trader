@@ -636,15 +636,19 @@ def get_executions():
             trade_comment = getattr(pos.tradeData, 'comment', None)
             open_ts = getattr(pos.tradeData, 'openTimestamp', None)
 
+            lot_size_cl = spec.get("lotSize", 100000)
+            raw_sl = getattr(pos, 'stopLoss', 0) or 0
+            raw_tp = getattr(pos, 'takeProfit', 0) or 0
             open_trades.append({
                 "id": str(pos.positionId),
-                "signal_uuid": trade_comment,
+                "signal_uuid": trade_comment if trade_comment else None,
                 "symbol": name,
                 "side": "BUY" if pos.tradeData.tradeSide == TRADE_SIDE_BUY else "SELL",
                 "volume": pos.tradeData.volume,
+                "lots": round(pos.tradeData.volume / lot_size_cl, 2),
                 "entry_price": getattr(pos.tradeData, 'openPrice', None),
-                "stop_loss": getattr(pos, 'stopLoss', None),
-                "take_profit": getattr(pos, 'takeProfit', None),
+                "stop_loss": raw_sl if raw_sl > 0 else None,
+                "take_profit": raw_tp if raw_tp > 0 else None,
                 "close_price": None,
                 "pnl": None,
                 "status": "open",
@@ -705,12 +709,15 @@ def get_executions():
             open_ts = getattr(opening_deal, 'executionTimestamp', None)
             close_ts = getattr(closing_deal, 'executionTimestamp', None)
 
+            closed_lot_size_cl = spec.get("lotSize", 100000)
+            filled_vol = getattr(closing_deal, 'filledVolume', 0)
             closed_trades.append({
                 "id": pos_id,
-                "signal_uuid": hist_comment,
+                "signal_uuid": hist_comment if hist_comment else None,
                 "symbol": symbol_name,
                 "side": "BUY" if opening_deal.tradeSide == TRADE_SIDE_BUY else "SELL",
-                "volume": getattr(closing_deal, 'filledVolume', 0),
+                "volume": filled_vol,
+                "lots": round(filled_vol / closed_lot_size_cl, 2),
                 "entry_price": getattr(opening_deal, 'executionPrice', 0),
                 "close_price": getattr(closing_deal, 'executionPrice', 0),
                 "stop_loss": None,
