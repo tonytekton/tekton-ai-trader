@@ -421,21 +421,22 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
         print(f"🔍 Bridge response: {result}")
 
         if result.get("success"):
-            print(f"✅ Trade Executed: {symbol} ID: {result.get('position_id')}")
-            return True
+            pos_id = result.get("position_id")
+            print(f"✅ Trade Executed: {symbol} ID: {pos_id}")
+            return str(pos_id) if pos_id else "UNKNOWN"
         else:
             print(f"❌ Execution Failed: {result.get('error')}")
-            return False
+            return None
 
     except ValueError as e:
         if "Conversion failed" in str(e):
             print(f"⚠️ UNSUPPORTED symbol {symbol}: {e} — marking FAILED (will not retry)")
         else:
             print(f"❌ CRITICAL ERROR in execute_trade: {e}")
-        return False
+        return None
     except Exception as e:
         print(f"❌ CRITICAL ERROR in execute_trade: {e}")
-        return False
+        return None
 
 # ---------------------------------------------------------------------------
 # SIGNAL POLL LOOP
@@ -524,7 +525,10 @@ def poll_signals():
 
                     result = execute_trade(s_uuid, sym, s_type, tf, float(sl_pips), float(tp_pips))
                     if result:
-                        cur.execute("UPDATE signals SET status = 'COMPLETED' WHERE signal_uuid = %s", (str(s_uuid),))
+                        cur.execute(
+                            "UPDATE signals SET status = 'COMPLETED', position_id = %s WHERE signal_uuid = %s",
+                            (result, str(s_uuid))
+                        )
                     else:
                         cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
                     conn.commit()
