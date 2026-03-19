@@ -691,26 +691,41 @@ def get_executions():
                 position_deals[pos_id] = []
             position_deals[pos_id].append(deal)
 
-        # Build entry price map for open positions from the same DealListReq result
-        # DealListReq returns all deals including open ones — opening deal has executionPrice
-        deal_entry_map = {}
-        for pos_id, deals in position_deals.items():
-            opening_deal = deals[0]
-            ep_raw = getattr(opening_deal, 'executionPrice', 0)
-            spec = state['symbol_id_to_spec_map'].get(opening_deal.symbolId, {})
-            ep_digits = spec.get('digits', 5)
-            ep_divisor = 10 ** ep_digits
-            if ep_raw and ep_raw / ep_divisor >= 0.001:
-                deal_entry_map[pos_id] = round(ep_raw / ep_divisor, ep_digits)
+        # --- Enrich open trade entry prices via ProtoOAOrderListReq ---
+        # ReconcileReq.tradeData.openPrice is Optional and broker may not populate it.
+        # ProtoOAOrder.executionPrice on a FILLED non-closing order is the reliable source.
+        try:
+            order_list_req = openapi.ProtoOAOrderListReq()
+            order_list_req.ctidTraderAccountId = ACCOUNT_ID
+            order_list_req.fromTimestamp = from_ts  # same 30-day window as DealListReq
+            order_list_req.toTimestamp = to_ts
 
-        # DEBUG: log what's in deal_entry_map vs open trade IDs
-        print(f'DEBUG deal_entry_map keys: {list(deal_entry_map.keys())}')
-        print(f'DEBUG open trade IDs: {[t["id"] for t in open_trades]}')
-        print(f'DEBUG total deals from DealListReq: {len(deal_result.deal)}')
-        # Apply deal entry prices to open trades where cTrader ReconcileReq returned None
-        for t in open_trades:
-            if t['entry_price'] is None and t['id'] in deal_entry_map:
-                t['entry_price'] = deal_entry_map[t['id']]
+            d_orders, client_msg_id_orders = defer.Deferred(), str(uuid.uuid4())
+            pending_requests[client_msg_id_orders] = d_orders
+            reactor.callFromThread(lambda: bridge.client.send(order_list_req, clientMsgId=client_msg_id_orders))
+            order_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_orders, 30)
+
+            # Build positionId → executionPrice map from FILLED opening orders
+            order_entry_map = {}
+            from ctrader_open_api.messages.OpenApiModelMessages_pb2 import ProtoOAOrderStatus
+            for order in order_result.order:
+                if (order.orderStatus == ProtoOAOrderStatus.ORDER_STATUS_FILLED
+                        and not order.closingOrder
+                        and order.positionId
+                        and order.executionPrice):
+                    pos_id = str(order.positionId)
+                    spec = state['symbol_id_to_spec_map'].get(order.tradeData.symbolId, {})
+                    digits = spec.get('digits', 5)
+                    # executionPrice from ProtoOAOrder is already a scaled double (not raw int)
+                    order_entry_map[pos_id] = round(order.executionPrice, digits)
+
+            # Apply to any open trade still missing entry_price
+            for t in open_trades:
+                if t['entry_price'] is None and t['id'] in order_entry_map:
+                    t['entry_price'] = order_entry_map[t['id']]
+
+        except Exception as e:
+            logging.warning(f'OrderListReq for entry prices failed: {e}')
 
         for pos_id, deals in position_deals.items():
             closing_deal = next((d for d in deals if hasattr(d, 'closePositionDetail')), None)
@@ -1402,6 +1417,8 @@ class Bridge:
                         payload_class = openapi.ProtoOAAssetListRes
                     elif pt == openapi.ProtoOADealListRes().payloadType:
                         payload_class = openapi.ProtoOADealListRes
+                    elif pt == openapi.ProtoOAOrderListRes().payloadType:
+                        payload_class = openapi.ProtoOAOrderListRes
 
                     if payload_class:
                         payload = payload_class()
