@@ -81,14 +81,15 @@ def fetch_settings():
             "daily_drawdown_limit":     float(data.get("daily_drawdown_limit", 0.05)),
             "max_session_exposure_pct": float(data.get("max_session_exposure_pct", 4.0)),
             "max_lots":                 float(data.get("max_lots", 50.0)),
-            "min_sl_pips":              float(data.get("min_sl_pips", 8.0))
+            "min_sl_pips":              float(data.get("min_sl_pips", 8.0)),
+            "news_blackout_mins":        int(data.get("news_blackout_mins", 30))
         }
     except Exception as bridge_err:
         print(f"⚠️ Settings bridge unavailable: {bridge_err} — falling back to direct SQL")
         try:
             conn = psycopg2.connect(**DB_PARAMS)
             cur  = conn.cursor()
-            cur.execute("SELECT auto_trade, friday_flush, risk_pct, target_reward, daily_drawdown_limit, max_session_exposure_pct, max_lots FROM settings WHERE id=1")
+            cur.execute("SELECT auto_trade, friday_flush, risk_pct, target_reward, daily_drawdown_limit, max_session_exposure_pct, max_lots, news_blackout_mins FROM settings WHERE id=1")
             row = cur.fetchone()
             cur.close(); conn.close()
             if row:
@@ -101,7 +102,8 @@ def fetch_settings():
                     "daily_drawdown_limit":     float(row[4]),
                     "max_session_exposure_pct": float(row[5]),
                     "max_lots":                 float(row[6]),
-                    "min_sl_pips":              8.0
+                    "min_sl_pips":              8.0,
+                    "news_blackout_mins":        int(row[7]) if row[7] is not None else 30
                 }
         except Exception as sql_err:
             print(f"⚠️ Settings SQL fallback failed: {sql_err} — using safe hardcoded defaults")
@@ -110,7 +112,7 @@ def fetch_settings():
             "auto_trade": False, "friday_flush": False,
             "risk_pct": 0.01, "target_reward": 1.8,
             "daily_drawdown_limit": 0.05, "max_session_exposure_pct": 4.0,
-            "max_lots": 50.0, "min_sl_pips": 8.0
+            "max_lots": 50.0, "min_sl_pips": 8.0, "news_blackout_mins": 30
         }
 
 # ---------------------------------------------------------------------------
@@ -459,6 +461,32 @@ def poll_signals():
                 time.sleep(30)
                 continue
 
+            # --- ECONOMIC CALENDAR GATE ---
+            # Block new executions within news_blackout_mins of any HIGH impact event
+            blackout_mins = settings.get("news_blackout_mins", 30)
+            try:
+                cal_conn = psycopg2.connect(**DB_PARAMS)
+                cal_cur  = cal_conn.cursor()
+                cal_cur.execute("""
+                    SELECT indicator_name, event_date, currency
+                    FROM economic_events
+                    WHERE impact_level = 'HIGH'
+                    AND event_date BETWEEN NOW() - INTERVAL '%s minutes'
+                                      AND NOW() + INTERVAL '%s minutes'
+                    ORDER BY event_date ASC
+                    LIMIT 1
+                """, (blackout_mins, blackout_mins))
+                news_event = cal_cur.fetchone()
+                cal_cur.close()
+                cal_conn.close()
+                if news_event:
+                    ev_name, ev_date, ev_ccy = news_event
+                    print(f"📰 NEWS BLACKOUT: {ev_name} ({ev_ccy}) at {ev_date.strftime('%H:%M')} UTC — no new trades within {blackout_mins}min window.")
+                    time.sleep(30)
+                    continue
+            except Exception as cal_err:
+                print(f"⚠️ Calendar gate check failed: {cal_err} — proceeding without news filter.")
+
             conn = psycopg2.connect(**DB_PARAMS)
             cur  = conn.cursor()
 
@@ -510,3 +538,4 @@ def poll_signals():
 
 if __name__ == "__main__":
     poll_signals()
+
