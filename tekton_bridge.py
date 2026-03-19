@@ -638,15 +638,17 @@ def get_executions():
 
             raw_sl = getattr(pos, 'stopLoss', 0) or 0
             raw_tp = getattr(pos, 'takeProfit', 0) or 0
+            divisor = 10 ** digits
+            open_price_raw = getattr(pos.tradeData, 'openPrice', None)
             open_trades.append({
                 "id": str(pos.positionId),
                 "signal_uuid": trade_comment if trade_comment else None,
                 "symbol": name,
                 "side": "BUY" if pos.tradeData.tradeSide == TRADE_SIDE_BUY else "SELL",
-                "volume": pos.tradeData.volume,
-                "entry_price": getattr(pos.tradeData, 'openPrice', None),
-                "stop_loss": raw_sl if raw_sl > 0 else None,
-                "take_profit": raw_tp if raw_tp > 0 else None,
+                "volume": round(pos.tradeData.volume / 10000000, 2),
+                "entry_price": round(open_price_raw / divisor, digits) if open_price_raw else None,
+                "stop_loss": round(raw_sl / divisor, digits) if raw_sl > 0 else None,
+                "take_profit": round(raw_tp / divisor, digits) if raw_tp > 0 else None,
                 "close_price": None,
                 "pnl": None,
                 "status": "open",
@@ -708,14 +710,17 @@ def get_executions():
             close_ts = getattr(closing_deal, 'executionTimestamp', None)
 
             filled_vol = getattr(closing_deal, 'filledVolume', 0)
+            divisor_c = 10 ** digits
+            entry_raw = getattr(opening_deal, 'executionPrice', 0)
+            close_raw = getattr(closing_deal, 'executionPrice', 0)
             closed_trades.append({
                 "id": pos_id,
                 "signal_uuid": hist_comment if hist_comment else None,
                 "symbol": symbol_name,
                 "side": "BUY" if opening_deal.tradeSide == TRADE_SIDE_BUY else "SELL",
-                "volume": filled_vol,
-                "entry_price": getattr(opening_deal, 'executionPrice', 0),
-                "close_price": getattr(closing_deal, 'executionPrice', 0),
+                "volume": round(filled_vol / 10000000, 2),
+                "entry_price": round(entry_raw / divisor_c, digits) if entry_raw else None,
+                "close_price": round(close_raw / divisor_c, digits) if close_raw else None,
                 "stop_loss": None,
                 "take_profit": None,
                 "pnl": round(net_pnl_cents / 100, 2),
@@ -752,6 +757,36 @@ def get_executions():
                         t["strategy"] = sig["strategy"]
         except Exception as enrich_err:
             print(f"WARNING Signal enrichment failed (non-fatal): {enrich_err}")
+
+        # ── Enrich closed trades with signal_uuid from SQL by position_id ──────
+        try:
+            pos_ids = [t["id"] for t in closed_trades if not t.get("signal_uuid")]
+            if pos_ids:
+                enrich_conn2 = psycopg2.connect(
+                    host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
+                    database=os.getenv("CLOUD_SQL_DB_NAME", "tekton-trader"),
+                    user=os.getenv("CLOUD_SQL_DB_USER", "postgres"),
+                    password=os.getenv("CLOUD_SQL_DB_PASSWORD")
+                )
+                enrich_cur2 = enrich_conn2.cursor()
+                placeholders2 = ",".join(["%s"] * len(pos_ids))
+                enrich_cur2.execute(
+                    f"SELECT position_id, signal_uuid::text, sl_pips, tp_pips, strategy FROM signals WHERE position_id IN ({placeholders2})",
+                    pos_ids
+                )
+                pos_signal_map = {row[0]: {"signal_uuid": row[1], "sl_pips": row[2], "tp_pips": row[3], "strategy": row[4]} for row in enrich_cur2.fetchall()}
+                enrich_cur2.close()
+                enrich_conn2.close()
+                for t in closed_trades:
+                    sig = pos_signal_map.get(t["id"])
+                    if sig:
+                        if not t.get("signal_uuid"):
+                            t["signal_uuid"] = sig["signal_uuid"]
+                        t["sl_pips"] = float(sig["sl_pips"]) if sig["sl_pips"] else None
+                        t["tp_pips"] = float(sig["tp_pips"]) if sig["tp_pips"] else None
+                        t["strategy"] = sig["strategy"]
+        except Exception as enrich_err2:
+            print(f"WARNING Closed trade enrichment failed (non-fatal): {enrich_err2}")
 
         closed_trades.sort(key=lambda x: x.get('closed_at') or '', reverse=True)
         return jsonify({
