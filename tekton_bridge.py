@@ -813,7 +813,9 @@ def get_executions():
                         if t["entry_price"] is None and sig.get("avg_fill_price"):
                             t["entry_price"] = float(sig["avg_fill_price"])
         except Exception as enrich_err:
+            import traceback as _tb
             print(f"WARNING Signal enrichment failed (non-fatal): {enrich_err}")
+            _tb.print_exc()
 
         # ── Enrich closed trades with signal_uuid from SQL by position_id ──────
         try:
