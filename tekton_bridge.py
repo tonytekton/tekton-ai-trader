@@ -72,6 +72,9 @@ state = {
     "equity_cents": 0,
     "margin_used_cents": 0,
     "starting_equity_cents": 0,
+    # ── v4.8 event-driven position state ──────────────────────────────────────
+    "position_state": {},            # positionId(str) → normalised position dict
+    "position_state_ready": False,   # True after startup ReconcileReq seed completes
 }
 
 # ===== API CALL TRACKING =====
@@ -101,6 +104,75 @@ def safe_get_field(obj, field_name, default_value=0):
     if hasattr(obj, field_name):
         return getattr(obj, field_name)
     return default_value
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PRICE NORMALISATION HELPERS (v4.8)
+# ═══════════════════════════════════════════════════════════════════════════════
+# cTrader uses two distinct price formats — mixing them up causes silent bugs.
+#
+# RAW INTEGER format (divide by 10^digits to get decimal):
+#   ProtoOADeal.executionPrice, ProtoOAPosition.stopLoss/takeProfit,
+#   ProtoOATradeData.openPrice, market data candles
+#
+# DECIMAL DOUBLE format (use as-is — do NOT divide):
+#   ProtoOAOrder.executionPrice
+#   ProtoOAAmendPositionSLTPReq.stopLoss / .takeProfit  ← pass float directly
+#   ProtoOANewOrderReq.relativeStopLoss / .relativeTakeProfit (points, not price)
+#
+# RULE: Always use these helpers. Never inline the conversion anywhere else.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def raw_to_decimal(raw_int, digits):
+    """Convert a cTrader raw integer price to a human-readable decimal.
+    Use for: ProtoOADeal.executionPrice, ProtoOAPosition.stopLoss/takeProfit,
+             ProtoOATradeData.openPrice, market data candle prices.
+    Returns None if raw_int is falsy or the result looks bogus (<0.0001).
+    """
+    if not raw_int:
+        return None
+    val = raw_int / (10 ** digits)
+    return round(val, digits) if val >= 0.0001 else None
+
+
+def decimal_to_raw(decimal_price, digits):
+    """Convert a human-readable decimal price to a cTrader raw integer.
+    Use when you need to store or compare against raw integer fields.
+    Returns None if decimal_price is falsy.
+    """
+    if not decimal_price:
+        return None
+    return int(round(float(decimal_price) * (10 ** digits)))
+
+
+def _position_to_dict(pos, spec, digits):
+    """Normalise a ProtoOAPosition protobuf object into a clean Python dict.
+    Single source of truth for position normalisation — all callers use this.
+    entry_price comes from ProtoOATradeData.openPrice (raw int) — use raw_to_decimal.
+    stop_loss / take_profit from position object are raw ints — use raw_to_decimal.
+    Note: entry_price from ExecutionEvent's order field is a decimal double and
+    will be patched onto position_state separately (see _handle_execution_event).
+    """
+    side_val = getattr(pos.tradeData, 'tradeSide', None)
+    side = 'BUY' if side_val == TRADE_SIDE_BUY else 'SELL'
+
+    return {
+        'id':           str(pos.positionId),
+        'symbol':       spec.get('symbolName', f'UNKNOWN_{pos.tradeData.symbolId}'),
+        'symbol_id':    pos.tradeData.symbolId,
+        'side':         side,
+        'volume':       round(pos.tradeData.volume / 10_000_000, 4),
+        'volume_raw':   pos.tradeData.volume,
+        'entry_price':  raw_to_decimal(getattr(pos.tradeData, 'openPrice', None), digits),
+        'stop_loss':    raw_to_decimal(getattr(pos, 'stopLoss', None), digits),
+        'take_profit':  raw_to_decimal(getattr(pos, 'takeProfit', None), digits),
+        'comment':      getattr(pos.tradeData, 'comment', None),   # contains signal_uuid
+        'open_ts':      getattr(pos.tradeData, 'openTimestamp', None),
+        'digits':       digits,
+        'pnl':          None,   # populated later from PnL event or spot calc
+        'status':       'open',
+    }
+
 
 def wait_for_deferred(d, timeout_seconds=30):
     gate = defer.Deferred()
