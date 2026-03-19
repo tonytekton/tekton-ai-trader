@@ -647,30 +647,9 @@ def get_executions():
                 scaled_sl = None
             if scaled_tp is not None and scaled_tp < 0.001:
                 scaled_tp = None
-            # Try openPrice from reconcile; fall back to deal history if None/0
+            # openPrice from ReconcileReq (may be None — cTrader limitation for some brokers)
             open_price_raw2 = getattr(pos.tradeData, 'openPrice', None)
             scaled_open = round(open_price_raw2 / divisor, digits) if open_price_raw2 and open_price_raw2 / divisor >= 0.001 else None
-            if scaled_open is None:
-                try:
-                    d_ep = defer.Deferred()
-                    ep_id = str(uuid.uuid4())
-                    pending_requests[ep_id] = d_ep
-                    ep_req = openapi.ProtoOADealListReq()
-                    ep_req.ctidTraderAccountId = ACCOUNT_ID
-                    now_ms = int(time.time() * 1000)
-                    ep_req.fromTimestamp = now_ms - (7 * 24 * 60 * 60 * 1000)
-                    ep_req.toTimestamp = now_ms
-                    ep_req.maxRows = 50
-                    ep_req.positionId = pos.positionId
-                    reactor.callFromThread(lambda r=ep_req, k=ep_id: bridge.client.send(r, clientMsgId=k))
-                    ep_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_ep, 5)
-                    for deal in ep_result.deal:
-                        ep_raw = getattr(deal, 'executionPrice', 0)
-                        if ep_raw and ep_raw / divisor >= 0.001:
-                            scaled_open = round(ep_raw / divisor, digits)
-                            break
-                except Exception as ep_err:
-                    print(f'WARNING entry price lookup failed for pos {pos.positionId}: {ep_err}')
             open_trades.append({
                 "id": str(pos.positionId),
                 "signal_uuid": trade_comment if trade_comment else None,
