@@ -756,11 +756,14 @@ def get_executions():
             close_ts = getattr(closing_deal, 'executionTimestamp', None)
 
             filled_vol = getattr(closing_deal, 'filledVolume', 0)
-            divisor_c = 10 ** digits
-            entry_raw = getattr(opening_deal, 'executionPrice', 0)
-            close_raw = getattr(closing_deal, 'executionPrice', 0)
-            scaled_entry = round(entry_raw / divisor_c, digits) if entry_raw and entry_raw / divisor_c >= 0.001 else None
-            scaled_close = round(close_raw / divisor_c, digits) if close_raw and close_raw / divisor_c >= 0.001 else None
+            # FIX: ProtoOADeal.executionPrice is already a decimal double (e.g. 1.71536),
+            # NOT a raw integer. Dividing by 10^digits was producing values ~0.00001
+            # which failed the sanity check and returned None.
+            # Use directly — same behaviour confirmed in /positions/history endpoint.
+            entry_raw = getattr(opening_deal, 'executionPrice', None) or getattr(closing_deal, 'executionPrice', None)
+            close_raw = getattr(closing_deal, 'executionPrice', None) or getattr(opening_deal, 'executionPrice', None)
+            scaled_entry = round(float(entry_raw), digits) if entry_raw else None
+            scaled_close = round(float(close_raw), digits) if close_raw else None
             closed_trades.append({
                 "id": pos_id,
                 "signal_uuid": hist_comment if hist_comment else None,
