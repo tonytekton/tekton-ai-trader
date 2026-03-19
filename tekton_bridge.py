@@ -725,6 +725,34 @@ def get_executions():
                 "digits": digits
             })
 
+        # ── Enrich open trades with sl_pips/tp_pips/strategy from SQL ──────────
+        try:
+            uuids = [t["signal_uuid"] for t in open_trades if t.get("signal_uuid")]
+            if uuids:
+                enrich_conn = psycopg2.connect(
+                    host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
+                    database=os.getenv("CLOUD_SQL_DB_NAME", "tekton-trader"),
+                    user=os.getenv("CLOUD_SQL_DB_USER", "postgres"),
+                    password=os.getenv("CLOUD_SQL_DB_PASSWORD")
+                )
+                enrich_cur = enrich_conn.cursor()
+                placeholders = ",".join(["%s"] * len(uuids))
+                enrich_cur.execute(
+                    f"SELECT signal_uuid::text, sl_pips, tp_pips, strategy FROM signals WHERE signal_uuid::text IN ({placeholders})",
+                    uuids
+                )
+                signal_map = {{row[0]: {{"sl_pips": row[1], "tp_pips": row[2], "strategy": row[3]}} for row in enrich_cur.fetchall()}}
+                enrich_cur.close()
+                enrich_conn.close()
+                for t in open_trades:
+                    sig = signal_map.get(t.get("signal_uuid") or "")
+                    if sig:
+                        t["sl_pips"] = float(sig["sl_pips"]) if sig["sl_pips"] else None
+                        t["tp_pips"] = float(sig["tp_pips"]) if sig["tp_pips"] else None
+                        t["strategy"] = sig["strategy"]
+        except Exception as enrich_err:
+            print(f"WARNING Signal enrichment failed (non-fatal): {enrich_err}")
+
         closed_trades.sort(key=lambda x: x.get('closed_at') or '', reverse=True)
         return jsonify({
             "success": True,
