@@ -646,7 +646,7 @@ def get_executions():
                 "symbol": name,
                 "side": "BUY" if pos.tradeData.tradeSide == TRADE_SIDE_BUY else "SELL",
                 "volume": round(pos.tradeData.volume / 10000000, 2),
-                "entry_price": round(open_price_raw / divisor, digits) if open_price_raw else None,
+                "entry_price": round(open_price_raw / divisor, digits) if open_price_raw is not None and open_price_raw != 0 else None,
                 "stop_loss": round(raw_sl / divisor, digits) if raw_sl > 0 else None,
                 "take_profit": round(raw_tp / divisor, digits) if raw_tp > 0 else None,
                 "close_price": None,
