@@ -640,15 +640,24 @@ def get_executions():
             raw_tp = getattr(pos, 'takeProfit', 0) or 0
             divisor = 10 ** digits
             open_price_raw = getattr(pos.tradeData, 'openPrice', None)
+            scaled_sl = round(raw_sl / divisor, digits) if raw_sl > 0 else None
+            scaled_tp = round(raw_tp / divisor, digits) if raw_tp > 0 else None
+            # Discard bogus SL/TP (cTrader returns 1 raw unit when not set = < 0.001 after scaling)
+            if scaled_sl is not None and scaled_sl < 0.001:
+                scaled_sl = None
+            if scaled_tp is not None and scaled_tp < 0.001:
+                scaled_tp = None
+            open_price_raw2 = getattr(pos.tradeData, 'openPrice', None)
+            scaled_open = round(open_price_raw2 / divisor, digits) if open_price_raw2 and open_price_raw2 / divisor >= 0.001 else None
             open_trades.append({
                 "id": str(pos.positionId),
                 "signal_uuid": trade_comment if trade_comment else None,
                 "symbol": name,
                 "side": "BUY" if pos.tradeData.tradeSide == TRADE_SIDE_BUY else "SELL",
                 "volume": round(pos.tradeData.volume / 10000000, 2),
-                "entry_price": round(open_price_raw / divisor, digits) if open_price_raw is not None and open_price_raw != 0 else None,
-                "stop_loss": round(raw_sl / divisor, digits) if raw_sl > 0 else None,
-                "take_profit": round(raw_tp / divisor, digits) if raw_tp > 0 else None,
+                "entry_price": scaled_open,
+                "stop_loss": scaled_sl,
+                "take_profit": scaled_tp,
                 "close_price": None,
                 "pnl": None,
                 "status": "open",
@@ -713,14 +722,16 @@ def get_executions():
             divisor_c = 10 ** digits
             entry_raw = getattr(opening_deal, 'executionPrice', 0)
             close_raw = getattr(closing_deal, 'executionPrice', 0)
+            scaled_entry = round(entry_raw / divisor_c, digits) if entry_raw and entry_raw / divisor_c >= 0.001 else None
+            scaled_close = round(close_raw / divisor_c, digits) if close_raw and close_raw / divisor_c >= 0.001 else None
             closed_trades.append({
                 "id": pos_id,
                 "signal_uuid": hist_comment if hist_comment else None,
                 "symbol": symbol_name,
                 "side": "BUY" if opening_deal.tradeSide == TRADE_SIDE_BUY else "SELL",
                 "volume": round(filled_vol / 10000000, 2),
-                "entry_price": round(entry_raw / divisor_c, digits) if entry_raw else None,
-                "close_price": round(close_raw / divisor_c, digits) if close_raw else None,
+                "entry_price": scaled_entry,
+                "close_price": scaled_close,
                 "stop_loss": None,
                 "take_profit": None,
                 "pnl": round(net_pnl_cents / 100, 2),
