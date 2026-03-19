@@ -801,11 +801,11 @@ def get_executions():
                     f"SELECT signal_uuid::text, sl_pips, tp_pips, strategy, avg_fill_price FROM signals WHERE signal_uuid::text IN ({placeholders})",
                     uuids
                 )
-                signal_map = {{row[0]: {{"sl_pips": row[1], "tp_pips": row[2], "strategy": row[3], "avg_fill_price": row[4]}} for row in enrich_cur.fetchall()}}
+                signal_map = {str(row[0]): {"sl_pips": row[1], "tp_pips": row[2], "strategy": row[3], "avg_fill_price": row[4]} for row in enrich_cur.fetchall()}
                 enrich_cur.close()
                 enrich_conn.close()
                 for t in open_trades:
-                    sig = signal_map.get(t.get("signal_uuid") or "")
+                    sig = signal_map.get(str(t.get("signal_uuid") or ""))
                     if sig:
                         t["sl_pips"] = float(sig["sl_pips"]) if sig["sl_pips"] else None
                         t["tp_pips"] = float(sig["tp_pips"]) if sig["tp_pips"] else None
