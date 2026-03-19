@@ -692,40 +692,42 @@ def get_executions():
             position_deals[pos_id].append(deal)
 
         # --- Enrich open trade entry prices via ProtoOAOrderListReq ---
-        # ReconcileReq.tradeData.openPrice is Optional and broker may not populate it.
+        # Only fetch if there are open trades with missing entry_price (avoids rate limit hits).
         # ProtoOAOrder.executionPrice on a FILLED non-closing order is the reliable source.
-        try:
-            order_list_req = openapi.ProtoOAOrderListReq()
-            order_list_req.ctidTraderAccountId = ACCOUNT_ID
-            order_list_req.fromTimestamp = from_ts  # same 30-day window as DealListReq
-            order_list_req.toTimestamp = to_ts
+        missing_entry = [t for t in open_trades if t['entry_price'] is None]
+        if missing_entry:
+            try:
+                order_list_req = openapi.ProtoOAOrderListReq()
+                order_list_req.ctidTraderAccountId = ACCOUNT_ID
+                order_list_req.fromTimestamp = from_ts  # same 30-day window as DealListReq
+                order_list_req.toTimestamp = to_ts
 
-            d_orders, client_msg_id_orders = defer.Deferred(), str(uuid.uuid4())
-            pending_requests[client_msg_id_orders] = d_orders
-            reactor.callFromThread(lambda: bridge.client.send(order_list_req, clientMsgId=client_msg_id_orders))
-            order_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_orders, 30)
+                d_orders, client_msg_id_orders = defer.Deferred(), str(uuid.uuid4())
+                pending_requests[client_msg_id_orders] = d_orders
+                reactor.callFromThread(lambda: bridge.client.send(order_list_req, clientMsgId=client_msg_id_orders))
+                order_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_orders, 30)
 
-            # Build positionId → executionPrice map from FILLED opening orders
-            order_entry_map = {}
-            from ctrader_open_api.messages.OpenApiModelMessages_pb2 import ProtoOAOrderStatus
-            for order in order_result.order:
-                if (order.orderStatus == ProtoOAOrderStatus.ORDER_STATUS_FILLED
-                        and not order.closingOrder
-                        and order.positionId
-                        and order.executionPrice):
-                    pos_id = str(order.positionId)
-                    spec = state['symbol_id_to_spec_map'].get(order.tradeData.symbolId, {})
-                    digits = spec.get('digits', 5)
-                    # executionPrice from ProtoOAOrder is already a scaled double (not raw int)
-                    order_entry_map[pos_id] = round(order.executionPrice, digits)
+                # Build positionId → executionPrice map from FILLED opening orders
+                order_entry_map = {}
+                from ctrader_open_api.messages.OpenApiModelMessages_pb2 import ProtoOAOrderStatus
+                for order in order_result.order:
+                    if (order.orderStatus == ProtoOAOrderStatus.ORDER_STATUS_FILLED
+                            and not order.closingOrder
+                            and order.positionId
+                            and order.executionPrice):
+                        pos_id = str(order.positionId)
+                        spec = state['symbol_id_to_spec_map'].get(order.tradeData.symbolId, {})
+                        digits = spec.get('digits', 5)
+                        # executionPrice from ProtoOAOrder is already a scaled double (not raw int)
+                        order_entry_map[pos_id] = round(order.executionPrice, digits)
 
-            # Apply to any open trade still missing entry_price
-            for t in open_trades:
-                if t['entry_price'] is None and t['id'] in order_entry_map:
-                    t['entry_price'] = order_entry_map[t['id']]
+                # Apply to any open trade still missing entry_price
+                for t in open_trades:
+                    if t['entry_price'] is None and t['id'] in order_entry_map:
+                        t['entry_price'] = order_entry_map[t['id']]
 
-        except Exception as e:
-            logging.warning(f'OrderListReq for entry prices failed: {e}')
+            except Exception as e:
+                print(f'WARNING: OrderListReq for entry prices failed (non-fatal): {e}')
 
         for pos_id, deals in position_deals.items():
             closing_deal = next((d for d in deals if hasattr(d, 'closePositionDetail')), None)
