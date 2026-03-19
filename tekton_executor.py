@@ -34,9 +34,15 @@ INDEX_QUOTE_MAP = {
     "XAUUSD": "USD", "XAGUSD": "USD", "XTIUSD": "USD", "XBRUSD": "USD",
 }
 
-# cTrader: relativeStopLoss/relativeTakeProfit are in POINTS.
-# 1 pip = 10 points for all instruments (pipPosition handles the scaling).
-POINTS_PER_PIP = 10
+# FIX 3: relativeStopLoss/relativeTakeProfit are in PIPS (float, 1dp), not points.
+# cTrader rejects integer point values — send round(sl_pips, 1) directly.
+# POINTS_PER_PIP removed — was causing 'invalid precision' errors on all instruments.
+
+# ---------------------------------------------------------------------------
+# FIX 4: In-memory execution lock — prevents duplicate positions from race conditions.
+# Symbol added before /trade/execute call, removed in finally block.
+# Immune to cTrader position visibility latency (~200-500ms after order sent).
+_executing_symbols: set = set()
 
 # ---------------------------------------------------------------------------
 # IN-MEMORY CACHE  —  reduces cTrader API calls significantly
@@ -405,6 +411,15 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
             future case where success=true but position_id is missing or malformed.
             Also unpacks and returns fill_price so caller can store avg_fill_price.
     """
+    # FIX 4: Acquire in-memory lock before any bridge calls.
+    # Guards against race condition where two poll cycles fire before cTrader
+    # confirms the position (200-500ms visibility latency after order sent).
+    if symbol in _executing_symbols:
+        print(f"🔒 {symbol} currently executing — skipping duplicate.")
+        return None
+
+    _executing_symbols.add(symbol)  # FIX 4: acquire lock
+
     try:
         if is_symbol_already_open(symbol):
             print(f"🚫 {symbol} already open. Skipping.")
@@ -412,9 +427,10 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
 
         vol = calculate_professional_lot_size(symbol, sl_pips)
 
-        # cTrader relativeStopLoss/relativeTakeProfit are in POINTS (1 pip = 10 points)
-        rel_sl = int(sl_pips * POINTS_PER_PIP)
-        rel_tp = int(tp_pips * POINTS_PER_PIP)
+        # FIX 3: relativeStopLoss/TP are in PIPS (float, 1dp) — not integer points.
+        # cTrader rejects integers/point-multiplied values with "invalid precision".
+        rel_sl = round(sl_pips, 1)
+        rel_tp = round(tp_pips, 1)
 
         payload = {
             "symbol":  symbol,
@@ -425,7 +441,7 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
             "rel_tp":  rel_tp
         }
 
-        print(f"🚀 Executing {symbol} | SL: {sl_pips}p ({rel_sl}pts) | TP: {tp_pips}p ({rel_tp}pts)")
+        print(f"🚀 Executing {symbol} | SL: {sl_pips}p ({rel_sl}) | TP: {tp_pips}p ({rel_tp})")
         response = requests.post(BRIDGE_EXECUTE_URL, json=payload, headers=HEADERS, timeout=30)
         result   = response.json()
         print(f"🔍 Bridge response: {result}")
@@ -454,6 +470,8 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
     except Exception as e:
         print(f"❌ CRITICAL ERROR in execute_trade: {e}")
         return None
+    finally:
+        _executing_symbols.discard(symbol)  # FIX 4: always release lock, even on exception
 
 # ---------------------------------------------------------------------------
 # SIGNAL POLL LOOP
