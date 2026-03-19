@@ -703,6 +703,10 @@ def get_executions():
             if ep_raw and ep_raw / ep_divisor >= 0.001:
                 deal_entry_map[pos_id] = round(ep_raw / ep_divisor, ep_digits)
 
+        # DEBUG: log what's in deal_entry_map vs open trade IDs
+        print(f'DEBUG deal_entry_map keys: {list(deal_entry_map.keys())}')
+        print(f'DEBUG open trade IDs: {[t["id"] for t in open_trades]}')
+        print(f'DEBUG total deals from DealListReq: {len(deal_result.deal)}')
         # Apply deal entry prices to open trades where cTrader ReconcileReq returned None
         for t in open_trades:
             if t['entry_price'] is None and t['id'] in deal_entry_map:
