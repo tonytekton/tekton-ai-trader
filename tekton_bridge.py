@@ -965,17 +965,6 @@ def execute_trade():
         result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_exec, 30)
         log_ctrader_call("/trade/execute", int((time.time() - start_time) * 1000), True)
 
-        # ADD THIS DEBUG LOGGING
-        print(f"🔍 FULL BROKER RESPONSE: {result}")
-        print(f"   - hasattr order: {hasattr(result, 'order')}")
-        print(f"   - hasattr position: {hasattr(result, 'position')}")
-        print(f"   - hasattr errorCode: {hasattr(result, 'errorCode')}")
-        if hasattr(result, 'errorCode'):
-            print(f"   - errorCode: {result.errorCode}")
-        if hasattr(result, 'description'):
-            print(f"   - description: {result.description}")
-        print(f"   - All attributes: {dir(result)}")
-
         if hasattr(result, 'errorCode') and result.errorCode:
             return jsonify({"success": False, "error": str(result.description)}), 400
 
@@ -984,13 +973,23 @@ def execute_trade():
             print(f"❌ Broker Rejected Order: {error_desc}")
             return jsonify({"success": False, "error": error_desc}), 400
 
-        pos_id      = result.position.positionId if hasattr(result, 'position') else 0
-        entry_price = getattr(result.order, 'executionPrice', 0)
+        pos_id        = result.position.positionId if hasattr(result, 'position') else 0
+        entry_raw     = getattr(result.order, 'executionPrice', 0)
+
+        # FIX 3: Scale entry_price from raw cTrader integer to decimal price.
+        # Raw integer must be divided by 10^digits to produce the human-readable price.
+        # e.g. EURUSD digits=5: raw 108500 → 1.08500
+        #      XAUUSD digits=2: raw 298450 → 2984.50
+        # spec is already available from symbols_cache lookup above.
+        digits        = spec.get("digits", 5) if spec else 5
+        entry_price   = round(entry_raw / (10 ** digits), digits) if entry_raw else None
+
+        print(f"✅ Executed {symbol}: pos_id={pos_id} raw={entry_raw} scaled={entry_price} digits={digits}")
 
         return jsonify({
             "success":     True,
             "position_id": pos_id,
-            "entry_price": entry_price
+            "entry_price": entry_price   # scaled decimal, ready to store in signals.avg_fill_price
         })
 
     except Exception as e:
