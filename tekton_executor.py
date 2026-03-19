@@ -395,10 +395,20 @@ def get_current_session_exposure_pct():
 # TRADE EXECUTION
 # ---------------------------------------------------------------------------
 def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
+    """
+    Executes a trade via the bridge and returns (position_id, fill_price) on success.
+    Returns None on failure or if symbol already open.
+
+    FIX 1: return None (not True) when symbol already open — prevents boolean
+            being written as position_id in signals table.
+    FIX 2: validate position_id is numeric before accepting — guards against any
+            future case where success=true but position_id is missing or malformed.
+            Also unpacks and returns fill_price so caller can store avg_fill_price.
+    """
     try:
         if is_symbol_already_open(symbol):
             print(f"🚫 {symbol} already open. Skipping.")
-            return True
+            return None  # FIX 1: was incorrectly returning True (boolean)
 
         vol = calculate_professional_lot_size(symbol, sl_pips)
 
@@ -421,9 +431,16 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
         print(f"🔍 Bridge response: {result}")
 
         if result.get("success"):
-            pos_id = result.get("position_id")
-            print(f"✅ Trade Executed: {symbol} ID: {pos_id}")
-            return str(pos_id) if pos_id else "UNKNOWN"
+            pos_id     = result.get("position_id")
+            fill_price = result.get("entry_price")  # FIX 2: bridge now returns scaled decimal
+
+            # Validate pos_id is a real numeric position ID, not a boolean or junk value
+            if not pos_id or not str(pos_id).strip().lstrip('-').isdigit():
+                print(f"⚠️ Invalid position_id in bridge response: '{pos_id}' — marking FAILED")
+                return None
+
+            print(f"✅ Trade Executed: {symbol} ID: {pos_id} @ {fill_price}")
+            return (str(pos_id), fill_price)  # FIX 2: return tuple (pos_id, fill_price)
         else:
             print(f"❌ Execution Failed: {result.get('error')}")
             return None
@@ -525,10 +542,13 @@ def poll_signals():
 
                     result = execute_trade(s_uuid, sym, s_type, tf, float(sl_pips), float(tp_pips))
                     if result:
+                        # FIX 2: unpack (pos_id, fill_price) tuple and store avg_fill_price
+                        pos_id, fill_price = result
                         cur.execute(
-                            "UPDATE signals SET status = 'COMPLETED', position_id = %s WHERE signal_uuid = %s",
-                            (result, str(s_uuid))
+                            "UPDATE signals SET status = 'COMPLETED', position_id = %s, avg_fill_price = %s WHERE signal_uuid = %s",
+                            (pos_id, fill_price if fill_price else None, str(s_uuid))
                         )
+                        print(f"✅ signals updated: pos_id={pos_id} fill={fill_price}")
                     else:
                         cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
                     conn.commit()
@@ -542,4 +562,5 @@ def poll_signals():
 
 if __name__ == "__main__":
     poll_signals()
+
 
