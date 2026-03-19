@@ -755,10 +755,10 @@ def get_executions():
                 enrich_cur = enrich_conn.cursor()
                 placeholders = ",".join(["%s"] * len(uuids))
                 enrich_cur.execute(
-                    f"SELECT signal_uuid::text, sl_pips, tp_pips, strategy FROM signals WHERE signal_uuid::text IN ({placeholders})",
+                    f"SELECT signal_uuid::text, sl_pips, tp_pips, strategy, avg_fill_price FROM signals WHERE signal_uuid::text IN ({placeholders})",
                     uuids
                 )
-                signal_map = {{row[0]: {{"sl_pips": row[1], "tp_pips": row[2], "strategy": row[3]}} for row in enrich_cur.fetchall()}}
+                signal_map = {{row[0]: {{"sl_pips": row[1], "tp_pips": row[2], "strategy": row[3], "avg_fill_price": row[4]}} for row in enrich_cur.fetchall()}}
                 enrich_cur.close()
                 enrich_conn.close()
                 for t in open_trades:
@@ -767,6 +767,8 @@ def get_executions():
                         t["sl_pips"] = float(sig["sl_pips"]) if sig["sl_pips"] else None
                         t["tp_pips"] = float(sig["tp_pips"]) if sig["tp_pips"] else None
                         t["strategy"] = sig["strategy"]
+                        if t["entry_price"] is None and sig.get("avg_fill_price"):
+                            t["entry_price"] = float(sig["avg_fill_price"])
         except Exception as enrich_err:
             print(f"WARNING Signal enrichment failed (non-fatal): {enrich_err}")
 
@@ -848,7 +850,7 @@ def get_signals():
         params += [limit, offset]
 
         cur.execute(f"""
-            SELECT signal_uuid, symbol, signal_type, timeframe, confidence_score, sl_pips, tp_pips, status, created_at, position_id, strategy
+            SELECT signal_uuid, symbol, signal_type, timeframe, confidence_score, sl_pips, tp_pips, status, created_at, position_id, strategy, avg_fill_price
             FROM signals
             {where_clause}
             ORDER BY created_at DESC
