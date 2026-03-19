@@ -691,6 +691,23 @@ def get_executions():
                 position_deals[pos_id] = []
             position_deals[pos_id].append(deal)
 
+        # Build entry price map for open positions from the same DealListReq result
+        # DealListReq returns all deals including open ones — opening deal has executionPrice
+        deal_entry_map = {}
+        for pos_id, deals in position_deals.items():
+            opening_deal = deals[0]
+            ep_raw = getattr(opening_deal, 'executionPrice', 0)
+            spec = state['symbol_id_to_spec_map'].get(opening_deal.symbolId, {})
+            ep_digits = spec.get('digits', 5)
+            ep_divisor = 10 ** ep_digits
+            if ep_raw and ep_raw / ep_divisor >= 0.001:
+                deal_entry_map[pos_id] = round(ep_raw / ep_divisor, ep_digits)
+
+        # Apply deal entry prices to open trades where cTrader ReconcileReq returned None
+        for t in open_trades:
+            if t['entry_price'] is None and t['id'] in deal_entry_map:
+                t['entry_price'] = deal_entry_map[t['id']]
+
         for pos_id, deals in position_deals.items():
             closing_deal = next((d for d in deals if hasattr(d, 'closePositionDetail')), None)
             if not closing_deal:
