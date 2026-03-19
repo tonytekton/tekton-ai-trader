@@ -719,9 +719,15 @@ def get_executions():
         pending_requests[client_msg_id_recon] = d_recon
 
         reactor.callFromThread(lambda: bridge.client.send(recon_msg, clientMsgId=client_msg_id_recon))
-        recon_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_recon, 10)
+        try:
+            recon_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_recon, 10)
+            recon_positions = recon_result.position
+        except Exception as recon_err:
+            print(f"⚠️  ReconcileReq timeout in /proxy/executions — serving empty open trades: {recon_err}")
+            pending_requests.pop(client_msg_id_recon, None)
+            recon_positions = []
 
-        for pos in recon_result.position:
+        for pos in recon_positions:
             if hasattr(pos, 'positionStatus') and pos.positionStatus != 1:
                 continue
 
@@ -1266,9 +1272,13 @@ def modify_trade():
         d_recon, mid_recon = defer.Deferred(), str(uuid.uuid4())
         pending_requests[mid_recon] = d_recon
         reactor.callFromThread(lambda: bridge.client.send(recon_msg, clientMsgId=mid_recon))
-        recon_res = threads.blockingCallFromThread(reactor, wait_for_deferred, d_recon, 10)
-
-        target_pos = next((p for p in recon_res.position if str(p.positionId) == str(position_id)), None)
+        try:
+            recon_res = threads.blockingCallFromThread(reactor, wait_for_deferred, d_recon, 10)
+            target_pos = next((p for p in recon_res.position if str(p.positionId) == str(position_id)), None)
+        except Exception as recon_err:
+            print(f"⚠️  ReconcileReq timeout in /trade/modify — aborting: {recon_err}")
+            pending_requests.pop(mid_recon, None)
+            return jsonify({"error": "Position lookup timed out — please retry"}), 503
         if not target_pos:
             return jsonify({"success": False, "error": "Position not found"}), 404
 
@@ -1338,9 +1348,15 @@ def close_trade():
             pending_requests[client_msg_id_recon] = d_recon
 
             reactor.callFromThread(lambda: bridge.client.send(recon_msg, clientMsgId=client_msg_id_recon))
-            recon_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_recon, 10)
+            try:
+                recon_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_recon, 10)
+                recon_close_positions = recon_result.position
+            except Exception as recon_err:
+                print(f"⚠️  ReconcileReq timeout in /trade/close — aborting: {recon_err}")
+                pending_requests.pop(client_msg_id_recon, None)
+                return jsonify({"error": "Position lookup timed out — please retry"}), 503
 
-            for pos in recon_result.position:
+            for pos in recon_close_positions:
                 if str(pos.positionId) == str(position_id):
                     volume_centilots = pos.tradeData.volume
                     break
