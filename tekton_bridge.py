@@ -1579,6 +1579,71 @@ def get_historical_prices():
         return jsonify({"success": False, "error": str(e)}), 500
 
 # === BRIDGE CLASS ===
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXECUTION EVENT HANDLER (v4.8)
+# ═══════════════════════════════════════════════════════════════════════════════
+# Called from on_message when ProtoOAExecutionEvent arrives (push, not poll).
+# Maintains position_state{} in real time so endpoints never need ReconcileReq.
+#
+# ProtoOAExecutionType values used here:
+#   2  = ORDER_FILLED  (market order filled — new position opened)
+#   7  = POSITION_CLOSED
+#   8  = POSITION_AMENDED (SL/TP changed on open position)
+#   9  = POSITION_PARTIAL_EXECUTION
+#   11 = STOP_OUT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _handle_execution_event(ev):
+    """Update position_state{} from a ProtoOAExecutionEvent push.
+    Called directly from on_message — runs on the Twisted reactor thread.
+    No blocking calls, no cTrader requests — state update only.
+    """
+    try:
+        exec_type = ev.executionType
+
+        # Constants for ProtoOAExecutionType (numeric values are stable across versions)
+        EXEC_ORDER_FILLED         = 2
+        EXEC_POSITION_CLOSED      = 7
+        EXEC_POSITION_AMENDED     = 8
+        EXEC_PARTIAL_EXECUTION    = 9
+        EXEC_STOP_OUT             = 11
+
+        if not hasattr(ev, 'position') or not ev.position:
+            return  # No position in this event — ignore (e.g. pending order events)
+
+        pos = ev.position
+        pos_id = str(pos.positionId)
+        symbol_id = pos.tradeData.symbolId
+        spec = state['symbol_id_to_spec_map'].get(symbol_id, {})
+        digits = spec.get('digits', 5)
+
+        if exec_type in (EXEC_POSITION_CLOSED, EXEC_STOP_OUT):
+            # Position is gone — remove from state
+            removed = state['position_state'].pop(pos_id, None)
+            if removed:
+                print(f"📤 position_state: removed {pos_id} ({removed.get('symbol','?')}) — exec_type={exec_type}")
+            return
+
+        # For all other types (opened, amended, partial): upsert into state
+        entry = _position_to_dict(pos, spec, digits)
+
+        # If the event also carries an order, use its executionPrice for entry_price.
+        # ProtoOAOrder.executionPrice is a decimal double — do NOT use raw_to_decimal().
+        if hasattr(ev, 'order') and ev.order:
+            order_price = getattr(ev.order, 'executionPrice', None)
+            if order_price and order_price > 0:
+                entry['entry_price'] = round(float(order_price), digits)
+
+        state['position_state'][pos_id] = entry
+        print(f"📥 position_state: upsert {pos_id} {entry.get('symbol','?')} {entry.get('side','?')} "
+              f"entry={entry.get('entry_price')} sl={entry.get('stop_loss')} tp={entry.get('take_profit')} "
+              f"exec_type={exec_type}")
+
+    except Exception as e:
+        print(f"⚠️  _handle_execution_event error: {e}")
+        traceback.print_exc()
+
+
 class Bridge:
     def __init__(self):
         self.client = None
@@ -1670,6 +1735,25 @@ class Bridge:
                             "ask": spot_payload.ask,
                             "timestamp": datetime.now(timezone.utc).isoformat()
                         }
+                return
+
+            if pt == openapi.ProtoOAExecutionEvent().payloadType:
+                # Push event: position opened / amended / closed.
+                # Update position_state{} via handler — no cTrader calls needed.
+                ev_payload = openapi.ProtoOAExecutionEvent()
+                ev_payload.ParseFromString(msg.payload)
+                _handle_execution_event(ev_payload)
+                return
+
+            if pt == openapi.ProtoOATraderUpdatedEvent().payloadType:
+                # Push event: balance / equity / margin changed (on fill, close, deposit).
+                # Keeps account state live without polling ProtoOATraderReq.
+                trader_payload = openapi.ProtoOATraderUpdatedEvent()
+                trader_payload.ParseFromString(msg.payload)
+                trader = trader_payload.trader
+                state['balance_cents']      = getattr(trader, 'balance',      state['balance_cents'])
+                state['equity_cents']       = getattr(trader, 'moneyBalance', state['equity_cents'])
+                state['margin_used_cents']  = getattr(trader, 'usedMargin',   state['margin_used_cents'])
                 return
 
             if pt == openapi.ProtoOAVersionRes().payloadType:
@@ -1771,6 +1855,33 @@ class Bridge:
                                     state["subscribed_symbol_ids"].add(s_id)
                                 reactor.callFromThread(send_subscription(self.client, subscribe_msg))
                                 time.sleep(0.5)
+
+                            # ── v4.8: Seed position_state{} with current open positions ──────────
+                            # One-time ReconcileReq at startup. After this, position_state{} is
+                            # maintained exclusively by ProtoOAExecutionEvent push events.
+                            def _seed_position_state(reconcile_result):
+                                try:
+                                    for pos in reconcile_result.position:
+                                        symbol_id = pos.tradeData.symbolId
+                                        spec = state['symbol_id_to_spec_map'].get(symbol_id, {})
+                                        digits = spec.get('digits', 5)
+                                        entry = _position_to_dict(pos, spec, digits)
+                                        state['position_state'][str(pos.positionId)] = entry
+                                    state['position_state_ready'] = True
+                                    print(f"✅ position_state seeded: {len(state['position_state'])} open positions")
+                                except Exception as seed_err:
+                                    print(f"⚠️  position_state seed error: {seed_err}")
+                                    traceback.print_exc()
+                                    state['position_state_ready'] = True  # allow endpoints even if seed fails
+
+                            reconcile_req = openapi.ProtoOAReconcileReq()
+                            reconcile_req.ctidTraderAccountId = ACCOUNT_ID
+                            d_reconcile, cid_reconcile = defer.Deferred(), str(uuid.uuid4())
+                            pending_requests[cid_reconcile] = d_reconcile
+                            d_reconcile.addCallback(_seed_position_state)
+                            reactor.callFromThread(
+                                lambda r=reconcile_req, c=cid_reconcile: self.client.send(r, clientMsgId=c)
+                            )
 
                     d_batch.addCallback(process_batch, batch)
                     reactor.callFromThread(lambda r=req, c=client_msg_id_batch: self.client.send(r, clientMsgId=c))
