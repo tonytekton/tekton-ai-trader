@@ -260,3 +260,1790 @@ gnored (HTF Trend mismatch)
 ⏳ Signal filtered: XAGUSD BUY ignored (HTF Trend mismatch)
 📡 SIGNAL SAVED: BUY XAUUSD | Reason: Strong MSS + Bullish FVG | Conf: 88%
 📡 SIGNAL SAVED: BUY XPTUSD | Reason: Strong MSS + Bullish FVG | Conf: 88%
+[05:12:15] 🚀 Strategy v1.4 started — scan=300s cooldown=1h lookback=10c ATR_min=0.2 MSS_buf=0.5×ATR
+[05:12:15] 🧠 Scan started
+[05:12:16] 📊 48 active symbols
+[05:12:16] 📋 Bridge specs loaded for 50 symbols
+[05:12:19] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[05:17:19] 🧠 Scan started
+[05:17:20] 📊 48 active symbols
+[05:17:20] 📋 Bridge specs loaded for 50 symbols
+[05:17:21] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[05:22:21] 🧠 Scan started
+[05:22:22] 📊 48 active symbols
+[05:22:22] 📋 Bridge specs loaded for 50 symbols
+[05:22:24] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[05:27:24] 🧠 Scan started
+[05:27:24] 📊 48 active symbols
+[05:27:24] 📋 Bridge specs loaded for 50 symbols
+[05:27:26] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[05:32:26] 🧠 Scan started
+[05:32:26] 📊 48 active symbols
+[05:32:26] 📋 Bridge specs loaded for 50 symbols
+[05:32:28] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[05:37:28] 🧠 Scan started
+[05:37:28] 📊 48 active symbols
+[05:37:29] 📋 Bridge specs loaded for 50 symbols
+[05:37:30] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[08:55:57] 🚀 Strategy v1.4 started — scan=300s cooldown=1h lookback=10c ATR_min=0.2 MSS_buf=0.5×ATR
+[08:55:57] 🧠 Scan started
+[08:55:58] 📊 48 active symbols
+[08:55:59] 📋 Bridge specs loaded for 50 symbols
+[08:55:59] 🚀 Strategy v1.4 started — scan=300s cooldown=1h lookback=10c ATR_min=0.2 MSS_buf=0.5×ATR
+[08:55:59] 🧠 Scan started
+[08:55:59] ⏳ COOLDOWN: AUDNZD BUY
+[08:56:02] ⏳ COOLDOWN: GBPNZD BUY
+[08:56:03] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=0 | cooldown=2
+[08:56:04] 📊 48 active symbols
+[08:56:04] 📋 Bridge specs loaded for 50 symbols
+[08:56:04] ⏳ COOLDOWN: AUDNZD BUY
+[08:56:06] ⏳ COOLDOWN: GBPNZD BUY
+[08:56:07] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=0 | cooldown=2
+[09:01:05] 🧠 Scan started
+[09:01:10] 🧠 Scan started
+[09:16:35] 🚀 Strategy v1.4 started — scan=300s cooldown=1h lookback=10c ATR_min=0.2 MSS_buf=0.5×ATR
+[09:16:35] 🧠 Scan started
+[09:16:38] 📊 48 active symbols
+[09:16:38] 📋 Bridge specs loaded for 0 symbols
+[09:16:38] 📋 Bridge specs loaded for 0 symbols
+[09:16:38] 📋 Bridge specs loaded for 0 symbols
+[09:16:38] 📋 Bridge specs loaded for 0 symbols
+[09:16:38] 📋 Bridge specs loaded for 0 symbols
+[09:16:38] 📋 Bridge specs loaded for 0 symbols
+[09:16:38] 📋 Bridge specs loaded for 0 symbols
+[09:16:38] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] ⏳ COOLDOWN: AUDNZD BUY
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:39] 📋 Bridge specs loaded for 0 symbols
+[09:16:40] 📋 Bridge specs loaded for 0 symbols
+[09:16:40] 📋 Bridge specs loaded for 0 symbols
+[09:16:40] 📋 Bridge specs loaded for 0 symbols
+[09:16:40] 📋 Bridge specs loaded for 0 symbols
+[09:16:40] 📋 Bridge specs loaded for 0 symbols
+[09:16:40] 📋 Bridge specs loaded for 0 symbols
+[09:16:40] 📋 Bridge specs loaded for 0 symbols
+[09:16:40] 📋 Bridge specs loaded for 0 symbols
+[09:16:40] 📋 Bridge specs loaded for 0 symbols
+[09:16:40] 📋 Bridge specs loaded for 0 symbols
+[09:16:41] 📋 Bridge specs loaded for 0 symbols
+[09:16:44] 📋 Bridge specs loaded for 50 symbols
+[09:16:44] ⏳ COOLDOWN: GBPNZD BUY
+[09:16:45] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=0 | cooldown=2
+[09:21:45] 🧠 Scan started
+[09:21:46] 📊 48 active symbols
+[09:21:46] 📋 Bridge specs loaded for 50 symbols
+[09:21:46] ⏳ COOLDOWN: AUDNZD BUY
+[09:21:48] ⏳ COOLDOWN: GBPNZD BUY
+[09:21:49] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=0 | cooldown=2
+[09:26:49] 🧠 Scan started
+[09:26:50] 📊 48 active symbols
+[09:26:50] 📋 Bridge specs loaded for 50 symbols
+[09:26:50] ⏳ COOLDOWN: AUDNZD BUY
+[09:26:51] ⏳ COOLDOWN: GBPNZD BUY
+[09:26:52] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=0 | cooldown=2
+[09:31:52] 🧠 Scan started
+[09:31:53] 📊 48 active symbols
+[09:31:53] 📋 Bridge specs loaded for 50 symbols
+[09:31:53] 🚫 HTF BLOCK: AUDCHF SELL (1H=BUY)
+[09:31:53] 🚫 HTF BLOCK: AUDUSD SELL (1H=BUY)
+[09:31:54] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[09:31:54] 🚫 HTF BLOCK: EURUSD SELL (1H=BUY)
+[09:31:54] ⏳ COOLDOWN: GBPNZD BUY
+[09:31:55] ✅ Scan done — accepted=0 | no_setup=43 | htf_blocked=4 | cooldown=1
+[09:36:55] 🧠 Scan started
+[09:36:55] 📊 48 active symbols
+[09:36:55] 📋 Bridge specs loaded for 50 symbols
+[09:36:56] 🚫 HTF BLOCK: AUDCHF SELL (1H=BUY)
+[09:36:56] 🚫 HTF BLOCK: AUDUSD SELL (1H=BUY)
+[09:36:56] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[09:36:56] 🚫 HTF BLOCK: EURUSD SELL (1H=BUY)
+[09:36:57] ✅ Scan done — accepted=0 | no_setup=44 | htf_blocked=4 | cooldown=0
+[09:41:57] 🧠 Scan started
+[09:41:58] 📊 48 active symbols
+[09:41:59] 📋 Bridge specs loaded for 50 symbols
+[09:41:59] 🚫 HTF BLOCK: AUDCHF SELL (1H=BUY)
+[09:41:59] 🚫 HTF BLOCK: AUDUSD SELL (1H=BUY)
+[09:41:59] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[09:42:00] 🚫 HTF BLOCK: EURUSD SELL (1H=BUY)
+[09:42:01] ✅ Scan done — accepted=0 | no_setup=44 | htf_blocked=4 | cooldown=0
+[09:47:01] 🧠 Scan started
+[09:47:02] 📊 48 active symbols
+[09:47:02] 📋 Bridge specs loaded for 50 symbols
+[09:47:02] 🚫 HTF BLOCK: AUDSGD SELL (1H=BUY)
+[09:47:03] 📡 SIGNAL: SELL EURAUD     | SL:   8.3p TP:  21.8p | Conf:94% | Bearish FVG+MSS gap=8.5p ATR=8.3p age=8c
+[09:47:03] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[09:47:03] 🚫 HTF BLOCK: EURUSD SELL (1H=BUY)
+[09:47:04] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[09:47:04] ✅ Scan done — accepted=1 | no_setup=43 | htf_blocked=4 | cooldown=0
+[09:52:04] 🧠 Scan started
+[09:52:05] 📊 48 active symbols
+[09:52:05] 📋 Bridge specs loaded for 50 symbols
+[09:52:06] 🚫 HTF BLOCK: AUDSGD SELL (1H=BUY)
+[09:52:06] ⏳ COOLDOWN: EURAUD SELL
+[09:52:06] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[09:52:06] 🚫 HTF BLOCK: EURUSD SELL (1H=BUY)
+[09:52:07] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[09:52:07] ✅ Scan done — accepted=0 | no_setup=43 | htf_blocked=4 | cooldown=1
+[09:57:07] 🧠 Scan started
+[09:57:08] 📊 48 active symbols
+[09:57:08] 📋 Bridge specs loaded for 50 symbols
+[09:57:08] 🚫 HTF BLOCK: AUDSGD SELL (1H=BUY)
+[09:57:09] ⏳ COOLDOWN: EURAUD SELL
+[09:57:09] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[09:57:09] 🚫 HTF BLOCK: EURUSD SELL (1H=BUY)
+[09:57:09] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[09:57:10] ✅ Scan done — accepted=0 | no_setup=43 | htf_blocked=4 | cooldown=1
+[10:02:10] 🧠 Scan started
+[10:02:11] 📊 48 active symbols
+[10:02:11] 📋 Bridge specs loaded for 50 symbols
+[10:02:11] 🚫 HTF BLOCK: AUDSGD SELL (1H=BUY)
+[10:02:13] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[10:07:13] 🧠 Scan started
+[10:07:13] 📊 48 active symbols
+[10:07:13] 📋 Bridge specs loaded for 50 symbols
+[10:07:13] 🚫 HTF BLOCK: AUDSGD SELL (1H=BUY)
+[10:07:15] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[10:12:15] 🧠 Scan started
+[10:12:16] 📊 48 active symbols
+[10:12:16] 📋 Bridge specs loaded for 50 symbols
+[10:12:16] 🚫 HTF BLOCK: AUDSGD SELL (1H=BUY)
+[10:12:17] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[10:17:17] 🧠 Scan started
+[10:17:18] 📊 48 active symbols
+[10:17:18] 📋 Bridge specs loaded for 50 symbols
+[10:17:18] 🚫 HTF BLOCK: AUDUSD SELL (1H=BUY)
+[10:17:18] 🚫 HTF BLOCK: EURCAD SELL (1H=BUY)
+[10:17:20] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=2 | cooldown=0
+[10:22:20] 🧠 Scan started
+[10:22:20] 📊 48 active symbols
+[10:22:20] 📋 Bridge specs loaded for 50 symbols
+[10:22:20] 🚫 HTF BLOCK: AUDUSD SELL (1H=BUY)
+[10:22:21] 🚫 HTF BLOCK: EURCAD SELL (1H=BUY)
+[10:22:22] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=2 | cooldown=0
+[10:27:22] 🧠 Scan started
+[10:27:22] 📊 48 active symbols
+[10:27:22] 📋 Bridge specs loaded for 50 symbols
+[10:27:22] 🚫 HTF BLOCK: AUDUSD SELL (1H=BUY)
+[10:27:23] 🚫 HTF BLOCK: EURCAD SELL (1H=BUY)
+[10:27:24] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=2 | cooldown=0
+[10:32:24] 🧠 Scan started
+[10:32:24] 📊 48 active symbols
+[10:32:24] 📋 Bridge specs loaded for 50 symbols
+[10:32:26] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[10:37:26] 🧠 Scan started
+[10:37:26] 📊 48 active symbols
+[10:37:26] 📋 Bridge specs loaded for 50 symbols
+[10:37:28] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[10:42:28] 🧠 Scan started
+[10:42:29] 📊 48 active symbols
+[10:42:29] 📋 Bridge specs loaded for 50 symbols
+[10:42:30] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[10:47:30] 🧠 Scan started
+[10:47:31] 📊 48 active symbols
+[10:47:31] 📋 Bridge specs loaded for 50 symbols
+[10:47:32] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[10:52:33] 🧠 Scan started
+[10:52:33] 📊 48 active symbols
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65300>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc646d0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64e50>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc640d0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64f70>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66710>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc644f0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65ea0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66290>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc643d0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64b80>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64160>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66c80>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66a10>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64490>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65d20>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc641f0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64970>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc668f0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66ce0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64f10>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65e70>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64850>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:33] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65c90>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66320>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65570>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64430>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc668c0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66d70>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66bc0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66e00>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc667a0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc653f0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65090>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65bd0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65a80>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc658d0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc664d0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc649d0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66770>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66620>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc649a0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66590>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64eb0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64670>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc654b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64af0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65c00>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65f60>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65720>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66b90>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc668f0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc666e0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66470>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65fc0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66d10>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc652a0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66c20>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65cf0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66860>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc640a0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66ef0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64910>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc669b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64d00>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65660>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66680>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65d20>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66e90>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc668c0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc659c0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66b60>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65450>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66b00>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65690>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64b80>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66320>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc658a0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66800>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64af0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66560>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66770>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65b40>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:34] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64490>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:35] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65840>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:35] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64f10>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:35] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66740>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:35] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65fc0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:35] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65780>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:35] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc648b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:35] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65cf0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:35] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65d50>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:35] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66020>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:35] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65210>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:35] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65c30>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:35] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64910>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[10:52:35] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[10:57:35] 🧠 Scan started
+[10:57:35] 📊 48 active symbols
+[10:57:35] 📋 Bridge specs loaded for 50 symbols
+[10:57:37] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[11:02:37] 🧠 Scan started
+[11:02:37] 📊 48 active symbols
+[11:02:37] 📋 Bridge specs loaded for 50 symbols
+[11:02:39] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[11:07:39] 🧠 Scan started
+[11:07:40] 📊 48 active symbols
+[11:07:40] 📋 Bridge specs loaded for 50 symbols
+[11:07:41] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[11:12:41] 🧠 Scan started
+[11:12:42] 📊 48 active symbols
+[11:12:42] 📋 Bridge specs loaded for 50 symbols
+[11:12:43] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[11:17:43] 🧠 Scan started
+[11:17:44] 📊 48 active symbols
+[11:17:44] 📋 Bridge specs loaded for 50 symbols
+[11:17:46] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[11:22:46] 🧠 Scan started
+[11:22:46] 📊 48 active symbols
+[11:22:46] 📋 Bridge specs loaded for 50 symbols
+[11:22:48] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[11:27:48] 🧠 Scan started
+[11:27:49] 📊 48 active symbols
+[11:27:49] 📋 Bridge specs loaded for 50 symbols
+[11:27:50] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[11:32:51] 🧠 Scan started
+[11:32:51] 📊 48 active symbols
+[11:32:51] 📋 Bridge specs loaded for 50 symbols
+[11:32:53] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[11:37:53] 🧠 Scan started
+[11:37:54] 📊 48 active symbols
+[11:37:54] 📋 Bridge specs loaded for 50 symbols
+[11:37:56] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[11:42:56] 🧠 Scan started
+[11:42:57] 📊 48 active symbols
+[11:42:57] 📋 Bridge specs loaded for 50 symbols
+[11:42:59] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[11:47:59] 🧠 Scan started
+[11:47:59] 📊 48 active symbols
+[11:47:59] 📋 Bridge specs loaded for 50 symbols
+[11:48:01] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[11:53:01] 🧠 Scan started
+[11:53:02] 📊 48 active symbols
+[11:53:02] 📋 Bridge specs loaded for 50 symbols
+[11:53:04] 📡 SIGNAL: BUY  USDCAD     | SL:   5.5p TP:   8.5p | Conf:86% | Bullish FVG+MSS gap=3.5p ATR=5.5p age=4c
+[11:53:04] ✅ Scan done — accepted=1 | no_setup=47 | htf_blocked=0 | cooldown=0
+[11:58:04] 🧠 Scan started
+[11:58:05] 📊 48 active symbols
+[11:58:05] 📋 Bridge specs loaded for 50 symbols
+[11:58:06] ⏳ COOLDOWN: USDCAD BUY
+[11:58:07] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[12:03:07] 🧠 Scan started
+[12:03:08] 📊 48 active symbols
+[12:03:08] 📋 Bridge specs loaded for 50 symbols
+[12:03:08] 📡 SIGNAL: SELL CADJPY     | SL: 537.1p TP: 830.0p | Conf:78% | Bearish FVG+MSS gap=230.0p ATR=537.1p age=5c
+[12:03:09] ⏳ COOLDOWN: USDCAD BUY
+[12:03:10] ✅ Scan done — accepted=1 | no_setup=46 | htf_blocked=0 | cooldown=1
+[12:08:10] 🧠 Scan started
+[12:08:11] 📊 48 active symbols
+[12:08:11] 📋 Bridge specs loaded for 50 symbols
+[12:08:11] ⏳ COOLDOWN: CADJPY SELL
+[12:08:12] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[12:13:12] 🧠 Scan started
+[12:13:13] 📊 48 active symbols
+[12:13:13] 📋 Bridge specs loaded for 50 symbols
+[12:13:14] ⏳ COOLDOWN: CADJPY SELL
+[12:13:15] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[12:18:15] 🧠 Scan started
+[12:18:16] 📊 48 active symbols
+[12:18:16] 📋 Bridge specs loaded for 50 symbols
+[12:18:17] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[12:23:18] 🧠 Scan started
+[12:23:18] 📊 48 active symbols
+[12:23:18] 📋 Bridge specs loaded for 50 symbols
+[12:23:20] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[12:28:20] 🧠 Scan started
+[12:28:21] 📊 48 active symbols
+[12:28:21] 📋 Bridge specs loaded for 50 symbols
+[12:28:23] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[12:33:23] 🧠 Scan started
+[12:33:24] 📊 48 active symbols
+[12:33:24] 📋 Bridge specs loaded for 50 symbols
+[12:33:25] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[12:38:25] 🧠 Scan started
+[12:38:26] 📊 48 active symbols
+[12:38:26] 📋 Bridge specs loaded for 50 symbols
+[12:38:28] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[12:43:28] 🧠 Scan started
+[12:43:29] 📊 48 active symbols
+[12:43:29] 📋 Bridge specs loaded for 50 symbols
+[12:43:30] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[12:48:30] 🧠 Scan started
+[12:48:31] 📊 48 active symbols
+[12:48:31] 📋 Bridge specs loaded for 50 symbols
+[12:48:33] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[12:53:33] 🧠 Scan started
+[12:53:34] 📊 48 active symbols
+[12:53:34] 📋 Bridge specs loaded for 50 symbols
+[12:53:36] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[12:58:36] 🧠 Scan started
+[12:58:36] 📊 48 active symbols
+[12:58:36] 📋 Bridge specs loaded for 50 symbols
+[12:58:38] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[13:03:38] 🧠 Scan started
+[13:03:39] 📊 48 active symbols
+[13:03:39] 📋 Bridge specs loaded for 50 symbols
+[13:03:39] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[13:03:40] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[13:03:41] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=2 | cooldown=0
+[13:08:41] 🧠 Scan started
+[13:08:41] 📊 48 active symbols
+[13:08:41] 📋 Bridge specs loaded for 50 symbols
+[13:08:42] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[13:08:42] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[13:08:43] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=2 | cooldown=0
+[13:13:43] 🧠 Scan started
+[13:13:44] 📊 48 active symbols
+[13:13:44] 📋 Bridge specs loaded for 50 symbols
+[13:13:45] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[13:13:45] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[13:13:46] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=2 | cooldown=0
+[13:18:46] 🧠 Scan started
+[13:18:47] 📊 48 active symbols
+[13:18:47] 📋 Bridge specs loaded for 50 symbols
+[13:18:47] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[13:18:48] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[13:23:48] 🧠 Scan started
+[13:23:49] 📊 48 active symbols
+[13:23:49] 📋 Bridge specs loaded for 50 symbols
+[13:23:50] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[13:23:51] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[13:28:51] 🧠 Scan started
+[13:28:51] 📊 48 active symbols
+[13:28:52] 📋 Bridge specs loaded for 50 symbols
+[13:28:52] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[13:28:54] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[13:33:54] 🧠 Scan started
+[13:33:54] 📊 48 active symbols
+[13:33:54] 📋 Bridge specs loaded for 50 symbols
+[13:33:55] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[13:33:56] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[13:38:56] 🧠 Scan started
+[13:38:57] 📊 48 active symbols
+[13:38:57] 📋 Bridge specs loaded for 50 symbols
+[13:38:58] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[13:38:59] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[13:43:59] 🧠 Scan started
+[13:43:59] 📊 48 active symbols
+[13:43:59] 📋 Bridge specs loaded for 50 symbols
+[13:44:00] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[13:44:01] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[13:49:01] 🧠 Scan started
+[13:49:02] 📊 48 active symbols
+[13:49:02] 📋 Bridge specs loaded for 50 symbols
+[13:49:02] 🚫 HTF BLOCK: CADCHF BUY (1H=SELL)
+[13:49:02] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[13:49:03] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[13:49:04] ✅ Scan done — accepted=0 | no_setup=45 | htf_blocked=3 | cooldown=0
+[13:54:04] 🧠 Scan started
+[13:54:04] 📊 48 active symbols
+[13:54:05] 📋 Bridge specs loaded for 50 symbols
+[13:54:05] 🚫 HTF BLOCK: CADCHF BUY (1H=SELL)
+[13:54:05] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[13:54:06] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[13:54:06] ✅ Scan done — accepted=0 | no_setup=45 | htf_blocked=3 | cooldown=0
+[13:59:06] 🧠 Scan started
+[13:59:07] 📊 48 active symbols
+[13:59:07] 📋 Bridge specs loaded for 50 symbols
+[13:59:08] 🚫 HTF BLOCK: CADCHF BUY (1H=SELL)
+[13:59:08] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[13:59:08] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[13:59:09] ✅ Scan done — accepted=0 | no_setup=45 | htf_blocked=3 | cooldown=0
+[14:04:09] 🧠 Scan started
+[14:04:10] 📊 48 active symbols
+[14:04:10] 📋 Bridge specs loaded for 50 symbols
+[14:04:10] 🚫 HTF BLOCK: AUDCAD SELL (1H=BUY)
+[14:04:11] 🚫 HTF BLOCK: EURUSD SELL (1H=BUY)
+[14:04:11] 🚫 HTF BLOCK: GBPAUD BUY (1H=SELL)
+[14:04:11] 📡 SIGNAL: BUY  GBPNZD     | SL:  15.6p TP:  27.6p | Conf:86% | Bullish FVG+MSS gap=10.9p ATR=15.6p age=4c
+[14:04:11] 🚫 HTF BLOCK: NZDUSD SELL (1H=BUY)
+[14:04:12] ✅ Scan done — accepted=1 | no_setup=43 | htf_blocked=4 | cooldown=0
+[14:09:12] 🧠 Scan started
+[14:09:13] 📊 48 active symbols
+[14:09:13] 📋 Bridge specs loaded for 50 symbols
+[14:09:13] 🚫 HTF BLOCK: AUDCAD SELL (1H=BUY)
+[14:09:14] 🚫 HTF BLOCK: EURUSD SELL (1H=BUY)
+[14:09:14] 🚫 HTF BLOCK: GBPAUD BUY (1H=SELL)
+[14:09:14] ⏳ COOLDOWN: GBPNZD BUY
+[14:09:14] 🚫 HTF BLOCK: NZDUSD SELL (1H=BUY)
+[14:09:15] ✅ Scan done — accepted=0 | no_setup=43 | htf_blocked=4 | cooldown=1
+[14:14:15] 🧠 Scan started
+[14:14:16] 📊 48 active symbols
+[14:14:16] 📋 Bridge specs loaded for 50 symbols
+[14:14:16] 🚫 HTF BLOCK: AUDCAD SELL (1H=BUY)
+[14:14:16] 🚫 HTF BLOCK: EURUSD SELL (1H=BUY)
+[14:14:16] 🚫 HTF BLOCK: GBPAUD BUY (1H=SELL)
+[14:14:17] ⏳ COOLDOWN: GBPNZD BUY
+[14:14:17] 🚫 HTF BLOCK: NZDUSD SELL (1H=BUY)
+[14:14:17] ✅ Scan done — accepted=0 | no_setup=43 | htf_blocked=4 | cooldown=1
+[14:19:17] 🧠 Scan started
+[14:19:18] 📊 48 active symbols
+[14:19:18] 📋 Bridge specs loaded for 50 symbols
+[14:19:19] 🚫 HTF BLOCK: EURAUD BUY (1H=SELL)
+[14:19:19] 📡 SIGNAL: SELL NZDCHF     | SL:   4.2p TP:   8.6p | Conf:86% | Bearish FVG+MSS gap=2.3p ATR=4.2p age=8c
+[14:19:20] 🚫 HTF BLOCK: NZDUSD SELL (1H=BUY)
+[14:19:20] ✅ Scan done — accepted=1 | no_setup=45 | htf_blocked=2 | cooldown=0
+[14:24:20] 🧠 Scan started
+[14:24:21] 📊 48 active symbols
+[14:24:21] 📋 Bridge specs loaded for 50 symbols
+[14:24:21] 🚫 HTF BLOCK: EURAUD BUY (1H=SELL)
+[14:24:22] ⏳ COOLDOWN: NZDCHF SELL
+[14:24:22] 🚫 HTF BLOCK: NZDUSD SELL (1H=BUY)
+[14:24:22] ✅ Scan done — accepted=0 | no_setup=45 | htf_blocked=2 | cooldown=1
+[14:29:23] 🧠 Scan started
+[14:29:23] 📊 48 active symbols
+[14:29:23] 📋 Bridge specs loaded for 50 symbols
+[14:29:24] 🚫 HTF BLOCK: EURAUD BUY (1H=SELL)
+[14:29:24] ⏳ COOLDOWN: NZDCHF SELL
+[14:29:24] 🚫 HTF BLOCK: NZDUSD SELL (1H=BUY)
+[14:29:25] ✅ Scan done — accepted=0 | no_setup=45 | htf_blocked=2 | cooldown=1
+[14:34:25] 🧠 Scan started
+[14:34:26] 📊 48 active symbols
+[14:34:26] 📋 Bridge specs loaded for 50 symbols
+[14:34:27] 🚫 HTF BLOCK: GBPAUD BUY (1H=SELL)
+[14:34:27] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[14:34:27] 🚫 HTF BLOCK: NZDCAD SELL (1H=BUY)
+[14:34:27] 🚫 HTF BLOCK: NZDUSD SELL (1H=BUY)
+[14:34:28] ✅ Scan done — accepted=0 | no_setup=44 | htf_blocked=4 | cooldown=0
+[14:39:28] 🧠 Scan started
+[14:39:28] 📊 48 active symbols
+[14:39:28] 📋 Bridge specs loaded for 50 symbols
+[14:39:29] 🚫 HTF BLOCK: GBPAUD BUY (1H=SELL)
+[14:39:29] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[14:39:30] 🚫 HTF BLOCK: NZDCAD SELL (1H=BUY)
+[14:39:30] 🚫 HTF BLOCK: NZDUSD SELL (1H=BUY)
+[14:39:30] ✅ Scan done — accepted=0 | no_setup=44 | htf_blocked=4 | cooldown=0
+[14:44:30] 🧠 Scan started
+[14:44:32] 📊 48 active symbols
+[14:44:32] 📋 Bridge specs loaded for 50 symbols
+[14:44:32] 🚫 HTF BLOCK: GBPAUD BUY (1H=SELL)
+[14:44:33] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[14:44:33] 🚫 HTF BLOCK: NZDCAD SELL (1H=BUY)
+[14:44:33] 🚫 HTF BLOCK: NZDUSD SELL (1H=BUY)
+[14:44:33] ✅ Scan done — accepted=0 | no_setup=44 | htf_blocked=4 | cooldown=0
+[14:49:33] 🧠 Scan started
+[14:49:34] 📊 48 active symbols
+[14:49:34] 📋 Bridge specs loaded for 50 symbols
+[14:49:35] 🚫 HTF BLOCK: NZDCAD SELL (1H=BUY)
+[14:49:35] 🚫 HTF BLOCK: NZDUSD SELL (1H=BUY)
+[14:49:36] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=2 | cooldown=0
+[14:54:36] 🧠 Scan started
+[14:54:36] 📊 48 active symbols
+[14:54:36] 📋 Bridge specs loaded for 50 symbols
+[14:54:37] 🚫 HTF BLOCK: NZDCAD SELL (1H=BUY)
+[14:54:38] 🚫 HTF BLOCK: NZDUSD SELL (1H=BUY)
+[14:54:38] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=2 | cooldown=0
+[14:59:38] 🧠 Scan started
+[14:59:39] 📊 48 active symbols
+[14:59:39] 📋 Bridge specs loaded for 50 symbols
+[14:59:40] 🚫 HTF BLOCK: NZDCAD SELL (1H=BUY)
+[14:59:40] 🚫 HTF BLOCK: NZDUSD SELL (1H=BUY)
+[14:59:40] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=2 | cooldown=0
+[15:04:41] 🧠 Scan started
+[15:04:41] 📊 48 active symbols
+[15:04:41] 📋 Bridge specs loaded for 50 symbols
+[15:04:42] 📡 SIGNAL: BUY  EURGBP     | SL:   4.8p TP:   8.8p | Conf:94% | Bullish FVG+MSS gap=5.6p ATR=4.8p age=3c
+[15:04:42] 🚫 HTF BLOCK: EURUSD SELL (1H=BUY)
+[15:04:43] ✅ Scan done — accepted=1 | no_setup=46 | htf_blocked=1 | cooldown=0
+[15:09:43] 🧠 Scan started
+[15:09:44] 📊 48 active symbols
+[15:09:44] 📋 Bridge specs loaded for 50 symbols
+[15:09:44] ⏳ COOLDOWN: EURGBP BUY
+[15:09:45] 🚫 HTF BLOCK: EURUSD SELL (1H=BUY)
+[15:09:45] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=1 | cooldown=1
+[15:14:46] 🧠 Scan started
+[15:14:46] 📊 48 active symbols
+[15:14:46] 📋 Bridge specs loaded for 50 symbols
+[15:14:47] ⏳ COOLDOWN: EURGBP BUY
+[15:14:47] 🚫 HTF BLOCK: EURUSD SELL (1H=BUY)
+[15:14:48] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=1 | cooldown=1
+[15:19:48] 🧠 Scan started
+[15:19:49] 📊 48 active symbols
+[15:19:49] 📋 Bridge specs loaded for 50 symbols
+[15:19:50] 🚫 HTF BLOCK: GBPSGD SELL (1H=BUY)
+[15:19:50] 📡 SIGNAL: BUY  USDCAD     | SL:   9.8p TP:  15.1p | Conf:78% | Bullish FVG+MSS gap=4.8p ATR=9.8p age=8c
+[15:19:51] ✅ Scan done — accepted=1 | no_setup=46 | htf_blocked=1 | cooldown=0
+[15:24:51] 🧠 Scan started
+[15:24:51] 📊 48 active symbols
+[15:24:51] 📋 Bridge specs loaded for 50 symbols
+[15:24:52] 🚫 HTF BLOCK: GBPSGD SELL (1H=BUY)
+[15:24:53] ⏳ COOLDOWN: USDCAD BUY
+[15:24:53] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=1 | cooldown=1
+[15:29:53] 🧠 Scan started
+[15:29:54] 📊 48 active symbols
+[15:29:54] 📋 Bridge specs loaded for 50 symbols
+[15:29:55] 🚫 HTF BLOCK: GBPSGD SELL (1H=BUY)
+[15:29:55] ⏳ COOLDOWN: USDCAD BUY
+[15:29:56] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=1 | cooldown=1
+[15:34:56] 🧠 Scan started
+[15:34:57] 📊 48 active symbols
+[15:34:57] 📋 Bridge specs loaded for 50 symbols
+[15:34:58] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[15:39:58] 🧠 Scan started
+[15:39:59] 📊 48 active symbols
+[15:39:59] 📋 Bridge specs loaded for 50 symbols
+[15:40:01] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[15:45:01] 🧠 Scan started
+[15:45:01] 📊 48 active symbols
+[15:45:02] 📋 Bridge specs loaded for 50 symbols
+[15:45:04] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[15:50:04] 🧠 Scan started
+[15:50:04] 📊 48 active symbols
+[15:50:04] 📋 Bridge specs loaded for 50 symbols
+[15:50:06] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[15:55:06] 🧠 Scan started
+[15:55:06] 📊 48 active symbols
+[15:55:06] 📋 Bridge specs loaded for 50 symbols
+[15:55:08] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[16:00:08] 🧠 Scan started
+[16:00:09] 📊 48 active symbols
+[16:00:09] 📋 Bridge specs loaded for 50 symbols
+[16:00:10] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[16:05:10] 🧠 Scan started
+[16:05:11] 📊 48 active symbols
+[16:05:11] 📋 Bridge specs loaded for 50 symbols
+[16:05:12] 📡 SIGNAL: BUY  EURGBP     | SL:   5.0p TP:   9.1p | Conf:94% | Bullish FVG+MSS gap=5.6p ATR=5.0p age=7c
+[16:05:12] 📡 SIGNAL: BUY  NZDCAD     | SL:   9.0p TP:  14.8p | Conf:86% | Bullish FVG+MSS gap=5.7p ATR=9.0p age=4c
+[16:05:13] ✅ Scan done — accepted=2 | no_setup=46 | htf_blocked=0 | cooldown=0
+[16:10:13] 🧠 Scan started
+[16:10:14] 📊 48 active symbols
+[16:10:14] 📋 Bridge specs loaded for 50 symbols
+[16:10:14] ⏳ COOLDOWN: EURGBP BUY
+[16:10:15] ⏳ COOLDOWN: NZDCAD BUY
+[16:10:15] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=0 | cooldown=2
+[16:15:15] 🧠 Scan started
+[16:15:16] 📊 48 active symbols
+[16:15:16] 📋 Bridge specs loaded for 50 symbols
+[16:15:17] ⏳ COOLDOWN: EURGBP BUY
+[16:15:17] ⏳ COOLDOWN: NZDCAD BUY
+[16:15:18] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=0 | cooldown=2
+[16:20:18] 🧠 Scan started
+[16:20:18] 📊 48 active symbols
+[16:20:18] 📋 Bridge specs loaded for 50 symbols
+[16:20:20] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[16:25:20] 🧠 Scan started
+[16:25:21] 📊 48 active symbols
+[16:25:21] 📋 Bridge specs loaded for 50 symbols
+[16:25:23] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[16:30:23] 🧠 Scan started
+[16:30:23] 📊 48 active symbols
+[16:30:23] 📋 Bridge specs loaded for 50 symbols
+[16:30:25] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[16:35:25] 🧠 Scan started
+[16:35:26] 📊 48 active symbols
+[16:35:26] 📋 Bridge specs loaded for 50 symbols
+[16:35:27] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[16:40:28] 🧠 Scan started
+[16:40:28] 📊 48 active symbols
+[16:40:28] 📋 Bridge specs loaded for 50 symbols
+[16:40:30] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[16:45:30] 🧠 Scan started
+[16:45:31] 📊 48 active symbols
+[16:45:31] 📋 Bridge specs loaded for 50 symbols
+[16:45:33] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[16:50:33] 🧠 Scan started
+[16:50:33] 📊 48 active symbols
+[16:50:33] 📋 Bridge specs loaded for 50 symbols
+[16:50:34] 🚫 HTF BLOCK: GBPNZD SELL (1H=BUY)
+[16:50:35] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[16:55:35] 🧠 Scan started
+[16:55:36] 📊 48 active symbols
+[16:55:36] 📋 Bridge specs loaded for 50 symbols
+[16:55:37] 🚫 HTF BLOCK: GBPNZD SELL (1H=BUY)
+[16:55:38] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[17:00:38] 🧠 Scan started
+[17:00:38] 📊 48 active symbols
+[17:00:38] 📋 Bridge specs loaded for 50 symbols
+[17:00:39] 🚫 HTF BLOCK: GBPNZD SELL (1H=BUY)
+[17:00:40] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[17:05:40] 🧠 Scan started
+[17:05:41] 📊 48 active symbols
+[17:05:41] 📋 Bridge specs loaded for 50 symbols
+[17:05:43] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[17:10:43] 🧠 Scan started
+[17:10:43] 📊 48 active symbols
+[17:10:43] 📋 Bridge specs loaded for 50 symbols
+[17:10:45] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[17:15:45] 🧠 Scan started
+[17:15:46] 📊 48 active symbols
+[17:15:46] 📋 Bridge specs loaded for 50 symbols
+[17:15:48] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[17:20:48] 🧠 Scan started
+[17:20:48] 📊 48 active symbols
+[17:20:48] 📋 Bridge specs loaded for 50 symbols
+[17:20:50] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[17:25:50] 🧠 Scan started
+[17:25:51] 📊 48 active symbols
+[17:25:51] 📋 Bridge specs loaded for 50 symbols
+[17:25:52] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[17:30:52] 🧠 Scan started
+[17:30:53] 📊 48 active symbols
+[17:30:53] 📋 Bridge specs loaded for 50 symbols
+[17:30:55] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[17:35:55] 🧠 Scan started
+[17:35:55] 📊 48 active symbols
+[17:35:55] 📋 Bridge specs loaded for 50 symbols
+[17:35:57] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[17:40:57] 🧠 Scan started
+[17:40:58] 📊 48 active symbols
+[17:40:58] 📋 Bridge specs loaded for 50 symbols
+[17:40:59] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[17:46:00] 🧠 Scan started
+[17:46:00] 📊 48 active symbols
+[17:46:00] 📋 Bridge specs loaded for 50 symbols
+[17:46:02] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[17:51:02] 🧠 Scan started
+[17:51:03] 📊 48 active symbols
+[17:51:03] 📋 Bridge specs loaded for 50 symbols
+[17:51:04] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[17:56:04] 🧠 Scan started
+[17:56:05] 📊 48 active symbols
+[17:56:05] 📋 Bridge specs loaded for 50 symbols
+[17:56:07] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[18:01:07] 🧠 Scan started
+[18:01:07] 📊 48 active symbols
+[18:01:07] 📋 Bridge specs loaded for 50 symbols
+[18:01:09] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[18:06:09] 🧠 Scan started
+[18:06:10] 📊 48 active symbols
+[18:06:10] 📋 Bridge specs loaded for 50 symbols
+[18:06:11] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[18:11:12] 🧠 Scan started
+[18:11:12] 📊 48 active symbols
+[18:11:12] 📋 Bridge specs loaded for 50 symbols
+[18:11:14] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[18:16:14] 🧠 Scan started
+[18:16:14] 📊 48 active symbols
+[18:16:14] 📋 Bridge specs loaded for 50 symbols
+[18:16:16] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[18:21:16] 🧠 Scan started
+[18:21:17] 📊 48 active symbols
+[18:21:17] 📋 Bridge specs loaded for 50 symbols
+[18:21:18] 🚫 HTF BLOCK: EURNZD SELL (1H=BUY)
+[18:21:19] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[18:26:19] 🧠 Scan started
+[18:26:19] 📊 48 active symbols
+[18:26:19] 📋 Bridge specs loaded for 50 symbols
+[18:26:20] 🚫 HTF BLOCK: EURNZD SELL (1H=BUY)
+[18:26:21] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[18:31:21] 🧠 Scan started
+[18:31:22] 📊 48 active symbols
+[18:31:22] 📋 Bridge specs loaded for 50 symbols
+[18:31:23] 🚫 HTF BLOCK: EURNZD SELL (1H=BUY)
+[18:31:24] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[18:36:24] 🧠 Scan started
+[18:36:24] 📊 48 active symbols
+[18:36:24] 📋 Bridge specs loaded for 50 symbols
+[18:36:25] 🚫 HTF BLOCK: EURNZD SELL (1H=BUY)
+[18:36:26] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[18:41:26] 🧠 Scan started
+[18:41:27] 📊 48 active symbols
+[18:41:27] 📋 Bridge specs loaded for 50 symbols
+[18:41:28] 🚫 HTF BLOCK: EURNZD SELL (1H=BUY)
+[18:41:29] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[18:46:29] 🧠 Scan started
+[18:46:30] 📊 48 active symbols
+[18:46:30] 📋 Bridge specs loaded for 50 symbols
+[18:46:31] 🚫 HTF BLOCK: EURNZD SELL (1H=BUY)
+[18:46:32] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[18:51:33] 🧠 Scan started
+[18:51:33] 📊 48 active symbols
+[18:51:33] 📋 Bridge specs loaded for 50 symbols
+[18:51:34] 🚫 HTF BLOCK: EURNZD SELL (1H=BUY)
+[18:51:34] 🚫 HTF BLOCK: GBPNZD SELL (1H=BUY)
+[18:51:35] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=2 | cooldown=0
+[18:56:35] 🧠 Scan started
+[18:56:36] 📊 48 active symbols
+[18:56:36] 📋 Bridge specs loaded for 50 symbols
+[18:56:37] 🚫 HTF BLOCK: EURNZD SELL (1H=BUY)
+[18:56:37] 🚫 HTF BLOCK: GBPNZD SELL (1H=BUY)
+[18:56:38] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=2 | cooldown=0
+[19:01:38] 🧠 Scan started
+[19:01:39] 📊 48 active symbols
+[19:01:39] 📋 Bridge specs loaded for 50 symbols
+[19:01:39] 📡 SIGNAL: BUY  EURCHF     | SL:   4.9p TP:   7.6p | Conf:78% | Bullish FVG+MSS gap=1.5p ATR=4.9p age=5c
+[19:01:40] 🚫 HTF BLOCK: GBPNZD SELL (1H=BUY)
+[19:01:41] ✅ Scan done — accepted=1 | no_setup=46 | htf_blocked=1 | cooldown=0
+[19:06:41] 🧠 Scan started
+[19:06:41] 📊 48 active symbols
+[19:06:41] 📋 Bridge specs loaded for 50 symbols
+[19:06:42] ⏳ COOLDOWN: EURCHF BUY
+[19:06:43] 📡 SIGNAL: BUY  GBPCHF     | SL:   8.3p TP:  12.6p | Conf:78% | Bullish FVG+MSS gap=1.9p ATR=8.3p age=6c
+[19:06:44] ✅ Scan done — accepted=1 | no_setup=46 | htf_blocked=0 | cooldown=1
+[19:11:44] 🧠 Scan started
+[19:11:44] 📊 48 active symbols
+[19:11:44] 📋 Bridge specs loaded for 50 symbols
+[19:11:45] ⏳ COOLDOWN: EURCHF BUY
+[19:11:45] ⏳ COOLDOWN: GBPCHF BUY
+[19:11:46] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=0 | cooldown=2
+[19:16:46] 🧠 Scan started
+[19:16:47] 📊 48 active symbols
+[19:16:47] 📋 Bridge specs loaded for 50 symbols
+[19:16:47] ⏳ COOLDOWN: EURCHF BUY
+[19:16:48] ⏳ COOLDOWN: GBPCHF BUY
+[19:16:49] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=0 | cooldown=2
+[19:21:49] 🧠 Scan started
+[19:21:49] 📊 48 active symbols
+[19:21:49] 📋 Bridge specs loaded for 50 symbols
+[19:21:50] ⏳ COOLDOWN: EURCHF BUY
+[19:21:51] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[19:26:51] 🧠 Scan started
+[19:26:52] 📊 48 active symbols
+[19:26:52] 📋 Bridge specs loaded for 50 symbols
+[19:26:52] ⏳ COOLDOWN: EURCHF BUY
+[19:26:53] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[19:31:53] 🧠 Scan started
+[19:31:54] 📊 48 active symbols
+[19:31:54] 📋 Bridge specs loaded for 50 symbols
+[19:31:55] ⏳ COOLDOWN: EURCHF BUY
+[19:31:56] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[19:36:56] 🧠 Scan started
+[19:36:56] 📊 48 active symbols
+[19:36:56] 📋 Bridge specs loaded for 50 symbols
+[19:36:57] ⏳ COOLDOWN: EURCHF BUY
+[19:36:58] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[19:41:58] 🧠 Scan started
+[19:41:59] 📊 48 active symbols
+[19:41:59] 📋 Bridge specs loaded for 50 symbols
+[19:41:59] ⏳ COOLDOWN: EURCHF BUY
+[19:42:01] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[19:47:01] 🧠 Scan started
+[19:47:01] 📊 48 active symbols
+[19:47:01] 📋 Bridge specs loaded for 50 symbols
+[19:47:03] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[19:52:03] 🧠 Scan started
+[19:52:03] 📊 48 active symbols
+[19:52:03] 📋 Bridge specs loaded for 50 symbols
+[19:52:05] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[19:57:05] 🧠 Scan started
+[19:57:06] 📊 48 active symbols
+[19:57:06] 📋 Bridge specs loaded for 50 symbols
+[19:57:08] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[20:02:08] 🧠 Scan started
+[20:02:08] 📊 48 active symbols
+[20:02:08] 📋 Bridge specs loaded for 50 symbols
+[20:02:10] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[20:07:10] 🧠 Scan started
+[20:07:10] 📊 48 active symbols
+[20:07:10] 📋 Bridge specs loaded for 50 symbols
+[20:07:12] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[20:12:12] 🧠 Scan started
+[20:12:13] 📊 48 active symbols
+[20:12:13] 📋 Bridge specs loaded for 50 symbols
+[20:12:14] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[20:17:15] 🧠 Scan started
+[20:17:15] 📊 48 active symbols
+[20:17:15] 📋 Bridge specs loaded for 50 symbols
+[20:17:17] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[20:22:17] 🧠 Scan started
+[20:22:17] 📊 48 active symbols
+[20:22:17] 📋 Bridge specs loaded for 50 symbols
+[20:22:19] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[20:27:19] 🧠 Scan started
+[20:27:20] 📊 48 active symbols
+[20:27:21] 📋 Bridge specs loaded for 50 symbols
+[20:27:22] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[20:32:22] 🧠 Scan started
+[20:32:23] 📊 48 active symbols
+[20:32:23] 📋 Bridge specs loaded for 50 symbols
+[20:32:25] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[20:37:25] 🧠 Scan started
+[20:37:26] 📊 48 active symbols
+[20:37:26] 📋 Bridge specs loaded for 50 symbols
+[20:37:28] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[20:42:28] 🧠 Scan started
+[20:42:28] 📊 48 active symbols
+[20:42:28] 📋 Bridge specs loaded for 50 symbols
+[20:42:30] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[20:47:30] 🧠 Scan started
+[20:47:31] 📊 48 active symbols
+[20:47:32] 📋 Bridge specs loaded for 50 symbols
+[20:47:33] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[20:52:33] 🧠 Scan started
+[20:52:34] 📊 48 active symbols
+[20:52:34] 📋 Bridge specs loaded for 50 symbols
+[20:52:36] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[20:57:36] 🧠 Scan started
+[20:57:37] 📊 48 active symbols
+[20:57:37] 📋 Bridge specs loaded for 50 symbols
+[20:57:38] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[21:02:38] 🧠 Scan started
+[21:02:39] 📊 48 active symbols
+[21:02:39] 📋 Bridge specs loaded for 50 symbols
+[21:02:40] 📡 SIGNAL: BUY  EURNZD     | SL:  15.8p TP:  29.0p | Conf:78% | Bullish FVG+MSS gap=4.4p ATR=15.8p age=3c
+[21:02:41] ✅ Scan done — accepted=1 | no_setup=47 | htf_blocked=0 | cooldown=0
+[21:07:41] 🧠 Scan started
+[21:07:42] 📊 48 active symbols
+[21:07:42] 📋 Bridge specs loaded for 50 symbols
+[21:07:43] ⏳ COOLDOWN: EURNZD BUY
+[21:07:44] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[21:12:44] 🧠 Scan started
+[21:12:45] 📊 48 active symbols
+[21:12:45] 📋 Bridge specs loaded for 50 symbols
+[21:12:45] ⏳ COOLDOWN: EURNZD BUY
+[21:12:47] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[21:17:47] 🧠 Scan started
+[21:17:47] 📊 48 active symbols
+[21:17:47] 📋 Bridge specs loaded for 50 symbols
+[21:17:49] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[21:22:49] 🧠 Scan started
+[21:22:50] 📊 48 active symbols
+[21:22:50] 📋 Bridge specs loaded for 50 symbols
+[21:22:52] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[21:27:52] 🧠 Scan started
+[21:27:52] 📊 48 active symbols
+[21:27:52] 📋 Bridge specs loaded for 50 symbols
+[21:27:54] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[21:32:54] 🧠 Scan started
+[21:32:55] 📊 48 active symbols
+[21:32:55] 📋 Bridge specs loaded for 50 symbols
+[21:32:55] 🚫 HTF BLOCK: AUDNZD SELL (1H=BUY)
+[21:32:55] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[21:32:56] 🚫 HTF BLOCK: EURNZD SELL (1H=BUY)
+[21:32:56] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[21:32:57] ✅ Scan done — accepted=0 | no_setup=44 | htf_blocked=4 | cooldown=0
+[21:37:57] 🧠 Scan started
+[21:37:58] 📊 48 active symbols
+[21:37:58] 📋 Bridge specs loaded for 50 symbols
+[21:37:58] 🚫 HTF BLOCK: AUDNZD SELL (1H=BUY)
+[21:37:58] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[21:37:59] 🚫 HTF BLOCK: EURNZD SELL (1H=BUY)
+[21:37:59] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[21:38:00] ✅ Scan done — accepted=0 | no_setup=44 | htf_blocked=4 | cooldown=0
+[21:43:00] 🧠 Scan started
+[21:43:01] 📊 48 active symbols
+[21:43:01] 📋 Bridge specs loaded for 50 symbols
+[21:43:01] 🚫 HTF BLOCK: AUDNZD SELL (1H=BUY)
+[21:43:02] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[21:43:02] 🚫 HTF BLOCK: EURNZD SELL (1H=BUY)
+[21:43:02] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[21:43:03] ✅ Scan done — accepted=0 | no_setup=44 | htf_blocked=4 | cooldown=0
+[21:48:03] 🧠 Scan started
+[21:48:04] 📊 48 active symbols
+[21:48:04] 📋 Bridge specs loaded for 50 symbols
+[21:48:04] 📡 SIGNAL: SELL AUDUSD     | SL:   8.8p TP:  13.7p | Conf:86% | Bearish FVG+MSS gap=7.7p ATR=8.8p age=5c
+[21:48:04] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[21:48:05] 📡 SIGNAL: SELL EURUSD     | SL:   9.3p TP:  15.6p | Conf:86% | Bearish FVG+MSS gap=5.1p ATR=9.3p age=6c
+[21:48:05] 🚫 HTF BLOCK: GBPSGD SELL (1H=BUY)
+[21:48:06] ✅ Scan done — accepted=2 | no_setup=44 | htf_blocked=2 | cooldown=0
+[21:53:06] 🧠 Scan started
+[21:53:06] 📊 48 active symbols
+[21:53:06] 📋 Bridge specs loaded for 50 symbols
+[21:53:07] ⏳ COOLDOWN: AUDUSD SELL
+[21:53:07] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[21:53:07] ⏳ COOLDOWN: EURUSD SELL
+[21:53:07] 🚫 HTF BLOCK: GBPSGD SELL (1H=BUY)
+[21:53:08] 📡 SIGNAL: BUY  USDCAD     | SL:   6.8p TP:  11.7p | Conf:78% | Bullish FVG+MSS gap=1.6p ATR=6.8p age=7c
+[21:53:08] ✅ Scan done — accepted=1 | no_setup=43 | htf_blocked=2 | cooldown=2
+[21:58:08] 🧠 Scan started
+[21:58:09] 📊 48 active symbols
+[21:58:09] 📋 Bridge specs loaded for 50 symbols
+[21:58:09] ⏳ COOLDOWN: AUDUSD SELL
+[21:58:09] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[21:58:10] ⏳ COOLDOWN: EURUSD SELL
+[21:58:10] 🚫 HTF BLOCK: GBPSGD SELL (1H=BUY)
+[21:58:10] ⏳ COOLDOWN: USDCAD BUY
+[21:58:11] ✅ Scan done — accepted=0 | no_setup=43 | htf_blocked=2 | cooldown=3
+[22:03:11] 🧠 Scan started
+[22:03:11] 📊 48 active symbols
+[22:03:11] 📋 Bridge specs loaded for 50 symbols
+[22:03:12] 🚫 HTF BLOCK: AUDNZD SELL (1H=BUY)
+[22:03:12] 🚫 HTF BLOCK: EURNZD SELL (1H=BUY)
+[22:03:12] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[22:03:13] ⏳ COOLDOWN: USDCAD BUY
+[22:03:13] ✅ Scan done — accepted=0 | no_setup=44 | htf_blocked=3 | cooldown=1
+[22:08:13] 🧠 Scan started
+[22:08:14] 📊 48 active symbols
+[22:08:14] 📋 Bridge specs loaded for 50 symbols
+[22:08:14] 🚫 HTF BLOCK: AUDNZD SELL (1H=BUY)
+[22:08:14] 🚫 HTF BLOCK: EURNZD SELL (1H=BUY)
+[22:08:15] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[22:08:15] ⏳ COOLDOWN: USDCAD BUY
+[22:08:15] ✅ Scan done — accepted=0 | no_setup=44 | htf_blocked=3 | cooldown=1
+[22:13:16] 🧠 Scan started
+[22:13:16] 📊 48 active symbols
+[22:13:16] 📋 Bridge specs loaded for 50 symbols
+[22:13:16] 🚫 HTF BLOCK: AUDNZD SELL (1H=BUY)
+[22:13:17] 🚫 HTF BLOCK: EURNZD SELL (1H=BUY)
+[22:13:17] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[22:13:18] ⏳ COOLDOWN: USDCAD BUY
+[22:13:18] ✅ Scan done — accepted=0 | no_setup=44 | htf_blocked=3 | cooldown=1
+[22:18:18] 🧠 Scan started
+[22:18:18] 📊 48 active symbols
+[22:18:19] 📋 Bridge specs loaded for 50 symbols
+[22:18:19] 🚫 HTF BLOCK: CADCHF SELL (1H=BUY)
+[22:18:19] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[22:18:19] 🚫 HTF BLOCK: EURUSD BUY (1H=SELL)
+[22:18:20] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[22:18:20] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[22:18:20] 🚫 HTF BLOCK: USDCHF SELL (1H=BUY)
+[22:18:20] ✅ Scan done — accepted=0 | no_setup=42 | htf_blocked=6 | cooldown=0
+[22:23:21] 🧠 Scan started
+[22:23:21] 📊 48 active symbols
+[22:23:21] 📋 Bridge specs loaded for 50 symbols
+[22:23:21] 🚫 HTF BLOCK: CADCHF SELL (1H=BUY)
+[22:23:22] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[22:23:22] 🚫 HTF BLOCK: EURUSD BUY (1H=SELL)
+[22:23:22] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[22:23:22] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[22:23:23] 🚫 HTF BLOCK: USDCHF SELL (1H=BUY)
+[22:23:23] 📡 SIGNAL: BUY  USDSGD     | SL:   6.1p TP:   9.6p | Conf:86% | Bullish FVG+MSS gap=5.0p ATR=6.1p age=7c
+[22:23:23] ✅ Scan done — accepted=1 | no_setup=41 | htf_blocked=6 | cooldown=0
+[22:28:23] 🧠 Scan started
+[22:28:24] 📊 48 active symbols
+[22:28:24] 📋 Bridge specs loaded for 50 symbols
+[22:28:24] 🚫 HTF BLOCK: CADCHF SELL (1H=BUY)
+[22:28:24] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[22:28:25] 🚫 HTF BLOCK: EURUSD BUY (1H=SELL)
+[22:28:25] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[22:28:25] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[22:28:25] 🚫 HTF BLOCK: USDCHF SELL (1H=BUY)
+[22:28:25] ⏳ COOLDOWN: USDSGD BUY
+[22:28:26] ✅ Scan done — accepted=0 | no_setup=41 | htf_blocked=6 | cooldown=1
+[22:33:26] 🧠 Scan started
+[22:33:26] 📊 48 active symbols
+[22:33:26] 📋 Bridge specs loaded for 50 symbols
+[22:33:27] 🚫 HTF BLOCK: CADCHF SELL (1H=BUY)
+[22:33:27] 📡 SIGNAL: SELL CHFSGD     | SL:   9.6p TP:  21.7p | Conf:86% | Bearish FVG+MSS gap=8.3p ATR=9.6p age=6c
+[22:33:27] 🚫 HTF BLOCK: EURAUD SELL (1H=BUY)
+[22:33:27] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[22:33:27] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[22:33:27] 🚫 HTF BLOCK: EURUSD BUY (1H=SELL)
+[22:33:27] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[22:33:28] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[22:33:28] 🚫 HTF BLOCK: USDCHF SELL (1H=BUY)
+[22:33:28] ⏳ COOLDOWN: USDSGD BUY
+[22:33:28] ✅ Scan done — accepted=1 | no_setup=38 | htf_blocked=8 | cooldown=1
+[22:38:28] 🧠 Scan started
+[22:38:29] 📊 48 active symbols
+[22:38:29] 📋 Bridge specs loaded for 50 symbols
+[22:38:29] 🚫 HTF BLOCK: CADCHF SELL (1H=BUY)
+[22:38:29] ⏳ COOLDOWN: CHFSGD SELL
+[22:38:30] 🚫 HTF BLOCK: EURAUD SELL (1H=BUY)
+[22:38:30] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[22:38:30] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[22:38:30] 🚫 HTF BLOCK: EURUSD BUY (1H=SELL)
+[22:38:30] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[22:38:30] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[22:38:31] 🚫 HTF BLOCK: USDCHF SELL (1H=BUY)
+[22:38:31] ✅ Scan done — accepted=0 | no_setup=39 | htf_blocked=8 | cooldown=1
+[22:43:31] 🧠 Scan started
+[22:43:32] 📊 48 active symbols
+[22:43:32] 📋 Bridge specs loaded for 50 symbols
+[22:43:32] 🚫 HTF BLOCK: CADCHF SELL (1H=BUY)
+[22:43:32] ⏳ COOLDOWN: CHFSGD SELL
+[22:43:32] 🚫 HTF BLOCK: EURAUD SELL (1H=BUY)
+[22:43:32] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[22:43:32] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[22:43:33] 🚫 HTF BLOCK: EURUSD BUY (1H=SELL)
+[22:43:33] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[22:43:33] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[22:43:33] 🚫 HTF BLOCK: USDCHF SELL (1H=BUY)
+[22:43:34] ✅ Scan done — accepted=0 | no_setup=39 | htf_blocked=8 | cooldown=1
+[22:48:34] 🧠 Scan started
+[22:48:34] 📊 48 active symbols
+[22:48:34] 📋 Bridge specs loaded for 50 symbols
+[22:48:34] 🚫 HTF BLOCK: CADCHF SELL (1H=BUY)
+[22:48:35] 🚫 HTF BLOCK: EURAUD SELL (1H=BUY)
+[22:48:35] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[22:48:35] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[22:48:35] 🚫 HTF BLOCK: EURUSD BUY (1H=SELL)
+[22:48:35] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[22:48:35] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[22:48:35] 🚫 HTF BLOCK: GBPSGD SELL (1H=BUY)
+[22:48:36] 🚫 HTF BLOCK: USDCAD SELL (1H=BUY)
+[22:48:36] 🚫 HTF BLOCK: USDCHF SELL (1H=BUY)
+[22:48:36] 🚫 HTF BLOCK: USDSGD SELL (1H=BUY)
+[22:48:36] ✅ Scan done — accepted=0 | no_setup=37 | htf_blocked=11 | cooldown=0
+[22:53:36] 🧠 Scan started
+[22:53:37] 📊 48 active symbols
+[22:53:37] 📋 Bridge specs loaded for 50 symbols
+[22:53:37] 🚫 HTF BLOCK: CADCHF SELL (1H=BUY)
+[22:53:37] 🚫 HTF BLOCK: EURAUD SELL (1H=BUY)
+[22:53:37] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[22:53:37] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[22:53:38] 🚫 HTF BLOCK: EURUSD BUY (1H=SELL)
+[22:53:38] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[22:53:38] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[22:53:38] 🚫 HTF BLOCK: GBPSGD SELL (1H=BUY)
+[22:53:38] 🚫 HTF BLOCK: USDCAD SELL (1H=BUY)
+[22:53:38] 🚫 HTF BLOCK: USDCHF SELL (1H=BUY)
+[22:53:38] 🚫 HTF BLOCK: USDSGD SELL (1H=BUY)
+[22:53:39] ✅ Scan done — accepted=0 | no_setup=37 | htf_blocked=11 | cooldown=0
+[22:58:39] 🧠 Scan started
+[22:58:39] 📊 48 active symbols
+[22:58:39] 📋 Bridge specs loaded for 50 symbols
+[22:58:40] 🚫 HTF BLOCK: CADCHF SELL (1H=BUY)
+[22:58:40] 🚫 HTF BLOCK: EURAUD SELL (1H=BUY)
+[22:58:40] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[22:58:40] 🚫 HTF BLOCK: EURSGD SELL (1H=BUY)
+[22:58:40] 🚫 HTF BLOCK: EURUSD BUY (1H=SELL)
+[22:58:40] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[22:58:40] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[22:58:40] 🚫 HTF BLOCK: GBPSGD SELL (1H=BUY)
+[22:58:41] 🚫 HTF BLOCK: USDCAD SELL (1H=BUY)
+[22:58:41] 🚫 HTF BLOCK: USDCHF SELL (1H=BUY)
+[22:58:41] 🚫 HTF BLOCK: USDSGD SELL (1H=BUY)
+[22:58:41] ✅ Scan done — accepted=0 | no_setup=37 | htf_blocked=11 | cooldown=0
+[23:03:41] 🧠 Scan started
+[23:03:42] 📊 48 active symbols
+[23:03:42] 📋 Bridge specs loaded for 50 symbols
+[23:03:42] 🚫 HTF BLOCK: CADCHF SELL (1H=BUY)
+[23:03:42] 🚫 HTF BLOCK: EURAUD SELL (1H=BUY)
+[23:03:42] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[23:03:43] 🚫 HTF BLOCK: EURUSD BUY (1H=SELL)
+[23:03:43] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[23:03:43] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[23:03:43] 🚫 HTF BLOCK: GBPSGD SELL (1H=BUY)
+[23:03:43] 🚫 HTF BLOCK: USDCAD SELL (1H=BUY)
+[23:03:43] 🚫 HTF BLOCK: USDCHF SELL (1H=BUY)
+[23:03:44] 🚫 HTF BLOCK: USDSGD SELL (1H=BUY)
+[23:03:44] ✅ Scan done — accepted=0 | no_setup=38 | htf_blocked=10 | cooldown=0
+[23:08:44] 🧠 Scan started
+[23:08:44] 📊 48 active symbols
+[23:08:44] 📋 Bridge specs loaded for 50 symbols
+[23:08:45] 🚫 HTF BLOCK: CADCHF SELL (1H=BUY)
+[23:08:45] 🚫 HTF BLOCK: EURAUD SELL (1H=BUY)
+[23:08:45] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[23:08:45] 🚫 HTF BLOCK: EURUSD BUY (1H=SELL)
+[23:08:45] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[23:08:45] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[23:08:45] 🚫 HTF BLOCK: GBPSGD SELL (1H=BUY)
+[23:08:46] 🚫 HTF BLOCK: USDCAD SELL (1H=BUY)
+[23:08:46] 🚫 HTF BLOCK: USDCHF SELL (1H=BUY)
+[23:08:46] 🚫 HTF BLOCK: USDSGD SELL (1H=BUY)
+[23:08:46] ✅ Scan done — accepted=0 | no_setup=38 | htf_blocked=10 | cooldown=0
+[23:13:46] 🧠 Scan started
+[23:13:47] 📊 48 active symbols
+[23:13:47] 📋 Bridge specs loaded for 50 symbols
+[23:13:47] 🚫 HTF BLOCK: CADCHF SELL (1H=BUY)
+[23:13:47] 🚫 HTF BLOCK: EURAUD SELL (1H=BUY)
+[23:13:47] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[23:13:48] 🚫 HTF BLOCK: EURUSD BUY (1H=SELL)
+[23:13:48] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[23:13:48] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[23:13:48] 🚫 HTF BLOCK: GBPSGD SELL (1H=BUY)
+[23:13:48] 🚫 HTF BLOCK: USDCAD SELL (1H=BUY)
+[23:13:49] 🚫 HTF BLOCK: USDCHF SELL (1H=BUY)
+[23:13:49] 🚫 HTF BLOCK: USDSGD SELL (1H=BUY)
+[23:13:49] ✅ Scan done — accepted=0 | no_setup=38 | htf_blocked=10 | cooldown=0
+[23:18:49] 🧠 Scan started
+[23:18:49] 📊 48 active symbols
+[23:18:49] 📋 Bridge specs loaded for 50 symbols
+[23:18:50] 🚫 HTF BLOCK: CADCHF SELL (1H=BUY)
+[23:18:50] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[23:18:50] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[23:18:50] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[23:18:51] 🚫 HTF BLOCK: USDCHF SELL (1H=BUY)
+[23:18:51] 🚫 HTF BLOCK: USDSGD SELL (1H=BUY)
+[23:18:51] ✅ Scan done — accepted=0 | no_setup=42 | htf_blocked=6 | cooldown=0
+[23:23:51] 🧠 Scan started
+[23:23:52] 📊 48 active symbols
+[23:23:52] 📋 Bridge specs loaded for 50 symbols
+[23:23:52] 🚫 HTF BLOCK: CADCHF SELL (1H=BUY)
+[23:23:52] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[23:23:53] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[23:23:53] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[23:23:53] 🚫 HTF BLOCK: USDCHF SELL (1H=BUY)
+[23:23:53] 🚫 HTF BLOCK: USDSGD SELL (1H=BUY)
+[23:23:54] ✅ Scan done — accepted=0 | no_setup=42 | htf_blocked=6 | cooldown=0
+[23:28:54] 🧠 Scan started
+[23:28:54] 📊 48 active symbols
+[23:28:54] 📋 Bridge specs loaded for 50 symbols
+[23:28:54] 🚫 HTF BLOCK: CADCHF SELL (1H=BUY)
+[23:28:55] 🚫 HTF BLOCK: EURCHF SELL (1H=BUY)
+[23:28:55] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[23:28:55] 🚫 HTF BLOCK: GBPCHF SELL (1H=BUY)
+[23:28:56] 🚫 HTF BLOCK: USDCHF SELL (1H=BUY)
+[23:28:56] 🚫 HTF BLOCK: USDSGD SELL (1H=BUY)
+[23:28:56] ✅ Scan done — accepted=0 | no_setup=42 | htf_blocked=6 | cooldown=0
+[23:33:56] 🧠 Scan started
+[23:33:57] 📊 48 active symbols
+[23:33:57] 📋 Bridge specs loaded for 50 symbols
+[23:33:57] 📡 SIGNAL: SELL EURUSD     | SL:   6.8p TP:  11.3p | Conf:86% | Bearish FVG+MSS gap=5.9p ATR=6.8p age=5c
+[23:33:58] ✅ Scan done — accepted=1 | no_setup=47 | htf_blocked=0 | cooldown=0
+[23:38:58] 🧠 Scan started
+[23:38:59] 📊 48 active symbols
+[23:38:59] 📋 Bridge specs loaded for 50 symbols
+[23:38:59] ⏳ COOLDOWN: EURUSD SELL
+[23:39:00] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[23:44:00] 🧠 Scan started
+[23:44:01] 📊 48 active symbols
+[23:44:01] 📋 Bridge specs loaded for 50 symbols
+[23:44:02] ⏳ COOLDOWN: EURUSD SELL
+[23:44:03] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[23:49:03] 🧠 Scan started
+[23:49:03] 📊 48 active symbols
+[23:49:03] 📋 Bridge specs loaded for 50 symbols
+[23:49:05] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[23:54:05] 🧠 Scan started
+[23:54:05] 📊 48 active symbols
+[23:54:05] 📋 Bridge specs loaded for 50 symbols
+[23:54:06] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[23:59:07] 🧠 Scan started
+[23:59:07] 📊 48 active symbols
+[23:59:07] 📋 Bridge specs loaded for 50 symbols
+[23:59:09] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[00:04:09] 🧠 Scan started
+[00:04:09] 📊 48 active symbols
+[00:04:09] 📋 Bridge specs loaded for 50 symbols
+[00:04:10] ⏳ COOLDOWN: EURUSD SELL
+[00:04:11] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[00:09:11] 🧠 Scan started
+[00:09:11] 📊 48 active symbols
+[00:09:11] 📋 Bridge specs loaded for 50 symbols
+[00:09:12] ⏳ COOLDOWN: EURUSD SELL
+[00:09:13] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[00:14:13] 🧠 Scan started
+[00:14:13] 📊 48 active symbols
+[00:14:13] 📋 Bridge specs loaded for 50 symbols
+[00:14:14] ⏳ COOLDOWN: EURUSD SELL
+[00:14:15] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[00:19:15] 🧠 Scan started
+[00:19:15] 📊 48 active symbols
+[00:19:15] 📋 Bridge specs loaded for 50 symbols
+[00:19:17] 📡 SIGNAL: BUY  USDCAD     | SL:   5.4p TP:  12.3p | Conf:94% | Bullish FVG+MSS gap=12.3p ATR=5.0p age=8c
+[00:19:17] ✅ Scan done — accepted=1 | no_setup=47 | htf_blocked=0 | cooldown=0
+[00:24:17] 🧠 Scan started
+[00:24:18] 📊 48 active symbols
+[00:24:18] 📋 Bridge specs loaded for 50 symbols
+[00:24:19] ⏳ COOLDOWN: USDCAD BUY
+[00:24:19] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[00:29:19] 🧠 Scan started
+[00:29:20] 📊 48 active symbols
+[00:29:20] 📋 Bridge specs loaded for 50 symbols
+[00:29:21] ⏳ COOLDOWN: USDCAD BUY
+[00:29:21] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=0 | cooldown=1
+[00:34:21] 🧠 Scan started
+[00:34:22] 📊 48 active symbols
+[00:34:22] 📋 Bridge specs loaded for 50 symbols
+[00:34:23] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[00:39:23] 🧠 Scan started
+[00:39:24] 📊 48 active symbols
+[00:39:24] 📋 Bridge specs loaded for 50 symbols
+[00:39:25] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[00:44:25] 🧠 Scan started
+[00:44:26] 📊 48 active symbols
+[00:44:26] 📋 Bridge specs loaded for 50 symbols
+[00:44:27] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[00:49:27] 🧠 Scan started
+[00:49:28] 📊 48 active symbols
+[00:49:28] 📋 Bridge specs loaded for 50 symbols
+[00:49:29] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[00:54:29] 🧠 Scan started
+[00:54:30] 📊 48 active symbols
+[00:54:30] 📋 Bridge specs loaded for 50 symbols
+[00:54:31] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[00:59:32] 🧠 Scan started
+[00:59:32] 📊 48 active symbols
+[00:59:32] 📋 Bridge specs loaded for 50 symbols
+[00:59:33] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[01:04:34] 🧠 Scan started
+[01:04:34] 📊 48 active symbols
+[01:04:34] 📋 Bridge specs loaded for 50 symbols
+[01:04:36] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[01:09:36] 🧠 Scan started
+[01:09:36] 📊 48 active symbols
+[01:09:36] 📋 Bridge specs loaded for 50 symbols
+[01:09:38] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[01:14:38] 🧠 Scan started
+[01:14:38] 📊 48 active symbols
+[01:14:38] 📋 Bridge specs loaded for 50 symbols
+[01:14:40] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[01:19:40] 🧠 Scan started
+[01:19:40] 📊 48 active symbols
+[01:19:40] 📋 Bridge specs loaded for 50 symbols
+[01:19:41] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[01:19:42] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[01:24:42] 🧠 Scan started
+[01:24:42] 📊 48 active symbols
+[01:24:42] 📋 Bridge specs loaded for 50 symbols
+[01:24:43] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[01:24:44] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[01:29:44] 🧠 Scan started
+[01:29:44] 📊 48 active symbols
+[01:29:44] 📋 Bridge specs loaded for 50 symbols
+[01:29:45] 🚫 HTF BLOCK: GBPAUD SELL (1H=BUY)
+[01:29:46] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[01:34:46] 🧠 Scan started
+[01:34:46] 📊 48 active symbols
+[01:34:46] 📋 Bridge specs loaded for 0 symbols
+[01:34:46] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:47] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] 📋 Bridge specs loaded for 0 symbols
+[01:34:48] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[01:39:48] 🧠 Scan started
+[01:39:49] 📊 48 active symbols
+[01:39:49] 📋 Bridge specs loaded for 50 symbols
+[01:39:50] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[01:44:50] 🧠 Scan started
+[01:44:51] 📊 48 active symbols
+[01:44:51] 📋 Bridge specs loaded for 50 symbols
+[01:44:52] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[01:49:52] 🧠 Scan started
+[01:49:53] 📊 48 active symbols
+[01:49:53] 📋 Bridge specs loaded for 50 symbols
+[01:49:54] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[01:54:54] 🧠 Scan started
+[01:54:55] 📊 48 active symbols
+[01:54:55] 📋 Bridge specs loaded for 50 symbols
+[01:54:56] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[01:59:56] 🧠 Scan started
+[01:59:57] 📊 48 active symbols
+[01:59:57] 📋 Bridge specs loaded for 50 symbols
+[01:59:58] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[02:04:59] 🧠 Scan started
+[02:04:59] 📊 48 active symbols
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66560>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc662c0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66fb0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67190>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc668f0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65330>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64190>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66590>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc657e0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65690>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc660b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc662c0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65d50>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65480>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc672e0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64370>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64cd0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64e50>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65720>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66c20>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc666e0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc640d0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67460>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66800>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64f10>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:04:59] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66920>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc666b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65900>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65ed0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66a70>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65ba0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65e70>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65210>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64460>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64940>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66fb0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67280>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64610>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66dd0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64190>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66e00>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc643d0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66320>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc660b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66d10>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67190>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67040>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc672e0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66c50>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66590>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66f50>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65720>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65600>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc662c0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66200>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67460>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66f80>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64370>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65d80>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc666b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65c60>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66c20>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc669e0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65ba0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66e60>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65d80>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67460>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64fd0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66320>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65900>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65690>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66dd0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc670d0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65450>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65480>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc675e0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc654b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66fb0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65c30>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67040>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66740>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:00] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65330>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:01] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc640d0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:01] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64e50>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:01] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65300>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:01] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc666e0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:01] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc661a0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:01] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66200>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:01] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64e80>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:01] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc672e0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:01] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66a70>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:01] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc655d0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:01] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67310>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:01] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65720>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:01] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc657b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:01] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc669e0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:05:01] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[02:10:01] 🧠 Scan started
+[02:10:01] 📊 48 active symbols
+[02:10:01] 📋 Bridge specs loaded for 50 symbols
+[02:10:03] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[02:15:03] 🧠 Scan started
+[02:15:03] 📊 48 active symbols
+[02:15:03] 📋 Bridge specs loaded for 50 symbols
+[02:15:05] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[02:20:05] 🧠 Scan started
+[02:20:05] 📊 48 active symbols
+[02:20:05] 📋 Bridge specs loaded for 50 symbols
+[02:20:07] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[02:25:07] 🧠 Scan started
+[02:25:07] 📊 48 active symbols
+[02:25:07] 📋 Bridge specs loaded for 50 symbols
+[02:25:09] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[02:30:09] 🧠 Scan started
+[02:30:09] 📊 48 active symbols
+[02:30:09] 📋 Bridge specs loaded for 50 symbols
+[02:30:11] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[02:35:11] 🧠 Scan started
+[02:35:11] 📊 48 active symbols
+[02:35:12] 📋 Bridge specs loaded for 50 symbols
+[02:35:13] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[02:40:13] 🧠 Scan started
+[02:40:14] 📊 48 active symbols
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc675b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc663e0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc671f0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc655d0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc654e0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65e40>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65570>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64f70>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65ab0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc649a0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65150>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc644f0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc652a0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65600>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64c70>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67280>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67490>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64f10>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66fb0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65510>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64a90>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65a20>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66dd0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64130>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67040>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64e20>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65840>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67010>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67160>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc672e0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64e50>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc644c0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc657b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc668f0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65c30>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc671f0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65db0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc658a0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64970>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65570>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64730>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc651b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64220>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65150>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67340>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc655d0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65540>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64c70>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64d00>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64f70>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65ed0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66fb0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc672b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc644f0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65d80>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66dd0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc643d0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:14] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67280>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc663b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65840>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc666b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65510>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc646a0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64e50>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc665f0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64130>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65e40>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65c30>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65900>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67010>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc649a0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64970>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc667d0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc644c0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65600>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64220>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64850>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc671f0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64f10>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65540>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66950>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65570>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65a20>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65ed0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc654b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65150>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64e20>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc65d80>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66980>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc64c70>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc672e0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc663b0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc67430>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc66fb0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc668f0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ⚠️  Could not fetch bridge specs: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /symbols/list (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7cbd9dc646a0>: Failed to establish a new connection: [Errno 111] Connection refused')) — using fallback
+[02:40:15] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[02:45:15] 🧠 Scan started
+[02:45:16] 📊 48 active symbols
+[02:45:16] 📋 Bridge specs loaded for 50 symbols
+[02:45:17] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[02:50:17] 🧠 Scan started
+[02:50:18] 📊 48 active symbols
+[02:50:18] 📋 Bridge specs loaded for 50 symbols
+[02:50:19] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[02:55:19] 🧠 Scan started
+[02:55:20] 📊 48 active symbols
+[02:55:20] 📋 Bridge specs loaded for 50 symbols
+[02:55:21] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[03:00:21] 🧠 Scan started
+[03:00:22] 📊 48 active symbols
+[03:00:22] 📋 Bridge specs loaded for 50 symbols
+[03:00:23] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[03:05:23] 🧠 Scan started
+[03:05:24] 📊 48 active symbols
+[03:05:24] 📋 Bridge specs loaded for 50 symbols
+[03:05:25] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[03:10:25] 🧠 Scan started
+[03:10:26] 📊 48 active symbols
+[03:10:26] 📋 Bridge specs loaded for 50 symbols
+[03:10:27] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[03:15:27] 🧠 Scan started
+[03:15:28] 📊 48 active symbols
+[03:15:28] 📋 Bridge specs loaded for 50 symbols
+[03:15:29] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[03:20:29] 🧠 Scan started
+[03:20:30] 📊 48 active symbols
+[03:20:30] 📋 Bridge specs loaded for 50 symbols
+[03:20:32] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[03:25:32] 🧠 Scan started
+[03:25:33] 📊 48 active symbols
+[03:25:33] 📋 Bridge specs loaded for 50 symbols
+[03:25:34] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[03:30:34] 🧠 Scan started
+[03:30:35] 📊 48 active symbols
+[03:30:35] 📋 Bridge specs loaded for 50 symbols
+[03:30:37] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[03:35:37] 🧠 Scan started
+[03:35:38] 📊 48 active symbols
+[03:35:38] 📋 Bridge specs loaded for 50 symbols
+[03:35:38] 🚫 HTF BLOCK: EURUSD BUY (1H=SELL)
+[03:35:39] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[03:40:39] 🧠 Scan started
+[03:40:40] 📊 48 active symbols
+[03:40:40] 📋 Bridge specs loaded for 50 symbols
+[03:40:41] 🚫 HTF BLOCK: EURUSD BUY (1H=SELL)
+[03:40:42] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[03:45:42] 🧠 Scan started
+[03:45:43] 📊 48 active symbols
+[03:45:43] 📋 Bridge specs loaded for 50 symbols
+[03:45:43] 🚫 HTF BLOCK: EURUSD BUY (1H=SELL)
+[03:45:44] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[03:50:44] 🧠 Scan started
+[03:50:45] 📊 48 active symbols
+[03:50:45] 📋 Bridge specs loaded for 50 symbols
+[03:50:46] 🚫 HTF BLOCK: EURCAD BUY (1H=SELL)
+[03:50:47] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[03:55:47] 🧠 Scan started
+[03:55:48] 📊 48 active symbols
+[03:55:48] 📋 Bridge specs loaded for 50 symbols
+[03:55:49] 🚫 HTF BLOCK: EURCAD BUY (1H=SELL)
+[03:55:50] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[04:00:50] 🧠 Scan started
+[04:00:51] 📊 48 active symbols
+[04:00:51] 📋 Bridge specs loaded for 50 symbols
+[04:00:52] 🚫 HTF BLOCK: EURCAD BUY (1H=SELL)
+[04:00:53] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[04:05:53] 🧠 Scan started
+[04:05:54] 📊 48 active symbols
+[04:05:54] 📋 Bridge specs loaded for 50 symbols
+[04:05:56] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[04:10:56] 🧠 Scan started
+[04:10:56] 📊 48 active symbols
+[04:10:56] 📋 Bridge specs loaded for 50 symbols
+[04:10:58] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[04:15:58] 🧠 Scan started
+[04:15:59] 📊 48 active symbols
+[04:15:59] 📋 Bridge specs loaded for 50 symbols
+[04:16:01] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[04:21:01] 🧠 Scan started
+[04:21:02] 📊 48 active symbols
+[04:21:02] 📋 Bridge specs loaded for 50 symbols
+[04:21:02] 🚫 HTF BLOCK: EURCAD BUY (1H=SELL)
+[04:21:03] 🚫 HTF BLOCK: NZDUSD BUY (1H=SELL)
+[04:21:03] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=2 | cooldown=0
+[04:26:04] 🧠 Scan started
+[04:26:04] 📊 48 active symbols
+[04:26:04] 📋 Bridge specs loaded for 50 symbols
+[04:26:05] 🚫 HTF BLOCK: EURCAD BUY (1H=SELL)
+[04:26:06] 🚫 HTF BLOCK: NZDUSD BUY (1H=SELL)
+[04:26:06] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=2 | cooldown=0
+[04:31:06] 🧠 Scan started
+[04:31:07] 📊 48 active symbols
+[04:31:07] 📋 Bridge specs loaded for 50 symbols
+[04:31:08] 🚫 HTF BLOCK: EURCAD BUY (1H=SELL)
+[04:31:08] 🚫 HTF BLOCK: NZDUSD BUY (1H=SELL)
+[04:31:09] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=2 | cooldown=0
+[04:36:09] 🧠 Scan started
+[04:36:10] 📊 48 active symbols
+[04:36:10] 📋 Bridge specs loaded for 50 symbols
+[04:36:11] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[04:41:11] 🧠 Scan started
+[04:41:12] 📊 48 active symbols
+[04:41:12] 📋 Bridge specs loaded for 50 symbols
+[04:41:14] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[04:46:14] 🧠 Scan started
+[04:46:15] 📊 48 active symbols
+[04:46:15] 📋 Bridge specs loaded for 50 symbols
+[04:46:17] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[04:51:17] 🧠 Scan started
+[04:51:17] 📊 48 active symbols
+[04:51:17] 📋 Bridge specs loaded for 50 symbols
+[04:51:19] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[04:56:19] 🧠 Scan started
+[04:56:20] 📊 48 active symbols
+[04:56:20] 📋 Bridge specs loaded for 50 symbols
+[04:56:21] ✅ Scan done — accepted=0 | no_setup=48 | htf_blocked=0 | cooldown=0
+[05:01:22] 🧠 Scan started
+[05:01:22] 📊 48 active symbols
+[05:01:22] 📋 Bridge specs loaded for 50 symbols
+[05:01:22] 📡 SIGNAL: BUY  AUDCHF     | SL:   3.7p TP:   6.0p | Conf:86% | Bullish FVG+MSS gap=3.7p ATR=3.7p age=7c
+[05:01:23] 🚫 HTF BLOCK: EURAUD SELL (1H=BUY)
+[05:01:24] ✅ Scan done — accepted=1 | no_setup=46 | htf_blocked=1 | cooldown=0
+[05:06:24] 🧠 Scan started
+[05:06:25] 📊 48 active symbols
+[05:06:25] 📋 Bridge specs loaded for 50 symbols
+[05:06:25] ⏳ COOLDOWN: AUDCHF BUY
+[05:06:26] 🚫 HTF BLOCK: EURAUD SELL (1H=BUY)
+[05:06:27] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=1 | cooldown=1
+[05:11:27] 🧠 Scan started
+[05:11:28] 📊 48 active symbols
+[05:11:28] 📋 Bridge specs loaded for 50 symbols
+[05:11:28] ⏳ COOLDOWN: AUDCHF BUY
+[05:11:28] 🚫 HTF BLOCK: EURAUD SELL (1H=BUY)
+[05:11:30] ✅ Scan done — accepted=0 | no_setup=46 | htf_blocked=1 | cooldown=1
+[05:16:30] 🧠 Scan started
+[05:16:31] 📊 48 active symbols
+[05:16:31] 📋 Bridge specs loaded for 50 symbols
+[05:16:32] 🚫 HTF BLOCK: EURAUD SELL (1H=BUY)
+[05:16:33] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[05:21:34] 🧠 Scan started
+[05:21:34] 📊 48 active symbols
+[05:21:34] 📋 Bridge specs loaded for 50 symbols
+[05:21:35] 🚫 HTF BLOCK: EURAUD SELL (1H=BUY)
+[05:21:36] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[05:26:36] 🧠 Scan started
+[05:26:37] 📊 48 active symbols
+[05:26:37] 📋 Bridge specs loaded for 50 symbols
+[05:26:38] 🚫 HTF BLOCK: EURAUD SELL (1H=BUY)
+[05:26:39] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
+[05:31:39] 🧠 Scan started
+[05:31:40] 📊 48 active symbols
+[05:31:40] 📋 Bridge specs loaded for 50 symbols
+[05:31:41] 🚫 HTF BLOCK: CADJPY SELL (1H=BUY)
+[05:31:42] ✅ Scan done — accepted=0 | no_setup=47 | htf_blocked=1 | cooldown=0
