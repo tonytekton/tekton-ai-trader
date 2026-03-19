@@ -801,7 +801,7 @@ def get_signals():
         params += [limit, offset]
 
         cur.execute(f"""
-            SELECT signal_uuid, symbol, signal_type, timeframe, confidence_score, sl_pips, tp_pips, status, created_at
+            SELECT signal_uuid, symbol, signal_type, timeframe, confidence_score, sl_pips, tp_pips, status, created_at, position_id, strategy
             FROM signals
             {where_clause}
             ORDER BY created_at DESC
@@ -822,7 +822,9 @@ def get_signals():
                 "sl_pips":    float(row[5]) if row[5] else None,
                 "tp_pips":    float(row[6]) if row[6] else None,
                 "status":     row[7],
-                "created_at": row[8].strftime("%Y-%m-%d %H:%M:%S") if row[8] else "N/A"
+                "created_at":  row[8].strftime("%Y-%m-%d %H:%M:%S") if row[8] else "N/A",
+                "position_id": row[9],
+                "strategy":    row[10],
             })
 
         print(f"📡 API HIT: Signals requested. status={status_filter} symbol={symbol_filter} limit={limit} offset={offset}. Found {len(signals_list)} rows.")
