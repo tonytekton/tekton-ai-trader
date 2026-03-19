@@ -634,6 +634,8 @@ def get_executions():
             name = spec.get("symbolName", f"UNKNOWN_{pos.tradeData.symbolId}")
             digits = spec.get("digits", 5)
             trade_comment = getattr(pos.tradeData, 'comment', None)
+            if trade_comment and not isinstance(trade_comment, str):
+                trade_comment = str(trade_comment)  # guard: protobuf may return non-string
             open_ts = getattr(pos.tradeData, 'openTimestamp', None)
 
             raw_sl = getattr(pos, 'stopLoss', 0) or 0
@@ -785,7 +787,7 @@ def get_executions():
 
         # ── Enrich open trades with sl_pips/tp_pips/strategy from SQL ──────────
         try:
-            uuids = [t["signal_uuid"] for t in open_trades if t.get("signal_uuid")]
+            uuids = [t["signal_uuid"] for t in open_trades if t.get("signal_uuid") and isinstance(t["signal_uuid"], str)]
             if uuids:
                 enrich_conn = psycopg2.connect(
                     host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
@@ -1018,15 +1020,15 @@ def execute_trade():
             return jsonify({"success": False, "error": error_desc}), 400
 
         pos_id        = result.position.positionId if hasattr(result, 'position') else 0
-        entry_raw     = getattr(result.order, 'executionPrice', 0)
-
-        # FIX 3: Scale entry_price from raw cTrader integer to decimal price.
-        # Raw integer must be divided by 10^digits to produce the human-readable price.
-        # e.g. EURUSD digits=5: raw 108500 → 1.08500
-        #      XAUUSD digits=2: raw 298450 → 2984.50
-        # spec is already available from symbols_cache lookup above.
-        digits        = spec.get("digits", 5) if spec else 5
-        entry_price   = round(entry_raw / (10 ** digits), digits) if entry_raw else None
+        # ProtoOAOrder.executionPrice is 0.0 for MARKET orders (filled async).
+        # Use ProtoOAPosition.price instead — it is the decimal fill price set by the broker.
+        entry_price   = None
+        if hasattr(result, 'position') and result.position:
+            raw_pos_price = getattr(result.position, 'price', None)
+            if raw_pos_price and raw_pos_price > 0:
+                digits = spec.get("digits", 5) if spec else 5
+                entry_price = round(float(raw_pos_price), digits)
+        digits = spec.get("digits", 5) if spec else 5
 
         print(f"✅ Executed {symbol}: pos_id={pos_id} raw={entry_raw} scaled={entry_price} digits={digits}")
 
