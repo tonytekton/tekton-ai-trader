@@ -764,10 +764,25 @@ def get_executions():
             # NOT a raw integer. Dividing by 10^digits was producing values ~0.00001
             # which failed the sanity check and returned None.
             # Use directly — same behaviour confirmed in /positions/history endpoint.
-            entry_raw = getattr(opening_deal, 'executionPrice', None) or getattr(closing_deal, 'executionPrice', None)
-            close_raw = getattr(closing_deal, 'executionPrice', None) or getattr(opening_deal, 'executionPrice', None)
-            scaled_entry = round(float(entry_raw), digits) if entry_raw else None
-            scaled_close = round(float(close_raw), digits) if close_raw else None
+            # ProtoOADeal.executionPrice is a decimal double but is 0.0 for some market orders.
+            # For the opening deal: use executionPrice if > 0, else fall back to closePositionDetail.closePrice (raw int → divide)
+            # For the closing deal: prefer closePositionDetail.closePrice (raw int) which is always populated.
+            #   Fall back to executionPrice if closePrice is missing.
+            entry_exec = getattr(opening_deal, 'executionPrice', None)
+            entry_raw  = float(entry_exec) if entry_exec and float(entry_exec) > 0 else None
+
+            cpd_close  = getattr(closing_deal, 'closePositionDetail', None)
+            close_cpd_raw = getattr(cpd_close, 'closePrice', None) if cpd_close else None
+            close_exec    = getattr(closing_deal, 'executionPrice', None)
+            if close_cpd_raw and float(close_cpd_raw) > 0:
+                # closePrice is a raw integer — divide by 10^digits
+                scaled_close = round(float(close_cpd_raw) / (10 ** digits), digits)
+            elif close_exec and float(close_exec) > 0:
+                scaled_close = round(float(close_exec), digits)
+            else:
+                scaled_close = None
+
+            scaled_entry = round(entry_raw, digits) if entry_raw else None
             closed_trades.append({
                 "id": pos_id,
                 "signal_uuid": hist_comment if hist_comment else None,
