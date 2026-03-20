@@ -782,8 +782,14 @@ def get_executions():
             entry_raw  = float(entry_exec) if entry_exec and float(entry_exec) > 0 else None
 
             cpd_close  = getattr(closing_deal, 'closePositionDetail', None)
-            close_cpd_raw = getattr(cpd_close, 'closePrice', None) if cpd_close else None
-            close_exec    = getattr(closing_deal, 'executionPrice', None)
+            # closePositionDetail.closePrice = raw integer price (divide by 10^digits)
+            # Try both 'closePrice' and 'price' field names across protobuf versions
+            close_cpd_raw = None
+            if cpd_close:
+                close_cpd_raw = (getattr(cpd_close, 'closePrice', None)
+                                 or getattr(cpd_close, 'price', None)
+                                 or getattr(cpd_close, 'closedBalance', None))
+            close_exec = getattr(closing_deal, 'executionPrice', None)
             if close_cpd_raw and float(close_cpd_raw) > 0:
                 # closePrice is a raw integer — divide by 10^digits
                 scaled_close = round(float(close_cpd_raw) / (10 ** digits), digits)
@@ -791,6 +797,7 @@ def get_executions():
                 scaled_close = round(float(close_exec), digits)
             else:
                 scaled_close = None
+                print(f"DEBUG cpd_close fields: {[f.name for f in cpd_close.DESCRIPTOR.fields] if cpd_close else 'None'}")
 
             scaled_entry = round(entry_raw, digits) if entry_raw else None
             closed_trades.append({
@@ -1026,12 +1033,13 @@ def execute_trade():
 
         rel_sl = data.get("rel_sl")
         rel_tp = data.get("rel_tp")
-        # relativeStopLoss/TP must be float pips (1dp), NOT int.
-        # int() truncation was accepted by cTrader but silently dropped the SL/TP.
+        # relativeStopLoss/TP is a protobuf int32 field — must be an integer.
+        # cTrader expects integer POINTS (1 pip = 10 points for 5-digit pairs).
+        # Convert: points = round(pips * 10) → always an int.
         if rel_sl:
-            req.relativeStopLoss = round(float(rel_sl), 1)
+            req.relativeStopLoss = int(round(float(rel_sl) * 10))
         if rel_tp:
-            req.relativeTakeProfit = round(float(rel_tp), 1)
+            req.relativeTakeProfit = int(round(float(rel_tp) * 10))
 
         d_exec, client_msg_id = defer.Deferred(), str(uuid.uuid4())
         pending_requests[client_msg_id] = d_exec
