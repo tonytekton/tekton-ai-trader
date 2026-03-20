@@ -157,8 +157,8 @@ const PHASES = [
       { id: 't12_4', title: 'Add api_rate_limit column to settings table', detail: 'Store the rate limit value in SQL so it can be updated from UI. ALTER TABLE settings ADD COLUMN api_rate_limit INT DEFAULT 75.', file: 'PostgreSQL + TradingSettings page' },
     ],
   },
-];
-  {
+
+{
     id: 'ph', title: 'Hotfixes — Production Patches (2026-03-16 to 2026-03-20)', color: 'red',
     desc: 'Critical bugs fixed directly on main branch to restore system stability. Each fix documented in System Context change log.',
     tasks: [
@@ -173,10 +173,58 @@ const PHASES = [
       { id: 'th_9', title: 'HF-09: Fix P&L showing €0.00 on closed trades', detail: 'closePositionDetail.closePrice field name fallback needed. Added fallback to try price and closedBalance.', file: 'tekton_bridge.py — SHA 353328f' },
       { id: 'th_10', title: 'HF-10: Fix SL/TP showing None on all open positions in UI', detail: 'ReconcileReq does not return SL/TP on this broker. Fix: enrich from position_state{} after ReconcileReq loop in get_executions().', file: 'tekton_bridge.py — SHA 6dfc562' },
       { id: 'th_11', title: 'HF-11: Fix TradingSettings max_lots default (5 → 5000)', detail: 'UI default was 5.0 — would reset DB to 5 if page loaded during bridge downtime. Fixed default and fallback to 5000.', file: 'pages/TradingSettings.jsx' },
-      { id: 'th_12', title: 'HF-12: Fix Execution Journal duplicate rows', detail: 'open_trades (ReconcileReq) and closed_trades (DealListReq) were merged with no deduplication. cTrader DealListReq returns opening deals for currently-open positions. Fix: strip open position IDs from closed_trades before merge, deduplicate within closed_trades by position ID.', file: 'tekton_bridge.py — SHA 157cd42' },
+      { id: 'th_12', title: 'HF-12: Fix Execution Journal duplicate rows', detail: 'open_trades (ReconcileReq) and closed_trades (DealListReq) were merged with no deduplication. cTrader DealListReq returns opening deals for currently-open positions. Fix: strip open position IDs from closed_trades before merge, deduplicate within closed_trades by position ID.', file: 'tekton_bridge.py — SHA 157cd42' },,
+{
+    id: 'p13', title: 'Phase 13 — Signals Log Fix (FAILED status bug)', color: 'red',
+    desc: 'BUG DIAGNOSED (20 Mar 2026): All 196 of 200 signals showing FAILED. Root cause: executor queries column signal_type but signals table stores direction in column named direction. Mismatch → executor SQL exception → every signal marked FAILED. Fix: align column name.',
+    tasks: [
+      { id: 't13_1', title: 'Confirm DB column name: direction vs signal_type', detail: "Run: SELECT column_name FROM information_schema.columns WHERE table_name='signals' ORDER BY ordinal_position; — confirm actual column name.", file: 'PostgreSQL (tekton-trader DB)' },
+      { id: 't13_2', title: 'Fix executor SELECT — use correct column name', detail: "tekton_executor.py ~line 251: change 'signal_type' → 'direction' in SELECT. Query: SELECT signal_uuid, symbol, direction, timeframe, sl_pips, tp_pips FROM signals WHERE status='PENDING'", file: 'tekton_executor.py' },
+      { id: 't13_3', title: 'Verify bridge /proxy/signals direction field consistent with DB column', detail: 'Bridge already returns "direction" field from /proxy/signals. Confirm bridge INSERT and SELECT both use same column name.', file: 'tekton_bridge.py ~line 695' },
+      { id: 't13_4', title: 'Test: insert PENDING signal → confirm COMPLETED not FAILED', detail: 'After fix: insert test signal via ManualSignal page. Watch combined_trades.log. Status should go PENDING → EXECUTING → COMPLETED.', file: 'ManualSignal page + combined_trades.log' },
+      { id: 't13_5', title: 'Verify Signals Log UI shows correct statuses', detail: 'Open Signals page. Confirm new signals show PENDING/COMPLETED/EXECUTING, not FAILED.', file: 'Base44 UI → Signals page' },
     ],
   },
-
+  {
+    id: 'p14', title: 'Phase 14 — Command Center Dashboard Fixes', color: 'orange',
+    desc: 'Multiple dashboard display bugs diagnosed (20 Mar 2026). Root causes identified: (1) /account/status missing balance field; (2) margin_used returns 0 despite 6 open positions totalling €62,069 margin; (3) open trade count not reading from /positions/list; (4) balance=equity because unrealised PnL not added. 6 open positions confirmed with €18,647 unrealised PnL.',
+    tasks: [
+      { id: 't14_1', title: 'Fix balance display — switch to /proxy/account-summary', detail: 'BUG: /account/status does not return balance field. Switch Dashboard to use /proxy/account-summary which returns {balance, equity, free_margin, margin_used}. Live balance: €3,472,798.74.', file: 'getAccountStatus.ts + Dashboard.jsx' },
+      { id: 't14_2', title: 'Fix margin_used showing 0', detail: 'BUG: /proxy/account-summary returns margin_used: 0.0 despite 6 open positions. True margin = €62,069 (from sum of positions/list marginUsed_cents). Fix: calculate in backend function from positions/list, OR fix bridge TraderUpdatedEvent to track margin correctly.', file: 'getAccountStatus.ts + tekton_bridge.py' },
+      { id: 't14_3', title: 'Fix open trade count showing 0', detail: 'BUG: Dashboard shows 0 trades. Fix: read count from /positions/list response. Currently 6 confirmed open.', file: 'Dashboard.jsx + getAccountStatus.ts' },
+      { id: 't14_4', title: 'Fix session exposure showing 0%', detail: 'BUG: Once margin_used fixed (t14_2), session exposure auto-calculates. Live: €62,069 / €3,472,799 = 1.79%. Show as % with colour coding.', file: 'Dashboard.jsx' },
+      { id: 't14_5', title: 'Fix balance = equity (unrealised PnL not reflected)', detail: 'BUG: Balance and equity showing same value. Equity = balance + unrealised PnL. Live: balance €3,472,799 + unrealised €18,647 = equity ~€3,491,446. Fix in bridge or backend function.', file: 'tekton_bridge.py (TraderUpdatedEvent) + getAccountStatus.ts' },
+      { id: 't14_6', title: 'Add daily P&L display — updates as trades close', detail: 'NEW FEATURE: Show daily P&L = sum of unrealised PnL (open positions) + realised PnL from closed_trades today. Auto-refresh every 30s. Live open PnL currently €18,647.', file: 'Dashboard.jsx + getAccountStatus.ts + tekton_bridge.py' },
+      { id: 't14_7', title: 'Add Upcoming News strip to Command Center', detail: 'BLOCKED on Phase 8 (economic calendar). Once /calendar/events exists, show next 5 high-impact events for today. Placeholder until then: "Economic calendar pending Phase 8."', file: 'Dashboard.jsx + getEconomicCalendar.ts' },
+    ],
+  },
+  {
+    id: 'p15', title: 'Phase 15 — Multi-Timeframe Signals + Metals/Indices', color: 'purple',
+    desc: 'DIAGNOSED: All 200 signals are 15min-only. Root cause: all strategy scripts hardcode LTF_TIMEFRAME="15min". Market data exists for 15min + 4H only (no 1H or Daily). Metals (XAUUSD, XAGUSD) and indices (US30, US500, UK100, JP225, AUS200) have 4,999+ 15min candles but are generating zero signals — 4H data availability unknown. Fix: backfill 1H/Daily data, create MTF strategy variants.',
+    tasks: [
+      { id: 't15_1', title: 'Audit market_data — confirm what timeframes exist per symbol', detail: "SELECT timeframe, COUNT(DISTINCT symbol), MIN(created_at), MAX(created_at) FROM market_data GROUP BY timeframe ORDER BY timeframe; — confirm 15min/4H coverage and whether metals/indices have 4H data.", file: 'PostgreSQL (tekton-trader DB)' },
+      { id: 't15_2', title: 'Backfill 4H candles for metals and indices if missing', detail: 'Check if XAUUSD, US30 etc have 4H data. If not, extend tekton_backfill.py to fetch 4H for all 50 symbols. Strategies require both 15min AND 4H to generate signals.', file: 'tekton_backfill.py + VM crontab' },
+      { id: 't15_3', title: 'Backfill 1H candles for all 50 active symbols', detail: 'Add 1H timeframe to backfill script. Min 200 candles per symbol. Enables 1H entry strategies with Daily trend filter.', file: 'tekton_backfill.py + VM crontab' },
+      { id: 't15_4', title: 'Backfill Daily (1D) candles for all 50 active symbols', detail: 'Add Daily timeframe to backfill. Min 100 candles per symbol. Used as HTF trend filter for 1H entry strategies.', file: 'tekton_backfill.py + VM crontab' },
+      { id: 't15_5', title: 'Create 1H EMA Pullback strategy variant', detail: 'Clone strat_ema_pullback_v1.py. Set HTF_TIMEFRAME=Daily, LTF_TIMEFRAME=1H. Signal INSERT with timeframe=1H. Deploy as new systemd service. Targets swing trade setups.', file: 'strat_ema_pullback_1h.py + new systemd service' },
+      { id: 't15_6', title: 'Diagnose why metals/indices not generating signals', detail: 'Metals (XAUUSD etc) and indices (US30 etc) have 15min data confirmed. Check: (a) does get_active_symbols() SQL query return them? (b) do they have 4H data? (c) are they passing trend/entry filters? Add debug logging.', file: 'strat_ema_pullback_v1.py + strat_ict_fvg_v1_rewrite.py + combined_trades.log' },
+      { id: 't15_7', title: 'Add USTEC, DE40, STOXX50, F40 to active symbol lists', detail: '4 additional instruments available from broker (confirmed via /symbols/list). Backfill market data and add to strategy symbol lists once data available.', file: 'strat_*.py + tekton_backfill.py' },
+    ],
+  },
+  {
+    id: 'p16', title: 'Phase 16 — Analytics Page + AI Recommendations', color: 'cyan',
+    desc: 'Build the full Analytics page with AI-powered trade analysis, strategy attribution, and actionable recommendations. Lester analyses closed trade history and recommends settings/strategy changes. AI recommendations become meaningful after 100+ closed trades — gate behind minimum count.',
+    tasks: [
+      { id: 't16_1', title: 'Build Analytics page skeleton — tabbed layout', detail: 'Analytics.jsx with tabs: Performance | By Symbol | By Session | AI Recommendations. Connect to getAnalytics backend function.', file: 'Base44 UI → Analytics.jsx' },
+      { id: 't16_2', title: 'Strategy performance table', detail: 'Table: strategy | signals | executed | win_rate | avg_r | profit_factor. Source: SQL GROUP BY strategy on signals + closed_trades. Sortable columns. Highlight underperformers in red.', file: 'Analytics.jsx + getAnalytics.ts' },
+      { id: 't16_3', title: 'Symbol and session P&L breakdown', detail: 'Bar charts: P&L by symbol (top 15), P&L by session (London/NY/Asian/Pacific), P&L by day of week. Show best/worst performers visually.', file: 'Analytics.jsx + getAnalytics.ts' },
+      { id: 't16_4', title: 'Confidence score vs actual R scatter', detail: 'X=confidence_score (0-100), Y=outcome_r. Colour by strategy. Does high confidence predict better outcomes? Include trend line.', file: 'Analytics.jsx + getAnalytics.ts' },
+      { id: 't16_5', title: 'AI Recommendations engine', detail: 'Call AI with: strategy stats, top/worst symbols, confidence correlation, recent drawdown events. Generate 5 plain-English recommendations with priority (CRITICAL/HIGH/MEDIUM). Store in AnalyticsSnapshot entity. Refresh on demand.', file: 'Analytics.jsx + Base44 AI backend function + AnalyticsSnapshot entity' },
+      { id: 't16_6', title: 'Gate AI analysis behind 100 closed trade minimum', detail: 'DECISION: AI recommendations only meaningful with sufficient data. Show progress bar "X/100 trades needed for AI analysis" until threshold reached. After 100: unlock full analysis.', file: 'Analytics.jsx' },
+      { id: 't16_7', title: 'Surface top 3 AI recommendations on Command Center', detail: 'Show latest Lester recommendations as a strip on Dashboard. Clickable through to full Analytics page.', file: 'Dashboard.jsx' },
+    ],
+  },,
+];
 const STATUS_CONFIG = {
   todo:        { label: 'To Do',       icon: Circle,        color: 'text-slate-500',   bg: 'bg-slate-500/10 border-slate-500/20' },
   in_progress: { label: 'In Progress', icon: Clock,         color: 'text-yellow-400',  bg: 'bg-yellow-500/10 border-yellow-500/20' },
@@ -311,7 +359,7 @@ export default function ImplementationPlan() {
           </div>
         );
       })}
-      <div className="text-center text-xs text-slate-700 mt-8 pb-4 font-mono">Implementation Plan v4.7.0 — Click status icons to update · Press Save Progress to persist</div>
+      <div className="text-center text-xs text-slate-700 mt-8 pb-4 font-mono">Implementation Plan v4.8.0 — Updated 23 Mar 2026 · Click status icons to update · Press Save Progress to persist</div>
     </div>
   );
 }
