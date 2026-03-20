@@ -669,6 +669,19 @@ def get_executions():
                 "digits": digits
             })
 
+        # --- 1b. Enrich open trade SL/TP from position_state{} ---
+        # ReconcileReq does not reliably return stopLoss/takeProfit (broker-dependent).
+        # position_state{} is populated from live ExecutionEvents and is always accurate.
+        for t in open_trades:
+            ps = state.get('position_state', {}).get(t['id'], {})
+            if ps:
+                if t['stop_loss'] is None and ps.get('stopLoss'):
+                    t['stop_loss'] = ps['stopLoss']
+                if t['take_profit'] is None and ps.get('takeProfit'):
+                    t['take_profit'] = ps['takeProfit']
+                if t['entry_price'] is None and ps.get('entryPrice'):
+                    t['entry_price'] = ps['entryPrice']
+
         # --- 2. Fetch Closed Positions (Last 30 Days) ---
         closed_trades = []
         to_ts = int(time.time() * 1000)
