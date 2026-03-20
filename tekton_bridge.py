@@ -669,18 +669,39 @@ def get_executions():
                 "digits": digits
             })
 
-        # --- 1b. Enrich open trade SL/TP from position_state{} ---
-        # ReconcileReq does not reliably return stopLoss/takeProfit (broker-dependent).
-        # position_state{} is populated from live ExecutionEvents and is always accurate.
+        # --- 1b. Enrich open trade SL/TP from position_state{} then ReconcileReq ---
+        # position_state{} uses snake_case keys: stop_loss, take_profit, entry_price
+        # ReconcileReq (recon_result) is a reliable SL/TP source on this broker —
+        # confirmed via /positions/list. Use it as direct fallback after position_state{}.
+        recon_pos_map = {str(p.positionId): p for p in recon_result.position}
         for t in open_trades:
             ps = state.get('position_state', {}).get(t['id'], {})
-            if ps:
-                if t['stop_loss'] is None and ps.get('stopLoss'):
-                    t['stop_loss'] = ps['stopLoss']
-                if t['take_profit'] is None and ps.get('takeProfit'):
-                    t['take_profit'] = ps['takeProfit']
-                if t['entry_price'] is None and ps.get('entryPrice'):
-                    t['entry_price'] = ps['entryPrice']
+            # Layer 1: position_state{} (most up-to-date — from live ExecutionEvents)
+            if t['stop_loss'] is None and ps.get('stop_loss'):
+                t['stop_loss'] = ps['stop_loss']
+            if t['take_profit'] is None and ps.get('take_profit'):
+                t['take_profit'] = ps['take_profit']
+            if t['entry_price'] is None and ps.get('entry_price'):
+                t['entry_price'] = ps['entry_price']
+            # Layer 2: ReconcileReq raw values (reliable on this broker after bridge restart
+            # when position_state{} has not yet been seeded by ExecutionEvents)
+            rp = recon_pos_map.get(t['id'])
+            if rp:
+                spec = state["symbol_id_to_spec_map"].get(rp.tradeData.symbolId, {})
+                digits = spec.get("digits", 5)
+                divisor = 10 ** digits
+                if t['stop_loss'] is None:
+                    raw_sl = getattr(rp, 'stopLoss', 0) or 0
+                    if raw_sl > 0:
+                        scaled = round(raw_sl / divisor, digits)
+                        if scaled >= 0.001:
+                            t['stop_loss'] = scaled
+                if t['take_profit'] is None:
+                    raw_tp = getattr(rp, 'takeProfit', 0) or 0
+                    if raw_tp > 0:
+                        scaled = round(raw_tp / divisor, digits)
+                        if scaled >= 0.001:
+                            t['take_profit'] = scaled
 
         # --- 2. Fetch Closed Positions (Last 30 Days) ---
         closed_trades = []
