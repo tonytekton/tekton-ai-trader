@@ -893,9 +893,36 @@ def get_executions():
             print(f"WARNING Closed trade enrichment failed (non-fatal): {enrich_err2}")
 
         closed_trades.sort(key=lambda x: x.get('closed_at') or '', reverse=True)
+
+        # --- Deduplication ---
+        # open_trades comes from ReconcileReq (live positions).
+        # closed_trades comes from DealListReq (historical deals).
+        # A position that is currently open will ALSO appear in DealListReq
+        # (as an opening deal without a closePositionDetail) so we must exclude it
+        # from closed_trades to prevent duplicate rows in the UI.
+        open_pos_ids = {t['id'] for t in open_trades}
+        closed_trades_deduped = [t for t in closed_trades if t['id'] not in open_pos_ids]
+
+        # Also deduplicate within closed_trades by position ID — keep only one row per
+        # position (the one with the most complete data — preferring non-None close_price).
+        seen_closed = {}
+        for t in closed_trades_deduped:
+            pid = t['id']
+            if pid not in seen_closed:
+                seen_closed[pid] = t
+            else:
+                # Prefer the entry with a real close_price and real P&L
+                existing = seen_closed[pid]
+                if t.get('close_price') and not existing.get('close_price'):
+                    seen_closed[pid] = t
+                elif t.get('pnl') is not None and existing.get('pnl') is None:
+                    seen_closed[pid] = t
+        closed_trades_final = list(seen_closed.values())
+        closed_trades_final.sort(key=lambda x: x.get('closed_at') or '', reverse=True)
+
         return jsonify({
             "success": True,
-            "executions": open_trades + closed_trades
+            "executions": open_trades + closed_trades_final
         })
 
     except Exception as e:
