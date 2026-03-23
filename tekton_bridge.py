@@ -321,83 +321,49 @@ def get_api_usage_stats():
 @app.route("/positions/list", methods=["GET", "POST"])
 @require_auth
 def list_positions():
+    # Phase 11c: Serve entirely from position_state{} — zero cTrader calls.
+    # PnL is optionally fetched with a single GetPositionUnrealizedPnLReq.
     if not state["authenticated"]:
         return jsonify({"success": False, "error": "Not authenticated"}), 503
     try:
-        start_time = time.time()
-        req_positions = openapi.ProtoOAReconcileReq()
-        req_positions.ctidTraderAccountId = ACCOUNT_ID
+        ps_dict = state.get("position_state", {})
 
-        d_positions, client_msg_id = defer.Deferred(), str(uuid.uuid4())
-        pending_requests[client_msg_id] = d_positions
-
-        reactor.callFromThread(lambda: bridge.client.send(req_positions, clientMsgId=client_msg_id))
-        reconcile_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_positions, 10)
-        log_ctrader_call("/positions/list", int((time.time() - start_time) * 1000), True)
-
-        start_time_pnl = time.time()
-        pnl_msg = openapi.ProtoOAGetPositionUnrealizedPnLReq()
-        pnl_msg.ctidTraderAccountId = ACCOUNT_ID
-
-        d_pnl, client_msg_id_pnl = defer.Deferred(), str(uuid.uuid4())
-        pending_requests[client_msg_id_pnl] = d_pnl
-
-        reactor.callFromThread(lambda: bridge.client.send(pnl_msg, clientMsgId=client_msg_id_pnl))
-        pnl_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_pnl, 10)
-        log_ctrader_call("/positions/list_pnl", int((time.time() - start_time_pnl) * 1000), True)
-
+        # Optional: fetch live PnL (single call, fast)
         pnl_map = {}
-        if hasattr(pnl_result, "positionUnrealizedPnL"):
-            for pnl_entry in pnl_result.positionUnrealizedPnL:
-                pos_id = str(pnl_entry.positionId)
-                pnl_map[pos_id] = {
-                    "grossPnL_cents": safe_get_field(pnl_entry, "grossUnrealizedPnL", 0),
-                    "netPnL_cents": safe_get_field(pnl_entry, "netUnrealizedPnL", 0),
-                }
+        try:
+            start_time = time.time()
+            pnl_msg = openapi.ProtoOAGetPositionUnrealizedPnLReq()
+            pnl_msg.ctidTraderAccountId = ACCOUNT_ID
+            d_pnl, mid_pnl = defer.Deferred(), str(uuid.uuid4())
+            pending_requests[mid_pnl] = d_pnl
+            reactor.callFromThread(lambda: bridge.client.send(pnl_msg, clientMsgId=mid_pnl))
+            pnl_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_pnl, 5)
+            log_ctrader_call("/positions/list_pnl", int((time.time() - start_time) * 1000), True)
+            if hasattr(pnl_result, "positionUnrealizedPnL"):
+                for entry in pnl_result.positionUnrealizedPnL:
+                    pnl_map[str(entry.positionId)] = {
+                        "grossPnL_cents": safe_get_field(entry, "grossUnrealizedPnL", 0),
+                        "netPnL_cents":   safe_get_field(entry, "netUnrealizedPnL", 0),
+                    }
+        except Exception as pnl_err:
+            print(f"⚠️  PnL fetch failed — returning positions without PnL: {pnl_err}")
 
         positions = []
-        for pos in reconcile_result.position:
-            if hasattr(pos, 'positionStatus') and pos.positionStatus != 1:
-                continue
-            pos_id = str(pos.positionId)
-            spec   = state["symbol_id_to_spec_map"].get(pos.tradeData.symbolId, {})
-            name   = spec.get("symbolName", f"UNKNOWN_{pos.tradeData.symbolId}")
-            digits = spec.get("digits", 5)
-            divisor = 10 ** digits
+        for pos_id, ps in ps_dict.items():
             pnl_data = pnl_map.get(pos_id, {"grossPnL_cents": 0, "netPnL_cents": 0})
-
-            # Scale raw integer prices → decimal
-            entry_raw = getattr(pos.tradeData, 'openPrice', None)
-            sl_raw    = getattr(pos, 'stopLoss', None) or 0
-            tp_raw    = getattr(pos, 'takeProfit', None) or 0
-            entry_dec = round(entry_raw / divisor, digits) if entry_raw else None
-            sl_dec    = round(sl_raw / divisor, digits) if sl_raw > 0 else None
-            tp_dec    = round(tp_raw / divisor, digits) if tp_raw > 0 else None
-            if sl_dec is not None and sl_dec < 0.001: sl_dec = None
-            if tp_dec is not None and tp_dec < 0.001: tp_dec = None
-
-            # Enrich from position_state{} (live ExecutionEvent cache — most up-to-date)
-            ps = state.get('position_state', {}).get(pos_id, {})
-            if entry_dec is None and ps.get('entry_price'):
-                entry_dec = ps['entry_price']
-            if sl_dec is None and ps.get('stop_loss'):
-                sl_dec = ps['stop_loss']
-            if tp_dec is None and ps.get('take_profit'):
-                tp_dec = ps['take_profit']
-
             positions.append({
-                "positionId": pos_id,
-                "symbol": name,
-                "tradeSide": "BUY" if pos.tradeData.tradeSide == 1 else "SELL",
+                "positionId":            pos_id,
+                "symbol":                ps.get("symbol", "UNKNOWN"),
+                "tradeSide":             ps.get("side", "BUY"),
                 "unrealizedNetPnL_cents": pnl_data["netPnL_cents"],
-                "marginUsed_cents": pos.usedMargin,
-                "volume": pos.tradeData.volume,
-                "entryPrice": entry_dec,
-                "stopLoss": sl_dec,
-                "takeProfit": tp_dec,
-                "comment": getattr(pos.tradeData, 'comment', None),
-                "openTimestamp": getattr(pos.tradeData, 'openTimestamp', None),
-                "digits": digits,
+                "marginUsed_cents":      ps.get("margin_used_cents", 0),
+                "volume":                ps.get("volume_raw", 0),
+                "entryPrice":            ps.get("entry_price"),
+                "stopLoss":              ps.get("stop_loss"),
+                "takeProfit":            ps.get("take_profit"),
+                "comment":               ps.get("comment"),
+                "openTimestamp":         ps.get("open_ts"),
+                "digits":                ps.get("digits", 5),
             })
 
         return jsonify({"success": True, "positions": positions, "count": len(positions)})
@@ -445,46 +411,47 @@ def internal_sync_account():
 @app.route("/account/info", methods=["GET"])
 @require_auth
 def get_account_info():
+    # Phase 11c: Serve from state{} — kept live by TraderUpdatedEvent pushes.
+    # Pass ?refresh=true to force a live TraderReq (e.g. after a deposit).
     if not state["authenticated"]:
         return jsonify({"success": False, "error": "Not authenticated"}), 503
     try:
-        start_time = time.time()
-        trader_msg = openapi.ProtoOATraderReq()
-        trader_msg.ctidTraderAccountId = ACCOUNT_ID
-        d, client_msg_id = defer.Deferred(), str(uuid.uuid4())
-        pending_requests[client_msg_id] = d
+        force_refresh = request.args.get("refresh", "false").lower() == "true"
 
-        reactor.callFromThread(lambda: bridge.client.send(trader_msg, clientMsgId=client_msg_id))
-        trader_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d, 30)
-        log_ctrader_call("/account/info", int((time.time() - start_time) * 1000), True)
+        if force_refresh:
+            start_time = time.time()
+            trader_msg = openapi.ProtoOATraderReq()
+            trader_msg.ctidTraderAccountId = ACCOUNT_ID
+            d, mid = defer.Deferred(), str(uuid.uuid4())
+            pending_requests[mid] = d
+            reactor.callFromThread(lambda: bridge.client.send(trader_msg, clientMsgId=mid))
+            trader_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d, 15)
+            log_ctrader_call("/account/info", int((time.time() - start_time) * 1000), True)
+            trader = trader_result.trader
+            state["balance_cents"]      = getattr(trader, 'balance', state["balance_cents"])
+            state["equity_cents"]       = getattr(trader, 'moneyBalance', state["equity_cents"])
+            state["margin_used_cents"]  = getattr(trader, 'usedMargin', state["margin_used_cents"])
 
-        trader = trader_result.trader
-        balance_cents = getattr(trader, 'balance', 0)
-        equity_cents = getattr(trader, 'moneyBalance', balance_cents)
-        margin_used_cents = getattr(trader, 'usedMargin', 0)
-        free_margin_cents = getattr(trader, 'freeMargin', 0)
-        deposit_asset_id = getattr(trader, 'depositAssetId', None)
+        balance_cents     = state.get("balance_cents", 0)
+        equity_cents      = state.get("equity_cents", balance_cents)
+        margin_used_cents = state.get("margin_used_cents", 0)
+        free_margin_cents = max(0, equity_cents - margin_used_cents)
 
-        state["balance_cents"] = balance_cents
-        state["equity_cents"] = equity_cents
-        state["margin_used_cents"] = margin_used_cents
-
+        deposit_asset_id = state.get("deposit_asset_id")
         currency = "EUR"
         if deposit_asset_id and deposit_asset_id in state.get("asset_map", {}):
             currency = state["asset_map"].get(deposit_asset_id, "EUR")
 
-        account_type = "demo" if not getattr(trader, 'isLive', False) else "live"
-
         return jsonify({
             "success": True,
             "account_info": {
-                "accountId": ACCOUNT_ID,
-                "balance_cents": balance_cents,
-                "equity_cents": equity_cents,
+                "accountId":        ACCOUNT_ID,
+                "balance_cents":    balance_cents,
+                "equity_cents":     equity_cents,
                 "usedMargin_cents": margin_used_cents,
                 "freeMargin_cents": free_margin_cents,
-                "currency": currency,
-                "accountType": account_type
+                "currency":         currency,
+                "accountType":      "live" if state.get("is_live") else "demo",
             }
         })
     except Exception as e:
@@ -710,123 +677,73 @@ def get_calendar_events():
 @require_auth
 def get_executions():
     try:
-        # --- 1. Fetch Open Positions via ReconcileReq ---
+        # --- 1. Fetch Open Positions from position_state{} (Phase 11c — zero cTrader calls) ---
         open_trades = []
-        recon_msg = openapi.ProtoOAReconcileReq()
-        recon_msg.ctidTraderAccountId = ACCOUNT_ID
+        ps_dict = state.get("position_state", {})
 
-        d_recon, client_msg_id_recon = defer.Deferred(), str(uuid.uuid4())
-        pending_requests[client_msg_id_recon] = d_recon
-
-        reactor.callFromThread(lambda: bridge.client.send(recon_msg, clientMsgId=client_msg_id_recon))
-        try:
-            recon_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_recon, 10)
-            recon_positions = recon_result.position
-        except Exception as recon_err:
-            print(f"⚠️  ReconcileReq timeout in /proxy/executions — serving empty open trades: {recon_err}")
-            pending_requests.pop(client_msg_id_recon, None)
-            recon_positions = []
-
-        for pos in recon_positions:
-            if hasattr(pos, 'positionStatus') and pos.positionStatus != 1:
-                continue
-
-            spec = state["symbol_id_to_spec_map"].get(pos.tradeData.symbolId, {})
-            name = spec.get("symbolName", f"UNKNOWN_{pos.tradeData.symbolId}")
-            digits = spec.get("digits", 5)
-            trade_comment = getattr(pos.tradeData, 'comment', None)
-            if trade_comment and not isinstance(trade_comment, str):
-                trade_comment = str(trade_comment)  # guard: protobuf may return non-string
-            open_ts = getattr(pos.tradeData, 'openTimestamp', None)
-
-            raw_sl = getattr(pos, 'stopLoss', 0) or 0
-            raw_tp = getattr(pos, 'takeProfit', 0) or 0
-            divisor = 10 ** digits
-            open_price_raw = getattr(pos.tradeData, 'openPrice', None)
-            scaled_sl = round(raw_sl / divisor, digits) if raw_sl > 0 else None
-            scaled_tp = round(raw_tp / divisor, digits) if raw_tp > 0 else None
-            # Discard bogus SL/TP (cTrader returns 1 raw unit when not set = < 0.001 after scaling)
-            if scaled_sl is not None and scaled_sl < 0.001:
-                scaled_sl = None
-            if scaled_tp is not None and scaled_tp < 0.001:
-                scaled_tp = None
-            # openPrice from ReconcileReq (may be None — cTrader limitation for some brokers)
-            open_price_raw2 = getattr(pos.tradeData, 'openPrice', None)
-            scaled_open = round(open_price_raw2 / divisor, digits) if open_price_raw2 and open_price_raw2 / divisor >= 0.001 else None
+        # Phase 11c: Build open_trades from position_state{} — zero cTrader calls.
+        # position_state{} is seeded at startup via ReconcileReq and kept live by ExecutionEvents.
+        # All prices are pre-scaled decimals. SL/TP authoritative from ExecutionEvent pushes.
+        for pos_id, ps in ps_dict.items():
+            open_ts = ps.get("open_ts")
             open_trades.append({
-                "id": str(pos.positionId),
-                "signal_uuid": trade_comment if trade_comment else None,
-                "symbol": name,
-                "side": "BUY" if pos.tradeData.tradeSide == TRADE_SIDE_BUY else "SELL",
-                "volume": round(pos.tradeData.volume / 10000000, 2),
-                "entry_price": scaled_open,
-                "stop_loss": scaled_sl,
-                "take_profit": scaled_tp,
+                "id":          pos_id,
+                "signal_uuid": ps.get("comment"),
+                "symbol":      ps.get("symbol", "UNKNOWN"),
+                "side":        ps.get("side", "BUY"),
+                "volume":      ps.get("volume", 0),
+                "entry_price": ps.get("entry_price"),
+                "stop_loss":   ps.get("stop_loss"),
+                "take_profit": ps.get("take_profit"),
                 "close_price": None,
-                "pnl": None,
-                "status": "open",
-                "created_at": datetime.fromtimestamp(open_ts / 1000).isoformat() if open_ts else None,
-                "closed_at": None,
-                "digits": digits
+                "pnl":         None,
+                "status":      "open",
+                "created_at":  datetime.fromtimestamp(open_ts / 1000).isoformat() if open_ts else None,
+                "closed_at":   None,
+                "digits":      ps.get("digits", 5),
+                "strategy":    None,
+                "sl_pips":     None,
+                "tp_pips":     None,
             })
-
-        # --- 1b. Enrich open trade SL/TP from position_state{} then ReconcileReq ---
-        # position_state{} uses snake_case keys: stop_loss, take_profit, entry_price
-        # ReconcileReq (recon_result) is a reliable SL/TP source on this broker —
-        # confirmed via /positions/list. Use it as direct fallback after position_state{}.
-        recon_pos_map = {str(p.positionId): p for p in recon_result.position}
-        for t in open_trades:
-            ps = state.get('position_state', {}).get(t['id'], {})
-            # Layer 1: position_state{} (most up-to-date — from live ExecutionEvents)
-            if t['stop_loss'] is None and ps.get('stop_loss'):
-                t['stop_loss'] = ps['stop_loss']
-            if t['take_profit'] is None and ps.get('take_profit'):
-                t['take_profit'] = ps['take_profit']
-            if t['entry_price'] is None and ps.get('entry_price'):
-                t['entry_price'] = ps['entry_price']
-            # Layer 2: ReconcileReq raw values (reliable on this broker after bridge restart
-            # when position_state{} has not yet been seeded by ExecutionEvents)
-            rp = recon_pos_map.get(t['id'])
-            if rp:
-                spec = state["symbol_id_to_spec_map"].get(rp.tradeData.symbolId, {})
-                digits = spec.get("digits", 5)
-                divisor = 10 ** digits
-                if t['stop_loss'] is None:
-                    raw_sl = getattr(rp, 'stopLoss', 0) or 0
-                    if raw_sl > 0:
-                        scaled = round(raw_sl / divisor, digits)
-                        if scaled >= 0.001:
-                            t['stop_loss'] = scaled
-                if t['take_profit'] is None:
-                    raw_tp = getattr(rp, 'takeProfit', 0) or 0
-                    if raw_tp > 0:
-                        scaled = round(raw_tp / divisor, digits)
-                        if scaled >= 0.001:
-                            t['take_profit'] = scaled
 
         # --- 2. Fetch Closed Positions (Last 30 Days) ---
         closed_trades = []
         to_ts = int(time.time() * 1000)
         from_ts = to_ts - (30 * 24 * 60 * 60 * 1000)
 
-        deal_req = openapi.ProtoOADealListReq()
-        deal_req.ctidTraderAccountId = ACCOUNT_ID
-        deal_req.fromTimestamp = from_ts
-        deal_req.toTimestamp = to_ts
-        deal_req.maxRows = 500
-
-        d_deals, client_msg_id_deals = defer.Deferred(), str(uuid.uuid4())
-        pending_requests[client_msg_id_deals] = d_deals
-
-        reactor.callFromThread(lambda: bridge.client.send(deal_req, clientMsgId=client_msg_id_deals))
-        deal_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_deals, 30)
-
+        # Phase 11d: DealListReq with hasMore pagination — fetch all deals, not just first 500
         position_deals = {}
-        for deal in deal_result.deal:
-            pos_id = str(deal.positionId)
-            if pos_id not in position_deals:
-                position_deals[pos_id] = []
-            position_deals[pos_id].append(deal)
+        current_to = to_ts
+        pages = 0
+        while True:
+            deal_req = openapi.ProtoOADealListReq()
+            deal_req.ctidTraderAccountId = ACCOUNT_ID
+            deal_req.fromTimestamp = from_ts
+            deal_req.toTimestamp = current_to
+            deal_req.maxRows = 500
+
+            d_deals, mid_deals = defer.Deferred(), str(uuid.uuid4())
+            pending_requests[mid_deals] = d_deals
+            reactor.callFromThread(lambda: bridge.client.send(deal_req, clientMsgId=mid_deals))
+            deal_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_deals, 30)
+            pages += 1
+
+            for deal in deal_result.deal:
+                pos_id = str(deal.positionId)
+                if pos_id not in position_deals:
+                    position_deals[pos_id] = []
+                position_deals[pos_id].append(deal)
+
+            if not getattr(deal_result, 'hasMore', False) or not deal_result.deal:
+                break
+            # Slide window back — oldest deal timestamp - 1ms becomes new ceiling
+            current_to = min(d.executionTimestamp for d in deal_result.deal) - 1
+            if pages > 10:  # safety cap — 5000 deals max
+                print("⚠️  DealListReq pagination safety cap reached (10 pages)")
+                break
+
+        if pages > 1:
+            print(f"📄 DealListReq pagination: fetched {pages} pages, {sum(len(v) for v in position_deals.values())} deals")
 
         # --- Enrich open trade entry prices via cached OrderListReq ---
         # OrderListReq is expensive (rate-limited). We only fire it for positions
@@ -1267,49 +1184,36 @@ def modify_trade():
         if sl_price is None and tp_price is None and sl_pips is None and tp_pips is None:
             return jsonify({"success": False, "error": "At least one of sl_price, tp_price, sl_pips, tp_pips required"}), 400
 
-        recon_msg = openapi.ProtoOAReconcileReq()
-        recon_msg.ctidTraderAccountId = ACCOUNT_ID
-        d_recon, mid_recon = defer.Deferred(), str(uuid.uuid4())
-        pending_requests[mid_recon] = d_recon
-        reactor.callFromThread(lambda: bridge.client.send(recon_msg, clientMsgId=mid_recon))
-        try:
-            recon_res = threads.blockingCallFromThread(reactor, wait_for_deferred, d_recon, 10)
-            target_pos = next((p for p in recon_res.position if str(p.positionId) == str(position_id)), None)
-        except Exception as recon_err:
-            print(f"⚠️  ReconcileReq timeout in /trade/modify — aborting: {recon_err}")
-            pending_requests.pop(mid_recon, None)
-            return jsonify({"error": "Position lookup timed out — please retry"}), 503
-        if not target_pos:
-            return jsonify({"success": False, "error": "Position not found"}), 404
+        # Phase 11c: look up position from position_state{} — no ReconcileReq needed
+        ps = state.get("position_state", {}).get(str(position_id))
+        if not ps:
+            return jsonify({"success": False, "error": f"Position {position_id} not found in position_state — may already be closed"}), 404
 
-        spec   = state["symbol_id_to_spec_map"].get(target_pos.tradeData.symbolId, {})
-        digits = spec.get("digits", 5)
-        pip_pos = spec.get("pipPosition", digits - 1)
-        pip_size = 10 ** -pip_pos  # e.g. pipPosition=4 → pip_size=0.0001
+        digits  = ps.get("digits", 5)
+        pip_pos = ps.get("pip_position", digits - 1)
+        pip_size = 10 ** -pip_pos
 
-        # If pips provided, derive absolute price from position entry
+        # If pips provided, derive absolute price from cached entry
         if sl_pips is not None or tp_pips is not None:
-            open_price_raw = getattr(target_pos.tradeData, 'openPrice', None)
-            if not open_price_raw:
-                return jsonify({"success": False, "error": "Cannot resolve entry price from position — use sl_price/tp_price instead"}), 400
-            entry_price = open_price_raw / (10 ** digits)
-            is_buy = target_pos.tradeData.tradeSide == 1  # TRADE_SIDE_BUY = 1
+            entry_price = ps.get("entry_price")
+            if not entry_price:
+                return jsonify({"success": False, "error": "Cannot resolve entry price from position_state — use sl_price/tp_price instead"}), 400
+            is_buy = ps.get("side", "BUY") == "BUY"
 
             if sl_pips is not None:
-                sl_pips_f = float(sl_pips)
-                sl_price = entry_price - (sl_pips_f * pip_size) if is_buy else entry_price + (sl_pips_f * pip_size)
+                sl_price = entry_price - (float(sl_pips) * pip_size) if is_buy else entry_price + (float(sl_pips) * pip_size)
             if tp_pips is not None:
-                tp_pips_f = float(tp_pips)
-                tp_price = entry_price + (tp_pips_f * pip_size) if is_buy else entry_price - (tp_pips_f * pip_size)
+                tp_price = entry_price + (float(tp_pips) * pip_size) if is_buy else entry_price - (float(tp_pips) * pip_size)
 
         req = openapi.ProtoOAAmendPositionSLTPReq()
         req.ctidTraderAccountId = ACCOUNT_ID
         req.positionId = int(position_id)
 
+        # ProtoOAAmendPositionSLTPReq expects DECIMAL DOUBLE — pass directly, no raw conversion
         if sl_price is not None:
-            req.stopLoss = int(round(float(sl_price) * (10**digits)))
+            req.stopLoss = round(float(sl_price), digits)
         if tp_price is not None:
-            req.takeProfit = int(round(float(tp_price) * (10**digits)))
+            req.takeProfit = round(float(tp_price), digits)
 
         print(f"🛠️ Modifying ID {position_id} | sl_pips={sl_pips} tp_pips={tp_pips} | Raw SL: {getattr(req, 'stopLoss', 'N/A')} | Raw TP: {getattr(req, 'takeProfit', 'N/A')}")
 
@@ -1341,28 +1245,13 @@ def close_trade():
             return jsonify({"success": False, "error": "position_id required"}), 400
 
         if not volume_centilots:
-            recon_msg = openapi.ProtoOAReconcileReq()
-            recon_msg.ctidTraderAccountId = ACCOUNT_ID
-
-            d_recon, client_msg_id_recon = defer.Deferred(), str(uuid.uuid4())
-            pending_requests[client_msg_id_recon] = d_recon
-
-            reactor.callFromThread(lambda: bridge.client.send(recon_msg, clientMsgId=client_msg_id_recon))
-            try:
-                recon_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_recon, 10)
-                recon_close_positions = recon_result.position
-            except Exception as recon_err:
-                print(f"⚠️  ReconcileReq timeout in /trade/close — aborting: {recon_err}")
-                pending_requests.pop(client_msg_id_recon, None)
-                return jsonify({"error": "Position lookup timed out — please retry"}), 503
-
-            for pos in recon_close_positions:
-                if str(pos.positionId) == str(position_id):
-                    volume_centilots = pos.tradeData.volume
-                    break
-
+            # Phase 11c: get volume from position_state{} — no ReconcileReq needed
+            ps = state.get("position_state", {}).get(str(position_id))
+            if not ps:
+                return jsonify({"success": False, "error": f"Position {position_id} not found in position_state — may already be closed"}), 404
+            volume_centilots = ps.get("volume_raw")
             if not volume_centilots:
-                return jsonify({"success": False, "error": f"Position {position_id} not found or already closed"})
+                return jsonify({"success": False, "error": f"Position {position_id} has no volume in position_state"}), 400
 
         start_time = time.time()
         req = openapi.ProtoOAClosePositionReq()
