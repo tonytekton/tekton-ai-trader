@@ -75,7 +75,15 @@ state = {
     # ── v4.8 event-driven position state ──────────────────────────────────────
     "position_state": {},            # positionId(str) → normalised position dict
     "position_state_ready": False,   # True after startup ReconcileReq seed completes
+    # ── v4.8 closed trades cache ─────────────────────────────────────────────
+    # Populated once at startup + refreshed every 5 min in background.
+    # /proxy/executions reads from here — zero on-demand DealListReq calls.
+    "closed_trades_cache": [],
+    "closed_trades_cache_ts": 0,
 }
+
+# Lock to prevent concurrent cache refreshes
+_closed_cache_lock = threading.Lock()
 
 # ===== API CALL TRACKING =====
 api_call_log = deque(maxlen=100000)
@@ -255,7 +263,7 @@ def health():
     return jsonify({
         "success": True,
         "status": "healthy",
-        "version": "4.5",
+        "version": "4.8.0",
         "architecture": "PURE_PASS_THROUGH_FIXED_TRACKING",
         "authenticated": state["authenticated"],
         "symbols_loaded": len(state["symbols_cache"]),
@@ -676,15 +684,14 @@ def get_calendar_events():
 @app.route("/proxy/executions", methods=["GET"])
 @require_auth
 def get_executions():
+    """Serve open + closed trade data entirely from in-memory caches.
+    Zero on-demand cTrader API calls — position_state{} for open positions,
+    closed_trades_cache for closed positions (refreshed every 5 min).
+    """
     try:
-        # --- 1. Fetch Open Positions from position_state{} (Phase 11c — zero cTrader calls) ---
+        # ── 1. Open trades from position_state{} ─────────────────────────────
         open_trades = []
-        ps_dict = state.get("position_state", {})
-
-        # Phase 11c: Build open_trades from position_state{} — zero cTrader calls.
-        # position_state{} is seeded at startup via ReconcileReq and kept live by ExecutionEvents.
-        # All prices are pre-scaled decimals. SL/TP authoritative from ExecutionEvent pushes.
-        for pos_id, ps in ps_dict.items():
+        for pos_id, ps in state.get("position_state", {}).items():
             open_ts = ps.get("open_ts")
             open_trades.append({
                 "id":          pos_id,
@@ -706,275 +713,194 @@ def get_executions():
                 "tp_pips":     None,
             })
 
-        # --- 2. Fetch Closed Positions (Last 30 Days) ---
-        closed_trades = []
+        # ── 2. Closed trades from cache (deduplicated against open positions) ─
+        open_pos_ids  = {t["id"] for t in open_trades}
+        closed_trades = [t for t in state.get("closed_trades_cache", [])
+                         if t.get("id") not in open_pos_ids]
 
-        # Guard: don't fire DealListReq until cTrader account auth handshake is complete.
-        # If called too early, cTrader returns INVALID_REQUEST: Trading account is not authorized.
-        if not state.get("authenticated"):
-            print("⚠️  /proxy/executions: cTrader not yet authorized — skipping DealListReq, returning open trades only")
-            return jsonify({"open_trades": open_trades, "closed_trades": [], "combined": open_trades})
+        # ── 3. Enrich open trades with signal data from DB ───────────────────
+        if open_trades:
+            try:
+                signal_uuids = [t["signal_uuid"] for t in open_trades if t["signal_uuid"]]
+                if signal_uuids:
+                    conn = get_db_conn()
+                    cur  = conn.cursor()
+                    placeholders = ",".join(["%s"] * len(signal_uuids))
+                    cur.execute(f"""
+                        SELECT signal_uuid, strategy, sl_pips, tp_pips
+                        FROM signals WHERE signal_uuid IN ({placeholders})
+                    """, signal_uuids)
+                    sig_map = {r[0]: r for r in cur.fetchall()}
+                    cur.close(); conn.close()
+                    for t in open_trades:
+                        row = sig_map.get(t["signal_uuid"])
+                        if row:
+                            t["strategy"] = row[1]
+                            t["sl_pips"]  = float(row[2]) if row[2] else None
+                            t["tp_pips"]  = float(row[3]) if row[3] else None
+            except Exception as enrich_err:
+                print(f"⚠️  Signal enrich error (non-fatal): {enrich_err}")
 
-        to_ts = int(time.time() * 1000)
-        from_ts = to_ts - (30 * 24 * 60 * 60 * 1000)
-
-        # Phase 11d: DealListReq with hasMore pagination — fetch all deals, not just first 500
-        position_deals = {}
-        current_to = to_ts
-        pages = 0
-        while True:
-            deal_req = openapi.ProtoOADealListReq()
-            deal_req.ctidTraderAccountId = ACCOUNT_ID
-            deal_req.fromTimestamp = from_ts
-            deal_req.toTimestamp = current_to
-            deal_req.maxRows = 500
-
-            d_deals, mid_deals = defer.Deferred(), str(uuid.uuid4())
-            pending_requests[mid_deals] = d_deals
-            reactor.callFromThread(lambda: bridge.client.send(deal_req, clientMsgId=mid_deals))
-            deal_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_deals, 30)
-            pages += 1
-
-            for deal in deal_result.deal:
-                pos_id = str(deal.positionId)
-                if pos_id not in position_deals:
-                    position_deals[pos_id] = []
-                position_deals[pos_id].append(deal)
-
-            if not getattr(deal_result, 'hasMore', False) or not deal_result.deal:
-                break
-            # Slide window back — oldest deal timestamp - 1ms becomes new ceiling
-            current_to = min(d.executionTimestamp for d in deal_result.deal) - 1
-            if pages > 10:  # safety cap — 5000 deals max
-                print("⚠️  DealListReq pagination safety cap reached (10 pages)")
-                break
-
-        if pages > 1:
-            print(f"📄 DealListReq pagination: fetched {pages} pages, {sum(len(v) for v in position_deals.values())} deals")
-
-        # --- Enrich open trade entry prices via cached OrderListReq ---
-        # OrderListReq is expensive (rate-limited). We only fire it for positions
-        # not yet in state['entry_price_cache'] (pre-bridge positions from ReconcileReq).
-        # Once fetched, prices are stored in the cache — never re-fetched.
-        missing_entry = [t for t in open_trades if t['entry_price'] is None]
-        if missing_entry:
-            # Check cache first — fill what we can without an API call
-            for t in missing_entry:
-                cached = state.get('entry_price_cache', {}).get(t['id'])
-                if cached:
-                    t['entry_price'] = cached
-
-            # Re-check who still needs fetching after cache hit
-            still_missing = [t for t in open_trades if t['entry_price'] is None]
-            if still_missing:
-                try:
-                    order_list_req = openapi.ProtoOAOrderListReq()
-                    order_list_req.ctidTraderAccountId = ACCOUNT_ID
-                    order_list_req.fromTimestamp = from_ts
-                    order_list_req.toTimestamp = to_ts
-
-                    d_orders, client_msg_id_orders = defer.Deferred(), str(uuid.uuid4())
-                    pending_requests[client_msg_id_orders] = d_orders
-                    reactor.callFromThread(lambda: bridge.client.send(order_list_req, clientMsgId=client_msg_id_orders))
-                    order_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_orders, 30)
-
-                    from ctrader_open_api.messages.OpenApiModelMessages_pb2 import ProtoOAOrderStatus
-                    if 'entry_price_cache' not in state:
-                        state['entry_price_cache'] = {}
-                    for order in order_result.order:
-                        if (order.orderStatus == ProtoOAOrderStatus.ORDER_STATUS_FILLED
-                                and not order.closingOrder
-                                and order.positionId
-                                and order.executionPrice):
-                            pos_id = str(order.positionId)
-                            spec = state['symbol_id_to_spec_map'].get(order.tradeData.symbolId, {})
-                            digits = spec.get('digits', 5)
-                            price = round(order.executionPrice, digits)
-                            state['entry_price_cache'][pos_id] = price  # cache it permanently
-
-                    for t in still_missing:
-                        cached = state['entry_price_cache'].get(t['id'])
-                        if cached:
-                            t['entry_price'] = cached
-
-                except Exception as e:
-                    print(f'WARNING: OrderListReq for entry prices failed (non-fatal): {e}')
-
-        for pos_id, deals in position_deals.items():
-            closing_deal = next((d for d in deals if hasattr(d, 'closePositionDetail')), None)
-            if not closing_deal:
-                continue
-
-            opening_deal = deals[0]
-            spec = state["symbol_id_to_spec_map"].get(closing_deal.symbolId, {})
-            symbol_name = spec.get("symbolName", f"UNKNOWN_{closing_deal.symbolId}")
-            digits = spec.get("digits", 5)
-            hist_comment = getattr(opening_deal, 'comment', None)
-
-            gross_pnl = 0
-            commission = 0
-            swap = 0
-            for deal in deals:
-                if hasattr(deal, 'closePositionDetail'):
-                    cpd = deal.closePositionDetail
-                    gross_pnl += getattr(cpd, 'grossProfit', 0)
-                    swap += getattr(cpd, 'swap', 0)
-                    commission += getattr(cpd, 'closedCommission', 0) + getattr(cpd, 'commission', 0)
-                else:
-                    swap += getattr(deal, 'swap', 0)
-                    commission += getattr(deal, 'commission', 0)
-
-            net_pnl_cents = gross_pnl - abs(commission) + swap
-            open_ts = getattr(opening_deal, 'executionTimestamp', None)
-            close_ts = getattr(closing_deal, 'executionTimestamp', None)
-
-            filled_vol = getattr(closing_deal, 'filledVolume', 0)
-            # FIX: ProtoOADeal.executionPrice is already a decimal double (e.g. 1.71536),
-            # NOT a raw integer. Dividing by 10^digits was producing values ~0.00001
-            # which failed the sanity check and returned None.
-            # Use directly — same behaviour confirmed in /positions/history endpoint.
-            # ProtoOADeal.executionPrice is a decimal double but is 0.0 for some market orders.
-            # For the opening deal: use executionPrice if > 0, else fall back to closePositionDetail.closePrice (raw int → divide)
-            # For the closing deal: prefer closePositionDetail.closePrice (raw int) which is always populated.
-            #   Fall back to executionPrice if closePrice is missing.
-            entry_exec = getattr(opening_deal, 'executionPrice', None)
-            entry_raw  = float(entry_exec) if entry_exec and float(entry_exec) > 0 else None
-
-            cpd_close  = getattr(closing_deal, 'closePositionDetail', None)
-            # closePositionDetail.closePrice = raw integer price (divide by 10^digits)
-            # Try both 'closePrice' and 'price' field names across protobuf versions
-            close_cpd_raw = None
-            if cpd_close:
-                close_cpd_raw = (getattr(cpd_close, 'closePrice', None)
-                                 or getattr(cpd_close, 'price', None)
-                                 or getattr(cpd_close, 'closedBalance', None))
-            close_exec = getattr(closing_deal, 'executionPrice', None)
-            if close_cpd_raw and float(close_cpd_raw) > 0:
-                # closePrice is a raw integer — divide by 10^digits
-                scaled_close = round(float(close_cpd_raw) / (10 ** digits), digits)
-            elif close_exec and float(close_exec) > 0:
-                scaled_close = round(float(close_exec), digits)
-            else:
-                scaled_close = None
-                print(f"DEBUG cpd_close fields: {[f.name for f in cpd_close.DESCRIPTOR.fields] if cpd_close else 'None'}")
-
-            scaled_entry = round(entry_raw, digits) if entry_raw else None
-            closed_trades.append({
-                "id": pos_id,
-                "signal_uuid": hist_comment if hist_comment else None,
-                "symbol": symbol_name,
-                "side": "BUY" if opening_deal.tradeSide == TRADE_SIDE_BUY else "SELL",
-                "volume": round(filled_vol / 10000000, 2),
-                "entry_price": scaled_entry,
-                "close_price": scaled_close,
-                "stop_loss": None,
-                "take_profit": None,
-                "pnl": round(net_pnl_cents / 100, 2),
-                "status": "closed",
-                "created_at": datetime.fromtimestamp(open_ts / 1000).isoformat() if open_ts else None,
-                "closed_at": datetime.fromtimestamp(close_ts / 1000).isoformat() if close_ts else None,
-                "digits": digits
-            })
-
-        # ── Enrich open trades with sl_pips/tp_pips/strategy from SQL ──────────
-        try:
-            uuids = [t["signal_uuid"] for t in open_trades if t.get("signal_uuid") and isinstance(t["signal_uuid"], str)]
-            if uuids:
-                enrich_conn = psycopg2.connect(
-                    host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
-                    database=os.getenv("CLOUD_SQL_DB_NAME", "tekton-trader"),
-                    user=os.getenv("CLOUD_SQL_DB_USER", "postgres"),
-                    password=os.getenv("CLOUD_SQL_DB_PASSWORD")
-                )
-                enrich_cur = enrich_conn.cursor()
-                placeholders = ",".join(["%s"] * len(uuids))
-                enrich_cur.execute(
-                    f"SELECT signal_uuid::text, sl_pips, tp_pips, strategy, avg_fill_price FROM signals WHERE signal_uuid::text IN ({placeholders})",
-                    uuids
-                )
-                signal_map = {str(row[0]): {"sl_pips": row[1], "tp_pips": row[2], "strategy": row[3], "avg_fill_price": row[4]} for row in enrich_cur.fetchall()}
-                enrich_cur.close()
-                enrich_conn.close()
-                for t in open_trades:
-                    sig = signal_map.get(str(t.get("signal_uuid") or ""))
-                    if sig:
-                        t["sl_pips"] = float(sig["sl_pips"]) if sig["sl_pips"] else None
-                        t["tp_pips"] = float(sig["tp_pips"]) if sig["tp_pips"] else None
-                        t["strategy"] = sig["strategy"]
-                        if t["entry_price"] is None and sig.get("avg_fill_price"):
-                            t["entry_price"] = float(sig["avg_fill_price"])
-        except Exception as enrich_err:
-            import traceback as _tb
-            print(f"WARNING Signal enrichment failed (non-fatal): {enrich_err}")
-            _tb.print_exc()
-
-        # ── Enrich closed trades with signal_uuid from SQL by position_id ──────
-        try:
-            pos_ids = [t["id"] for t in closed_trades if not t.get("signal_uuid")]
-            if pos_ids:
-                enrich_conn2 = psycopg2.connect(
-                    host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
-                    database=os.getenv("CLOUD_SQL_DB_NAME", "tekton-trader"),
-                    user=os.getenv("CLOUD_SQL_DB_USER", "postgres"),
-                    password=os.getenv("CLOUD_SQL_DB_PASSWORD")
-                )
-                enrich_cur2 = enrich_conn2.cursor()
-                placeholders2 = ",".join(["%s"] * len(pos_ids))
-                enrich_cur2.execute(
-                    f"SELECT position_id, signal_uuid::text, sl_pips, tp_pips, strategy FROM signals WHERE position_id IN ({placeholders2})",
-                    pos_ids
-                )
-                pos_signal_map = {row[0]: {"signal_uuid": row[1], "sl_pips": row[2], "tp_pips": row[3], "strategy": row[4]} for row in enrich_cur2.fetchall()}
-                enrich_cur2.close()
-                enrich_conn2.close()
-                for t in closed_trades:
-                    sig = pos_signal_map.get(t["id"])
-                    if sig:
-                        if not t.get("signal_uuid"):
-                            t["signal_uuid"] = sig["signal_uuid"]
-                        t["sl_pips"] = float(sig["sl_pips"]) if sig["sl_pips"] else None
-                        t["tp_pips"] = float(sig["tp_pips"]) if sig["tp_pips"] else None
-                        t["strategy"] = sig["strategy"]
-        except Exception as enrich_err2:
-            print(f"WARNING Closed trade enrichment failed (non-fatal): {enrich_err2}")
-
-        closed_trades.sort(key=lambda x: x.get('closed_at') or '', reverse=True)
-
-        # --- Deduplication ---
-        # open_trades comes from ReconcileReq (live positions).
-        # closed_trades comes from DealListReq (historical deals).
-        # A position that is currently open will ALSO appear in DealListReq
-        # (as an opening deal without a closePositionDetail) so we must exclude it
-        # from closed_trades to prevent duplicate rows in the UI.
-        open_pos_ids = {t['id'] for t in open_trades}
-        closed_trades_deduped = [t for t in closed_trades if t['id'] not in open_pos_ids]
-
-        # Also deduplicate within closed_trades by position ID — keep only one row per
-        # position (the one with the most complete data — preferring non-None close_price).
-        seen_closed = {}
-        for t in closed_trades_deduped:
-            pid = t['id']
-            if pid not in seen_closed:
-                seen_closed[pid] = t
-            else:
-                # Prefer the entry with a real close_price and real P&L
-                existing = seen_closed[pid]
-                if t.get('close_price') and not existing.get('close_price'):
-                    seen_closed[pid] = t
-                elif t.get('pnl') is not None and existing.get('pnl') is None:
-                    seen_closed[pid] = t
-        closed_trades_final = list(seen_closed.values())
-        closed_trades_final.sort(key=lambda x: x.get('closed_at') or '', reverse=True)
-
-        return jsonify({
-            "success": True,
-            "executions": open_trades + closed_trades_final
-        })
+        combined = open_trades + closed_trades
+        return jsonify({"open_trades": open_trades, "closed_trades": closed_trades, "combined": combined})
 
     except Exception as e:
         print(f"❌ Executions Proxy Error: {str(e)}")
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+def _refresh_closed_trades_cache():
+    """Fetch last 30 days of closed positions via DealListReq and update the cache.
+    Also backfills entry_price into position_state{} for pre-bridge positions.
+    Runs once at startup (via _schedule_cache_refresh) and every 5 minutes after.
+    Thread-safe via _closed_cache_lock. No-op if bridge not yet authenticated.
+    """
+    if not state.get("authenticated"):
+        return
+    if not _closed_cache_lock.acquire(blocking=False):
+        return  # another refresh already running
+
+    try:
+        to_ts   = int(time.time() * 1000)
+        from_ts = to_ts - (30 * 24 * 60 * 60 * 1000)
+
+        # ── Paginated DealListReq ─────────────────────────────────────────────
+        position_deals = {}
+        current_to     = to_ts
+        pages          = 0
+        while True:
+            deal_req = openapi.ProtoOADealListReq()
+            deal_req.ctidTraderAccountId = ACCOUNT_ID
+            deal_req.fromTimestamp = from_ts
+            deal_req.toTimestamp   = current_to
+            deal_req.maxRows       = 500
+
+            d_deal, cid = defer.Deferred(), str(uuid.uuid4())
+            pending_requests[cid] = d_deal
+            reactor.callFromThread(lambda r=deal_req, c=cid: bridge.client.send(r, clientMsgId=c))
+            result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_deal, 30)
+            pages += 1
+
+            for deal in result.deal:
+                pid = str(deal.positionId)
+                if pid not in position_deals:
+                    position_deals[pid] = []
+                position_deals[pid].append(deal)
+
+            if not getattr(result, "hasMore", False) or not result.deal:
+                break
+            current_to = min(d.executionTimestamp for d in result.deal) - 1
+            if pages >= 10:
+                print("⚠️  DealListReq cache refresh: safety cap (10 pages / ~5000 deals)")
+                break
+
+        if pages > 1:
+            print(f"📄 DealListReq cache: {pages} pages, {sum(len(v) for v in position_deals.values())} deals")
+
+        # ── Backfill entry_price into position_state{} ───────────────────────
+        patched = 0
+        for pid, ps in list(state.get("position_state", {}).items()):
+            if ps.get("entry_price") is None and pid in position_deals:
+                deals_sorted = sorted(position_deals[pid], key=lambda d: d.executionTimestamp)
+                opening_deal = deals_sorted[0]
+                spec   = state["symbol_id_to_spec_map"].get(opening_deal.symbolId, {})
+                digits = spec.get("digits", 5)
+                raw    = getattr(opening_deal, "executionPrice", 0)
+                if raw and float(raw) > 0:
+                    ps["entry_price"] = raw_to_decimal(int(raw), digits)
+                    patched += 1
+        if patched:
+            print(f"✅ position_state backfill: {patched} entry prices patched")
+
+        # ── Build closed_trades_cache ─────────────────────────────────────────
+        open_pos_ids = set(state.get("position_state", {}).keys())
+        closed = []
+        for pid, deals in position_deals.items():
+            if pid in open_pos_ids:
+                continue  # still open — exclude
+
+            closing_deal = next((d for d in deals if hasattr(d, "closePositionDetail")), None)
+            if not closing_deal:
+                continue
+
+            deals_sorted = sorted(deals, key=lambda d: d.executionTimestamp)
+            opening_deal = deals_sorted[0]
+            spec         = state["symbol_id_to_spec_map"].get(closing_deal.symbolId, {})
+            symbol_name  = spec.get("symbolName", f"UNKNOWN_{closing_deal.symbolId}")
+            digits       = spec.get("digits", 5)
+
+            gross_pnl = commission = swap = 0
+            for deal in deals:
+                if hasattr(deal, "closePositionDetail"):
+                    cpd         = deal.closePositionDetail
+                    gross_pnl  += getattr(cpd, "grossProfit", 0)
+                    swap       += getattr(cpd, "swap", 0)
+                    commission += getattr(cpd, "closedCommission", 0) + getattr(cpd, "commission", 0)
+                else:
+                    swap       += getattr(deal, "swap", 0)
+                    commission += getattr(deal, "commission", 0)
+
+            net_pnl_cents = gross_pnl - abs(commission) + swap
+
+            # Entry price: opening deal executionPrice (decimal double, direct use)
+            entry_exec  = getattr(opening_deal, "executionPrice", None)
+            entry_price = round(float(entry_exec), digits) if entry_exec and float(entry_exec) > 0 else None
+
+            # Close price: prefer closePositionDetail raw int → scale; fallback executionPrice
+            cpd_close = getattr(closing_deal, "closePositionDetail", None)
+            close_raw = None
+            if cpd_close:
+                close_raw = getattr(cpd_close, "closePrice", None) or getattr(cpd_close, "price", None)
+            close_exec = getattr(closing_deal, "executionPrice", None)
+            if close_raw and float(close_raw) > 0:
+                close_price = round(float(close_raw) / (10 ** digits), digits)
+            elif close_exec and float(close_exec) > 0:
+                close_price = round(float(close_exec), digits)
+            else:
+                close_price = None
+
+            filled_vol = getattr(closing_deal, "filledVolume", 0)
+            open_ts    = getattr(opening_deal, "executionTimestamp", None)
+            close_ts   = getattr(closing_deal, "executionTimestamp", None)
+
+            closed.append({
+                "id":          pid,
+                "signal_uuid": getattr(opening_deal, "comment", None),
+                "symbol":      symbol_name,
+                "side":        "BUY" if getattr(closing_deal, "tradeSide", 2) == TRADE_SIDE_BUY else "SELL",
+                "volume":      round(filled_vol / 10_000_000, 4) if filled_vol else 0,
+                "entry_price": entry_price,
+                "stop_loss":   None,
+                "take_profit": None,
+                "close_price": close_price,
+                "pnl":         round(net_pnl_cents / 100, 2),
+                "status":      "closed",
+                "created_at":  datetime.fromtimestamp(open_ts / 1000).isoformat() if open_ts else None,
+                "closed_at":   datetime.fromtimestamp(close_ts / 1000).isoformat() if close_ts else None,
+                "digits":      digits,
+                "strategy":    None,
+                "sl_pips":     None,
+                "tp_pips":     None,
+            })
+
+        closed.sort(key=lambda x: x.get("closed_at") or "", reverse=True)
+        state["closed_trades_cache"]    = closed
+        state["closed_trades_cache_ts"] = time.time()
+        print(f"✅ closed_trades_cache refreshed: {len(closed)} closed positions")
+
+    except Exception as e:
+        print(f"⚠️  _refresh_closed_trades_cache error: {e}")
+        traceback.print_exc()
+    finally:
+        _closed_cache_lock.release()
+
+
+def _schedule_cache_refresh():
+    """Kick off a background cache refresh, then reschedule every 5 minutes."""
+    threading.Thread(target=_refresh_closed_trades_cache, daemon=True).start()
+    reactor.callLater(300, _schedule_cache_refresh)
+
 
 def sync_latest_candles():
     while True:
@@ -992,12 +918,7 @@ def get_signals():
         limit = int(request.args.get("limit", 200))
         offset = int(request.args.get("offset", 0))
 
-        conn = psycopg2.connect(
-            host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
-            database=os.getenv("CLOUD_SQL_DB_NAME", "tekton-trader"),
-            user=os.getenv("CLOUD_SQL_DB_USER", "postgres"),
-            password=os.getenv("CLOUD_SQL_DB_PASSWORD")
-        )
+        conn = get_db_conn()
         cur = conn.cursor()
 
         # Build dynamic WHERE clause
@@ -1054,12 +975,7 @@ def get_signals():
 @require_auth
 def get_signals_stats():
     try:
-        conn = psycopg2.connect(
-            host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
-            database=os.getenv("CLOUD_SQL_DB_NAME", "tekton-trader"),
-            user=os.getenv("CLOUD_SQL_DB_USER", "postgres"),
-            password=os.getenv("CLOUD_SQL_DB_PASSWORD")
-        )
+        conn = get_db_conn()
         cur = conn.cursor()
 
         # Count by status
@@ -1801,69 +1717,13 @@ class Bridge:
                                     state['position_state_ready'] = True
                                     count = len(state['position_state'])
                                     print(f"✅ position_state seeded: {count} open positions")
-
-                                    # Backfill entry prices for pre-existing positions via DealListReq.
-                                    # ReconcileReq does not return openPrice on this broker — the opening
-                                    # deal's executionPrice is the only reliable source for entry price.
-                                    # We fire one DealListReq covering the last 30 days and extract the
-                                    # earliest deal per positionId (the opening deal).
-                                    if count > 0:
-                                        def _backfill_entry_prices():
-                                            try:
-                                                to_ts = int(time.time() * 1000)
-                                                from_ts = to_ts - (30 * 24 * 60 * 60 * 1000)
-                                                deal_req = openapi.ProtoOADealListReq()
-                                                deal_req.ctidTraderAccountId = ACCOUNT_ID
-                                                deal_req.fromTimestamp = from_ts
-                                                deal_req.toTimestamp = to_ts
-                                                deal_req.maxRows = 500
-                                                d_deal, cid_deal = defer.Deferred(), str(uuid.uuid4())
-                                                pending_requests[cid_deal] = d_deal
-                                                reactor.callFromThread(
-                                                    lambda r=deal_req, c=cid_deal: bridge.client.send(r, clientMsgId=c)
-                                                )
-                                                deal_result = threads.blockingCallFromThread(
-                                                    reactor, wait_for_deferred, d_deal, 30
-                                                )
-                                                # Build map: positionId → earliest deal (opening deal)
-                                                opening_deals = {}
-                                                for deal in deal_result.deal:
-                                                    pid = str(deal.positionId)
-                                                    if pid not in opening_deals:
-                                                        opening_deals[pid] = deal
-                                                    else:
-                                                        if deal.executionTimestamp < opening_deals[pid].executionTimestamp:
-                                                            opening_deals[pid] = deal
-                                                # Patch position_state{} with entry prices
-                                                patched = 0
-                                                for pid, ps in state['position_state'].items():
-                                                    if ps.get('entry_price') is None and pid in opening_deals:
-                                                        deal = opening_deals[pid]
-                                                        spec = state['symbol_id_to_spec_map'].get(
-                                                            deal.symbolId, {}
-                                                        )
-                                                        digits = spec.get('digits', 5)
-                                                        raw_price = getattr(deal, 'executionPrice', 0)
-                                                        if raw_price and raw_price > 0:
-                                                            scaled = raw_to_decimal(raw_price, digits)
-                                                            ps['entry_price'] = scaled
-                                                            # Also cache it for /proxy/executions
-                                                            if 'entry_price_cache' not in state:
-                                                                state['entry_price_cache'] = {}
-                                                            state['entry_price_cache'][pid] = scaled
-                                                            patched += 1
-                                                print(f"✅ position_state backfill: {patched}/{count} entry prices patched from DealListReq")
-                                            except Exception as bf_err:
-                                                print(f"⚠️  position_state backfill error: {bf_err}")
-                                                traceback.print_exc()
-
-                                        # Run backfill in a thread — non-blocking to the reactor
-                                        threading.Thread(target=_backfill_entry_prices, daemon=True).start()
-
+                                    # Single DealListReq handles both entry_price backfill
+                                    # and closed_trades_cache population — no separate thread.
+                                    _schedule_cache_refresh()
                                 except Exception as seed_err:
                                     print(f"⚠️  position_state seed error: {seed_err}")
                                     traceback.print_exc()
-                                    state['position_state_ready'] = True  # allow endpoints even if seed fails
+                                    state['position_state_ready'] = True
 
                             reconcile_req = openapi.ProtoOAReconcileReq()
                             reconcile_req.ctidTraderAccountId = ACCOUNT_ID
@@ -1895,7 +1755,7 @@ if __name__ == "__main__":
     resource = WSGIResource(reactor, reactor.getThreadPool(), app)
     site = Site(resource)
     reactor.listenTCP(BRIDGE_PORT, site, interface=BRIDGE_HOST)
-    print(f"🚀 Bridge v4.5 - MERGED: HOME + PROJECT with all fixes")
+    print(f"🚀 Bridge v4.8.0 — event-driven position state + closed trades cache")
     print(f"   ✅ Tracks: positions, account, execute, modify, close, deals, historical")
     print(f"   ❌ Skips: contract/specs (cache), prices/current (spot subscription)")
     print(f"   API stats: /stats/api-usage")
