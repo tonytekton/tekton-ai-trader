@@ -85,12 +85,14 @@ def manage_risk(config):
     """
     target_r = float(config.get("target_reward", 1.5))
 
-    res = requests.get(f"{BRIDGE_URL}/positions/list", headers=HEADERS, timeout=10)
+    # Use /proxy/executions — fully enriched pipeline with position_state{} SL/TP and scaled decimals
+    res = requests.get(f"{BRIDGE_URL}/proxy/executions", headers=HEADERS, timeout=15)
     if not res.text.strip():
-        print("⚠️ Bridge returned empty response for positions/list")
+        print("⚠️ Bridge returned empty response for /proxy/executions")
         return
 
-    positions = res.json().get("positions", [])
+    data = res.json()
+    positions = [t for t in data.get("trades", []) if t.get("status") == "open"]
     if not positions:
         return
 
@@ -159,20 +161,20 @@ def manage_risk(config):
             return False
 
     for pos in positions:
-        # Field names from /positions/list: positionId, tradeSide, entryPrice, stopLoss, takeProfit
-        pos_id = str(pos.get("positionId") or "")
+        # Field names from /proxy/executions: id, symbol, side, entry_price, stop_loss, take_profit
+        pos_id = str(pos.get("id") or "")
         symbol = pos.get("symbol", "?")
-        side   = (pos.get("tradeSide") or "").upper()
+        side   = (pos.get("side") or "").upper()
         digits = pos.get("digits", 5)
 
         if not pos_id:
-            print(f"⚠️ Position missing positionId — skipping: {pos}")
+            print(f"⚠️ Position missing id — skipping: {pos}")
             continue
 
-        # Prices are pre-scaled decimals from bridge (bridge handles raw→decimal conversion)
-        entry = pos.get("entryPrice") or 0
-        sl    = pos.get("stopLoss") or 0
-        tp    = pos.get("takeProfit") or 0
+        # Prices are pre-scaled decimals from bridge (position_state{} enriched)
+        entry = pos.get("entry_price") or 0
+        sl    = pos.get("stop_loss") or 0
+        tp    = pos.get("take_profit") or 0
 
         # SL/TP safety check — reapply or close if missing
         missing_sl = sl == 0
@@ -193,7 +195,8 @@ def manage_risk(config):
         if not bid_raw or not ask_raw:
             print(f"⚠️ {symbol} [{pos_id}] no spot price available — skipping R management")
             continue
-        current = ((bid_raw + ask_raw) / 2) / divisor
+        spot_digits = spot.get("digits", digits)
+        current = ((bid_raw + ask_raw) / 2) / (10 ** spot_digits)
 
         risk_distance = abs(entry - sl)
         if risk_distance == 0:
