@@ -1128,7 +1128,7 @@ def execute_trade():
                 entry_price = round(float(raw_pos_price), digits)
         digits = spec.get("digits", 5) if spec else 5
 
-        print(f"✅ Executed {symbol}: pos_id={pos_id} raw={entry_raw} scaled={entry_price} digits={digits}")
+        print(f"✅ Executed {symbol}: pos_id={pos_id} raw={raw_pos_price} scaled={entry_price} digits={digits}")
 
         return jsonify({
             "success":     True,
