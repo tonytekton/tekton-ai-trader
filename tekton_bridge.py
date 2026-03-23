@@ -1502,19 +1502,32 @@ def _handle_execution_event(ev):
     """Update position_state{} from a ProtoOAExecutionEvent push.
     Called directly from on_message — runs on the Twisted reactor thread.
     No blocking calls, no cTrader requests — state update only.
+
+    ProtoOAExecutionType confirmed values (from cTrader Open API docs + live observation):
+      ORDER_ACCEPTED      = 1
+      ORDER_FILLED        = 2   — fires AFTER POSITION_OPENED; pos.tradeData.openPrice may be 0
+      POSITION_OPENED     = 3   — fires first on new position; ev.order.executionPrice = entry (decimal)
+      POSITION_CLOSED     = 4   — position fully closed
+      POSITION_AMENDED    = 5   — SL/TP changed
+      ORDER_CANCELLED     = 6
+      ORDER_EXPIRED       = 7
+      ORDER_REJECTED      = 8
+      ORDER_CANCEL_REJECTED = 9
+      STOP_OUT            = 10
+      POSITION_PARTIAL_CLOSED = 11
     """
     try:
         exec_type = ev.executionType
 
-        # Constants for ProtoOAExecutionType (numeric values are stable across versions)
-        EXEC_ORDER_FILLED         = 2
-        EXEC_POSITION_CLOSED      = 7
-        EXEC_POSITION_AMENDED     = 8
-        EXEC_PARTIAL_EXECUTION    = 9
-        EXEC_STOP_OUT             = 11
+        # Confirmed values from Open API docs (verified against live logs)
+        EXEC_POSITION_OPENED       = 3
+        EXEC_POSITION_CLOSED       = 4
+        EXEC_POSITION_AMENDED      = 5
+        EXEC_STOP_OUT              = 10
+        EXEC_PARTIAL_CLOSED        = 11
 
         if not hasattr(ev, 'position') or not ev.position:
-            return  # No position in this event — ignore (e.g. pending order events)
+            return  # No position in this event — ignore (e.g. pending order accepted)
 
         pos = ev.position
         pos_id = str(pos.positionId)
@@ -1523,25 +1536,31 @@ def _handle_execution_event(ev):
         digits = spec.get('digits', 5)
 
         if exec_type in (EXEC_POSITION_CLOSED, EXEC_STOP_OUT):
-            # Position is gone — remove from state
             removed = state['position_state'].pop(pos_id, None)
             if removed:
                 print(f"📤 position_state: removed {pos_id} ({removed.get('symbol','?')}) — exec_type={exec_type}")
             return
 
-        # For all other types (opened, amended, partial): upsert into state
-        entry = _position_to_dict(pos, spec, digits)
+        # Build fresh dict from position object
+        fresh = _position_to_dict(pos, spec, digits)
 
-        # If the event also carries an order, use its executionPrice for entry_price.
-        # ProtoOAOrder.executionPrice is a decimal double — do NOT use raw_to_decimal().
+        # Entry price: prefer ev.order.executionPrice (decimal double, always accurate).
+        # ProtoOATradeData.openPrice is a raw integer — but is sometimes 0 on ORDER_FILLED events.
+        # Never overwrite a good cached entry_price with None.
         if hasattr(ev, 'order') and ev.order:
             order_price = getattr(ev.order, 'executionPrice', None)
-            if order_price and order_price > 0:
-                entry['entry_price'] = round(float(order_price), digits)
+            if order_price and float(order_price) > 0:
+                fresh['entry_price'] = round(float(order_price), digits)
 
-        state['position_state'][pos_id] = entry
-        print(f"📥 position_state: upsert {pos_id} {entry.get('symbol','?')} {entry.get('side','?')} "
-              f"entry={entry.get('entry_price')} sl={entry.get('stop_loss')} tp={entry.get('take_profit')} "
+        # Merge into existing state — never overwrite good values with None
+        existing = state['position_state'].get(pos_id, {})
+        for field in ('entry_price', 'stop_loss', 'take_profit'):
+            if fresh.get(field) is None and existing.get(field) is not None:
+                fresh[field] = existing[field]
+
+        state['position_state'][pos_id] = fresh
+        print(f"📥 position_state: upsert {pos_id} {fresh.get('symbol','?')} {fresh.get('side','?')} "
+              f"entry={fresh.get('entry_price')} sl={fresh.get('stop_loss')} tp={fresh.get('take_profit')} "
               f"exec_type={exec_type}")
 
     except Exception as e:
