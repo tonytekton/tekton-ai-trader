@@ -288,9 +288,31 @@ def list_positions():
             if hasattr(pos, 'positionStatus') and pos.positionStatus != 1:
                 continue
             pos_id = str(pos.positionId)
-            spec = state["symbol_id_to_spec_map"].get(pos.tradeData.symbolId, {})
-            name = spec.get("symbolName", f"UNKNOWN_{pos.tradeData.symbolId}")
+            spec   = state["symbol_id_to_spec_map"].get(pos.tradeData.symbolId, {})
+            name   = spec.get("symbolName", f"UNKNOWN_{pos.tradeData.symbolId}")
+            digits = spec.get("digits", 5)
+            divisor = 10 ** digits
             pnl_data = pnl_map.get(pos_id, {"grossPnL_cents": 0, "netPnL_cents": 0})
+
+            # Scale raw integer prices → decimal
+            entry_raw = getattr(pos.tradeData, 'openPrice', None)
+            sl_raw    = getattr(pos, 'stopLoss', None) or 0
+            tp_raw    = getattr(pos, 'takeProfit', None) or 0
+            entry_dec = round(entry_raw / divisor, digits) if entry_raw else None
+            sl_dec    = round(sl_raw / divisor, digits) if sl_raw > 0 else None
+            tp_dec    = round(tp_raw / divisor, digits) if tp_raw > 0 else None
+            if sl_dec is not None and sl_dec < 0.001: sl_dec = None
+            if tp_dec is not None and tp_dec < 0.001: tp_dec = None
+
+            # Enrich from position_state{} (live ExecutionEvent cache — most up-to-date)
+            ps = state.get('position_state', {}).get(pos_id, {})
+            if entry_dec is None and ps.get('entry_price'):
+                entry_dec = ps['entry_price']
+            if sl_dec is None and ps.get('stop_loss'):
+                sl_dec = ps['stop_loss']
+            if tp_dec is None and ps.get('take_profit'):
+                tp_dec = ps['take_profit']
+
             positions.append({
                 "positionId": pos_id,
                 "symbol": name,
@@ -298,12 +320,12 @@ def list_positions():
                 "unrealizedNetPnL_cents": pnl_data["netPnL_cents"],
                 "marginUsed_cents": pos.usedMargin,
                 "volume": pos.tradeData.volume,
-                "entryPrice": getattr(pos.tradeData, 'openPrice', None),
-                "stopLoss": getattr(pos, 'stopLoss', None),
-                "takeProfit": getattr(pos, 'takeProfit', None),
+                "entryPrice": entry_dec,
+                "stopLoss": sl_dec,
+                "takeProfit": tp_dec,
                 "comment": getattr(pos.tradeData, 'comment', None),
                 "openTimestamp": getattr(pos.tradeData, 'openTimestamp', None),
-                "digits": spec.get("digits", 5),
+                "digits": digits,
             })
 
         return jsonify({"success": True, "positions": positions, "count": len(positions)})
