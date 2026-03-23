@@ -78,8 +78,10 @@ def get_pip_size(symbol):
 def manage_risk(config):
     """
     Monitors open positions and closes any that have reached the Target Reward (R).
-    Target R is read from bridge config (e.g. 1.5 = close at 1.5R).
-    Prices are normalised from raw cTrader integers using pipPosition.
+    - Field names aligned to /positions/list response: positionId, tradeSide, entryPrice, stopLoss, takeProfit
+    - Current price fetched separately via /prices/current (bid/ask from state cache)
+    - Positions with missing SL/TP trigger reapply_protection() before R management
+    - All prices are RAW integers from cTrader — normalised using digits from contract specs
     """
     target_r = float(config.get("target_reward", 1.5))
 
@@ -94,102 +96,108 @@ def manage_risk(config):
 
     print(f"🛡️ Monitoring {len(positions)} positions | Target: {target_r}R")
 
-    for pos in positions:
-        pos_id  = pos.get("position_id") or pos.get("id")
-        symbol  = pos.get("symbol", "?")
-        side    = pos.get("side", "").upper()
-        entry   = pos.get("entry_price", 0)
-        sl      = pos.get("stop_loss", 0)
-        current = pos.get("current_price", 0)
+    # Fetch current prices for all symbols in one call
+    symbols = list({p.get("symbol") for p in positions if p.get("symbol")})
+    spot_map = {}
+    try:
+        price_res = requests.post(f"{BRIDGE_URL}/prices/current", json={"symbols": symbols}, headers=HEADERS, timeout=10)
+        for p in price_res.json().get("prices", []):
+            spot_map[p["symbol"]] = p
+    except Exception as e:
+        print(f"⚠️ Could not fetch spot prices: {e}")
 
-        # Safety check — positions with no SL/TP must have protection reapplied from signal record
-        tp = pos.get("take_profit", 0)
-
-        def reapply_protection(p_id, sym, p_entry, p_side, missing_sl, missing_tp):
-            """Look up original signal, reapply SL/TP. If impossible, close the position."""
-            print(f"🚨 MISSING PROTECTION on {sym} pos_id={p_id} (sl={'MISSING' if missing_sl else 'ok'}, tp={'MISSING' if missing_tp else 'ok'}) — attempting recovery from signal record")
-            try:
-                sig_res = requests.get(
-                    f"{BRIDGE_URL}/proxy/signals",
-                    params={"broker_position_id": str(p_id), "limit": 1},
-                    headers=HEADERS, timeout=10
-                )
-                signals = sig_res.json().get("signals", [])
-                if not signals:
-                    print(f"🚨 No signal record found for {sym} pos_id={p_id} — closing unprotected position")
-                    requests.post(f"{BRIDGE_URL}/trade/close", json={"position_id": p_id}, headers=HEADERS, timeout=15)
-                    print(f"🔴 CLOSED {sym} pos_id={p_id} — no signal record, could not reapply protection")
-                    return False
-
-                sig = signals[0]
-                sl_pips = float(sig.get("sl_pips") or 0)
-                tp_pips = float(sig.get("tp_pips") or 0)
-                direction = (sig.get("direction") or p_side).upper()
-
-                if sl_pips == 0:
-                    print(f"🚨 Signal for {sym} pos_id={p_id} has sl_pips=0 — cannot reapply SL, closing position")
-                    requests.post(f"{BRIDGE_URL}/trade/close", json={"position_id": p_id}, headers=HEADERS, timeout=15)
-                    print(f"🔴 CLOSED {sym} pos_id={p_id} — sl_pips=0 in signal record, unrecoverable")
-                    return False
-
-                # Pass sl_pips/tp_pips directly — bridge calculates absolute price from entry
-                modify_payload = {"position_id": p_id}
-                if missing_sl:
-                    modify_payload["sl_pips"] = sl_pips
-                if missing_tp and tp_pips:
-                    modify_payload["tp_pips"] = tp_pips
-
-                mod_res = requests.post(f"{BRIDGE_URL}/trade/modify", json=modify_payload, headers=HEADERS, timeout=15)
-                if mod_res.json().get("success"):
-                    print(f"✅ Protection reapplied on {sym} pos_id={p_id} | SL={modify_payload.get('sl_price')} TP={modify_payload.get('tp_price')}")
-                    return True
-                else:
-                    err = mod_res.json().get("error", "unknown")
-                    print(f"🚨 Failed to reapply protection on {sym} pos_id={p_id}: {err} — closing position")
-                    requests.post(f"{BRIDGE_URL}/trade/close", json={"position_id": p_id}, headers=HEADERS, timeout=15)
-                    print(f"🔴 CLOSED {sym} pos_id={p_id} — modify failed, could not protect position")
-                    return False
-            except Exception as ex:
-                print(f"🚨 Exception during protection recovery for {sym} pos_id={p_id}: {ex} — closing position")
+    def reapply_protection(p_id, sym, p_side, missing_sl, missing_tp):
+        """Look up original signal by broker_position_id, reapply SL/TP via sl_pips/tp_pips.
+        If unrecoverable, close the position."""
+        print(f"🚨 MISSING PROTECTION on {sym} pos_id={p_id} "
+              f"(sl={'MISSING' if missing_sl else 'ok'}, tp={'MISSING' if missing_tp else 'ok'}) "
+              f"— attempting recovery from signal record")
+        try:
+            sig_res = requests.get(
+                f"{BRIDGE_URL}/proxy/signals",
+                params={"broker_position_id": str(p_id), "limit": 1},
+                headers=HEADERS, timeout=10
+            )
+            signals = sig_res.json().get("signals", [])
+            if not signals:
+                print(f"🚨 No signal record found for {sym} pos_id={p_id} — closing unprotected position")
                 requests.post(f"{BRIDGE_URL}/trade/close", json={"position_id": p_id}, headers=HEADERS, timeout=15)
-                print(f"🔴 CLOSED {sym} pos_id={p_id} — exception during recovery, closed for safety")
+                print(f"🔴 CLOSED {sym} pos_id={p_id} — no signal record, could not reapply protection")
                 return False
 
-        missing_sl = not sl or sl == 0
-        missing_tp = not tp or tp == 0
+            sig     = signals[0]
+            sl_pips = float(sig.get("sl_pips") or 0)
+            tp_pips = float(sig.get("tp_pips") or 0)
 
-        if missing_sl or missing_tp:
-            recovered = reapply_protection(pos_id, symbol, entry, side, missing_sl, missing_tp)
-            if missing_sl and not recovered:
-                continue  # Position closed, skip monitoring
+            if missing_sl and sl_pips == 0:
+                print(f"🚨 Signal for {sym} pos_id={p_id} has sl_pips=0 — unrecoverable, closing position")
+                requests.post(f"{BRIDGE_URL}/trade/close", json={"position_id": p_id}, headers=HEADERS, timeout=15)
+                print(f"🔴 CLOSED {sym} pos_id={p_id} — sl_pips=0 in signal, cannot protect")
+                return False
 
-        if not all([pos_id, entry, sl, current]):
+            # Bridge calculates absolute SL/TP price from entry + pips internally
+            modify_payload = {"position_id": p_id}
+            if missing_sl:
+                modify_payload["sl_pips"] = sl_pips
+            if missing_tp and tp_pips:
+                modify_payload["tp_pips"] = tp_pips
+
+            mod_res = requests.post(f"{BRIDGE_URL}/trade/modify", json=modify_payload, headers=HEADERS, timeout=15)
+            if mod_res.json().get("success"):
+                print(f"✅ Protection reapplied on {sym} pos_id={p_id} | sl_pips={sl_pips} tp_pips={tp_pips}")
+                return True
+            else:
+                err = mod_res.json().get("error", "unknown")
+                print(f"🚨 Modify failed for {sym} pos_id={p_id}: {err} — closing position")
+                requests.post(f"{BRIDGE_URL}/trade/close", json={"position_id": p_id}, headers=HEADERS, timeout=15)
+                print(f"🔴 CLOSED {sym} pos_id={p_id} — modify failed, could not protect")
+                return False
+        except Exception as ex:
+            print(f"🚨 Exception in reapply_protection for {sym} pos_id={p_id}: {ex} — closing position")
+            requests.post(f"{BRIDGE_URL}/trade/close", json={"position_id": p_id}, headers=HEADERS, timeout=15)
+            print(f"🔴 CLOSED {sym} pos_id={p_id} — exception during recovery, closed for safety")
+            return False
+
+    for pos in positions:
+        # Field names from /positions/list: positionId, tradeSide, entryPrice, stopLoss, takeProfit
+        pos_id = str(pos.get("positionId") or "")
+        symbol = pos.get("symbol", "?")
+        side   = (pos.get("tradeSide") or "").upper()
+        digits = pos.get("digits", 5)
+
+        if not pos_id:
+            print(f"⚠️ Position missing positionId — skipping: {pos}")
             continue
 
-        # Normalise raw cTrader integer prices → real prices using pipPosition
-        # pip_size = 10^-pipPosition, price_scale = 10^pipPosition
-        pip_size    = get_pip_size(symbol)
-        price_scale = int(round(1 / pip_size))  # e.g. pip_size=0.0001 → scale=10000... wait, use 10^pipPosition directly
+        # Raw integer prices from cTrader — normalise by 10^digits
+        divisor    = 10 ** digits
+        entry_raw  = pos.get("entryPrice") or 0
+        sl_raw     = pos.get("stopLoss") or 0
+        tp_raw     = pos.get("takeProfit") or 0
+        entry      = entry_raw / divisor if entry_raw else 0
+        sl         = sl_raw / divisor if sl_raw else 0
+        tp         = tp_raw / divisor if tp_raw else 0
 
-        # Safer: fetch pipPosition directly
-        try:
-            spec_res = requests.post(
-                f"{BRIDGE_URL}/contract/specs",
-                json={"symbol": symbol},
-                headers=HEADERS,
-                timeout=10
-            )
-            pip_pos     = spec_res.json().get("contract_specifications", {}).get("pipPosition", 4)
-            price_scale = 10 ** pip_pos
-        except Exception:
-            price_scale = 100000  # safe default
+        # SL/TP safety check — reapply or close if missing
+        missing_sl = sl == 0
+        missing_tp = tp == 0
+        if missing_sl or missing_tp:
+            recovered = reapply_protection(pos_id, symbol, side, missing_sl, missing_tp)
+            if missing_sl and not recovered:
+                continue  # position was closed, skip R management
 
-        def norm(p):
-            return p / price_scale if p > 1000 else p
+        if not entry or not sl:
+            print(f"⚠️ {symbol} [{pos_id}] missing entry or SL after recovery — skipping R management")
+            continue
 
-        entry   = norm(entry)
-        sl      = norm(sl)
-        current = norm(current)
+        # Get current mid price from spot cache
+        spot = spot_map.get(symbol, {})
+        bid_raw = spot.get("bid_raw", 0)
+        ask_raw = spot.get("ask_raw", 0)
+        if not bid_raw or not ask_raw:
+            print(f"⚠️ {symbol} [{pos_id}] no spot price available — skipping R management")
+            continue
+        current = ((bid_raw + ask_raw) / 2) / divisor
 
         risk_distance = abs(entry - sl)
         if risk_distance == 0:
