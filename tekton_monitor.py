@@ -102,14 +102,82 @@ def manage_risk(config):
         sl      = pos.get("stop_loss", 0)
         current = pos.get("current_price", 0)
 
-        # Safety check — positions with no SL are unprotected, log loudly and skip
+        # Safety check — positions with no SL/TP must have protection reapplied from signal record
         tp = pos.get("take_profit", 0)
-        if not sl or sl == 0:
-            print(f"🚨 NO SL ON OPEN POSITION: {symbol} pos_id={pos_id} entry={entry} — UNPROTECTED, skipping AI management")
-            continue
-        if not tp or tp == 0:
-            print(f"⚠️ NO TP ON OPEN POSITION: {symbol} pos_id={pos_id} — position has no take profit set")
-            # Don't skip — still manage SL and R tracking
+
+        def reapply_protection(p_id, sym, p_entry, p_side, missing_sl, missing_tp):
+            """Look up original signal, reapply SL/TP. If impossible, close the position."""
+            print(f"🚨 MISSING PROTECTION on {sym} pos_id={p_id} (sl={'MISSING' if missing_sl else 'ok'}, tp={'MISSING' if missing_tp else 'ok'}) — attempting recovery from signal record")
+            try:
+                sig_res = requests.get(
+                    f"{BRIDGE_URL}/proxy/signals",
+                    params={"broker_position_id": str(p_id), "limit": 1},
+                    headers=HEADERS, timeout=10
+                )
+                signals = sig_res.json().get("signals", [])
+                if not signals:
+                    print(f"🚨 No signal record found for {sym} pos_id={p_id} — closing unprotected position")
+                    requests.post(f"{BRIDGE_URL}/trade/close", json={"position_id": p_id}, headers=HEADERS, timeout=15)
+                    print(f"🔴 CLOSED {sym} pos_id={p_id} — no signal record, could not reapply protection")
+                    return False
+
+                sig = signals[0]
+                sl_pips = float(sig.get("sl_pips") or 0)
+                tp_pips = float(sig.get("tp_pips") or 0)
+                direction = (sig.get("direction") or p_side).upper()
+
+                if sl_pips == 0:
+                    print(f"🚨 Signal for {sym} pos_id={p_id} has sl_pips=0 — cannot reapply SL, closing position")
+                    requests.post(f"{BRIDGE_URL}/trade/close", json={"position_id": p_id}, headers=HEADERS, timeout=15)
+                    print(f"🔴 CLOSED {sym} pos_id={p_id} — sl_pips=0 in signal record, unrecoverable")
+                    return False
+
+                # Calculate absolute SL/TP prices from entry + pips
+                pip_size = 0.0001  # default, will be overridden
+                try:
+                    spec_res = requests.post(f"{BRIDGE_URL}/contract/specs", json={"symbol": sym}, headers=HEADERS, timeout=10)
+                    pip_pos  = spec_res.json().get("contract_specifications", {}).get("pipPosition", 4)
+                    pip_size = 10 ** -pip_pos
+                except Exception:
+                    pass
+
+                if direction == "BUY":
+                    sl_price = p_entry - (sl_pips * pip_size)
+                    tp_price = p_entry + (tp_pips * pip_size) if tp_pips else None
+                else:
+                    sl_price = p_entry + (sl_pips * pip_size)
+                    tp_price = p_entry - (tp_pips * pip_size) if tp_pips else None
+
+                modify_payload = {"position_id": p_id}
+                if missing_sl:
+                    modify_payload["sl_price"] = round(sl_price, pip_pos + 1)
+                if missing_tp and tp_price:
+                    modify_payload["tp_price"] = round(tp_price, pip_pos + 1)
+
+                mod_res = requests.post(f"{BRIDGE_URL}/trade/modify", json=modify_payload, headers=HEADERS, timeout=15)
+                if mod_res.json().get("success"):
+                    print(f"✅ Protection reapplied on {sym} pos_id={p_id} | SL={modify_payload.get('sl_price')} TP={modify_payload.get('tp_price')}")
+                    return True
+                else:
+                    err = mod_res.json().get("error", "unknown")
+                    print(f"🚨 Failed to reapply protection on {sym} pos_id={p_id}: {err} — closing position")
+                    requests.post(f"{BRIDGE_URL}/trade/close", json={"position_id": p_id}, headers=HEADERS, timeout=15)
+                    print(f"🔴 CLOSED {sym} pos_id={p_id} — modify failed, could not protect position")
+                    return False
+            except Exception as ex:
+                print(f"🚨 Exception during protection recovery for {sym} pos_id={p_id}: {ex} — closing position")
+                requests.post(f"{BRIDGE_URL}/trade/close", json={"position_id": p_id}, headers=HEADERS, timeout=15)
+                print(f"🔴 CLOSED {sym} pos_id={p_id} — exception during recovery, closed for safety")
+                return False
+
+        missing_sl = not sl or sl == 0
+        missing_tp = not tp or tp == 0
+
+        if missing_sl or missing_tp:
+            recovered = reapply_protection(pos_id, symbol, entry, side, missing_sl, missing_tp)
+            if missing_sl and not recovered:
+                continue  # Position closed, skip monitoring
+
         if not all([pos_id, entry, sl, current]):
             continue
 
