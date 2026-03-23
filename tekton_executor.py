@@ -95,7 +95,7 @@ def fetch_settings():
         try:
             conn = psycopg2.connect(**DB_PARAMS)
             cur  = conn.cursor()
-            cur.execute("SELECT auto_trade, friday_flush, risk_pct, target_reward, daily_drawdown_limit, max_session_exposure_pct, max_lots, news_blackout_mins FROM settings WHERE id=1")
+            cur.execute("SELECT auto_trade, friday_flush, risk_pct, target_reward, daily_drawdown_limit, max_session_exposure_pct, max_lots, min_sl_pips, news_blackout_mins FROM settings WHERE id=1")
             row = cur.fetchone()
             cur.close(); conn.close()
             if row:
@@ -108,8 +108,8 @@ def fetch_settings():
                     "daily_drawdown_limit":     float(row[4]),
                     "max_session_exposure_pct": float(row[5]),
                     "max_lots":                 float(row[6]),
-                    "min_sl_pips":              8.0,
-                    "news_blackout_mins":        int(row[7]) if row[7] is not None else 30
+                    "min_sl_pips":              float(row[7]) if row[7] is not None else 8.0,
+                    "news_blackout_mins":        int(row[8]) if row[8] is not None else 30
                 }
         except Exception as sql_err:
             print(f"⚠️ Settings SQL fallback failed: {sql_err} — using safe hardcoded defaults")
