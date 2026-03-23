@@ -1153,11 +1153,18 @@ def modify_trade():
     try:
         data = request.get_json()
         position_id = data.get("position_id")
-        sl_val = data.get("sl_price") or data.get("stopLoss_raw")
-        tp_val = data.get("tp_price") or data.get("takeProfit_raw")
+
+        # Accepts sl_price/tp_price (absolute decimal) OR sl_pips/tp_pips (relative to entry).
+        # Pips mode takes priority — bridge calculates absolute price from position entry + side.
+        sl_price = data.get("sl_price") or data.get("stopLoss_raw")
+        tp_price = data.get("tp_price") or data.get("takeProfit_raw")
+        sl_pips  = data.get("sl_pips")
+        tp_pips  = data.get("tp_pips")
 
         if not position_id:
             return jsonify({"success": False, "error": "position_id required"}), 400
+        if sl_price is None and tp_price is None and sl_pips is None and tp_pips is None:
+            return jsonify({"success": False, "error": "At least one of sl_price, tp_price, sl_pips, tp_pips required"}), 400
 
         recon_msg = openapi.ProtoOAReconcileReq()
         recon_msg.ctidTraderAccountId = ACCOUNT_ID
@@ -1170,19 +1177,36 @@ def modify_trade():
         if not target_pos:
             return jsonify({"success": False, "error": "Position not found"}), 404
 
-        spec = state["symbol_id_to_spec_map"].get(target_pos.tradeData.symbolId, {})
+        spec   = state["symbol_id_to_spec_map"].get(target_pos.tradeData.symbolId, {})
         digits = spec.get("digits", 5)
+        pip_pos = spec.get("pipPosition", digits - 1)
+        pip_size = 10 ** -pip_pos  # e.g. pipPosition=4 → pip_size=0.0001
+
+        # If pips provided, derive absolute price from position entry
+        if sl_pips is not None or tp_pips is not None:
+            open_price_raw = getattr(target_pos.tradeData, 'openPrice', None)
+            if not open_price_raw:
+                return jsonify({"success": False, "error": "Cannot resolve entry price from position — use sl_price/tp_price instead"}), 400
+            entry_price = open_price_raw / (10 ** digits)
+            is_buy = target_pos.tradeData.tradeSide == 1  # TRADE_SIDE_BUY = 1
+
+            if sl_pips is not None:
+                sl_pips_f = float(sl_pips)
+                sl_price = entry_price - (sl_pips_f * pip_size) if is_buy else entry_price + (sl_pips_f * pip_size)
+            if tp_pips is not None:
+                tp_pips_f = float(tp_pips)
+                tp_price = entry_price + (tp_pips_f * pip_size) if is_buy else entry_price - (tp_pips_f * pip_size)
 
         req = openapi.ProtoOAAmendPositionSLTPReq()
         req.ctidTraderAccountId = ACCOUNT_ID
         req.positionId = int(position_id)
 
-        if sl_val is not None:
-            req.stopLoss = int(round(float(sl_val) * (10**digits)))
-        if tp_val is not None:
-            req.takeProfit = int(round(float(tp_val) * (10**digits)))
+        if sl_price is not None:
+            req.stopLoss = int(round(float(sl_price) * (10**digits)))
+        if tp_price is not None:
+            req.takeProfit = int(round(float(tp_price) * (10**digits)))
 
-        print(f"🛠️ Modifying ID {position_id} | Raw SL: {req.stopLoss} | Raw TP: {req.takeProfit}")
+        print(f"🛠️ Modifying ID {position_id} | sl_pips={sl_pips} tp_pips={tp_pips} | Raw SL: {getattr(req, 'stopLoss', 'N/A')} | Raw TP: {getattr(req, 'takeProfit', 'N/A')}")
 
         d_mod, mid_mod = defer.Deferred(), str(uuid.uuid4())
         pending_requests[mid_mod] = d_mod
