@@ -561,12 +561,14 @@ def poll_signals():
                     result = execute_trade(s_uuid, sym, s_type, tf, float(sl_pips), float(tp_pips))
                     if result:
                         # FIX 2: unpack (pos_id, fill_price) tuple and store avg_fill_price
+                        # FIX 3: status = EXECUTED (not COMPLETED) for open positions
+                        #         broker_position_id written immediately after fill
                         pos_id, fill_price = result
                         cur.execute(
-                            "UPDATE signals SET status = 'COMPLETED', position_id = %s, avg_fill_price = %s WHERE signal_uuid = %s",
-                            (pos_id, fill_price if fill_price else None, str(s_uuid))
+                            "UPDATE signals SET status = 'EXECUTED', broker_position_id = %s, avg_fill_price = %s WHERE signal_uuid = %s",
+                            (str(pos_id), fill_price if fill_price else None, str(s_uuid))
                         )
-                        print(f"✅ signals updated: pos_id={pos_id} fill={fill_price}")
+                        print(f"✅ signals updated: EXECUTED pos_id={pos_id} fill={fill_price}")
                     else:
                         cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
                     conn.commit()
