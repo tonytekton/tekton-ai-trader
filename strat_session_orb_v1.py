@@ -45,6 +45,7 @@ BRIDGE_URL        = os.getenv("BRIDGE_URL", "http://localhost:8080")
 BRIDGE_KEY        = os.getenv("BRIDGE_KEY", "")
 
 SCAN_INTERVAL_SEC  = 300
+STARTUP_OFFSET_SEC = 150   # stagger across strategies
 SIGNAL_COOLDOWN_HR = 8         # one trade per session per symbol
 LTF_TIMEFRAME      = "15min"
 LTF_CANDLES        = 60        # 15hr of 15min data
@@ -346,4 +347,7 @@ def main():
 
 
 if __name__ == "__main__":
+    if STARTUP_OFFSET_SEC > 0:
+        print(f"[startup] Stagger offset: sleeping {STARTUP_OFFSET_SEC}s before first scan...")
+        time.sleep(STARTUP_OFFSET_SEC)
     main()

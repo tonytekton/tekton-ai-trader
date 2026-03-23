@@ -27,6 +27,7 @@ BRIDGE_URL         = os.getenv("BRIDGE_URL", "http://localhost:8080")
 BRIDGE_KEY         = os.getenv("BRIDGE_KEY", "")
 
 SCAN_INTERVAL_SEC  = 300
+STARTUP_OFFSET_SEC = 0   # stagger across strategies
 SIGNAL_COOLDOWN_HR = 1
 HTF_CANDLES        = 50
 LTF_CANDLES        = 60
@@ -510,6 +511,9 @@ if __name__ == "__main__":
     print(f"[{_ts()}] 🚀 Strategy v1.4 started — "
           f"scan={SCAN_INTERVAL_SEC}s cooldown={SIGNAL_COOLDOWN_HR}h "
           f"lookback={FVG_LOOKBACK}c ATR_min={ATR_MIN_RATIO} MSS_buf={MSS_ATR_BUFFER}×ATR")
+    if STARTUP_OFFSET_SEC > 0:
+        print(f"[startup] Stagger offset: sleeping {STARTUP_OFFSET_SEC}s before first scan...")
+        time.sleep(STARTUP_OFFSET_SEC)
     while True:
         try:
             run_scan()

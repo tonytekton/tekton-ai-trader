@@ -45,6 +45,7 @@ BRIDGE_URL         = os.getenv("BRIDGE_URL", "http://localhost:8080")
 BRIDGE_KEY         = os.getenv("BRIDGE_KEY", "")
 
 SCAN_INTERVAL_SEC  = 300       # every 5 minutes
+STARTUP_OFFSET_SEC = 30   # stagger across strategies
 SIGNAL_COOLDOWN_HR = 4         # 4 hours between same symbol+direction signals
 HTF_TIMEFRAME      = "4H"      # trend filter timeframe
 LTF_TIMEFRAME      = "15min"   # entry timeframe
@@ -540,6 +541,9 @@ if __name__ == "__main__":
     print(f"[{_ts()}] 🚀 EPS v1.0 started — "
           f"scan={SCAN_INTERVAL_SEC}s cooldown={SIGNAL_COOLDOWN_HR}h "
           f"EMA={EMA_FAST}/{EMA_SLOW} HTF={HTF_TIMEFRAME} MIN_RR={MIN_RR}")
+    if STARTUP_OFFSET_SEC > 0:
+        print(f"[startup] Stagger offset: sleeping {STARTUP_OFFSET_SEC}s before first scan...")
+        time.sleep(STARTUP_OFFSET_SEC)
     while True:
         try:
             run_scan()
