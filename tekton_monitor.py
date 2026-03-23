@@ -169,14 +169,10 @@ def manage_risk(config):
             print(f"⚠️ Position missing positionId — skipping: {pos}")
             continue
 
-        # Raw integer prices from cTrader — normalise by 10^digits
-        divisor    = 10 ** digits
-        entry_raw  = pos.get("entryPrice") or 0
-        sl_raw     = pos.get("stopLoss") or 0
-        tp_raw     = pos.get("takeProfit") or 0
-        entry      = entry_raw / divisor if entry_raw else 0
-        sl         = sl_raw / divisor if sl_raw else 0
-        tp         = tp_raw / divisor if tp_raw else 0
+        # Prices are pre-scaled decimals from bridge (bridge handles raw→decimal conversion)
+        entry = pos.get("entryPrice") or 0
+        sl    = pos.get("stopLoss") or 0
+        tp    = pos.get("takeProfit") or 0
 
         # SL/TP safety check — reapply or close if missing
         missing_sl = sl == 0
