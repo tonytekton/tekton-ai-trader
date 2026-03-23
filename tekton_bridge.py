@@ -806,9 +806,11 @@ def _refresh_closed_trades_cache():
                 opening_deal = deals_sorted[0]
                 spec   = state["symbol_id_to_spec_map"].get(opening_deal.symbolId, {})
                 digits = spec.get("digits", 5)
+                # ProtoOADeal.executionPrice is a decimal double (e.g. 1.08432)
+                # NOT a raw integer — use directly, do not pass through raw_to_decimal.
                 raw    = getattr(opening_deal, "executionPrice", 0)
                 if raw and float(raw) > 0:
-                    ps["entry_price"] = raw_to_decimal(int(raw), digits)
+                    ps["entry_price"] = round(float(raw), digits)
                     patched += 1
         if patched:
             print(f"✅ position_state backfill: {patched} entry prices patched")
