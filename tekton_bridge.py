@@ -708,6 +708,13 @@ def get_executions():
 
         # --- 2. Fetch Closed Positions (Last 30 Days) ---
         closed_trades = []
+
+        # Guard: don't fire DealListReq until cTrader account auth handshake is complete.
+        # If called too early, cTrader returns INVALID_REQUEST: Trading account is not authorized.
+        if not state.get("authenticated"):
+            print("⚠️  /proxy/executions: cTrader not yet authorized — skipping DealListReq, returning open trades only")
+            return jsonify({"open_trades": open_trades, "closed_trades": [], "combined": open_trades})
+
         to_ts = int(time.time() * 1000)
         from_ts = to_ts - (30 * 24 * 60 * 60 * 1000)
 
