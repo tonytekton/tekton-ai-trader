@@ -915,9 +915,109 @@ def _schedule_cache_refresh():
 
 
 def sync_latest_candles():
+    """
+    Background thread: runs every 5 minutes, fetches the 3 most recent candles
+    per symbol per timeframe and upserts into market_data.
+    Replaces the external tekton_backfill.py cron for ongoing updates.
+    Staggered 0.5s between calls to avoid API rate spikes.
+    """
+    SYNC_INTERVAL_SEC = 300          # run every 5 minutes
+    TIMEFRAMES        = ["5min", "15min", "60min", "4H", "Daily"]
+    CANDLES_PER_SYNC  = 3            # only fetch last 3 candles per symbol/tf
+    CALL_DELAY_SEC    = 0.5          # pause between each API call
+
+    def _get_db():
+        return psycopg2.connect(
+            host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
+            database=os.getenv("CLOUD_SQL_DB_NAME", "tekton-trader"),
+            user=os.getenv("CLOUD_SQL_DB_USER", "postgres"),
+            password=os.getenv("CLOUD_SQL_DB_PASSWORD"),
+            port=int(os.getenv("CLOUD_SQL_PORT", 5432))
+        )
+
+    def _fetch_and_upsert(symbol, tf, conn, cur):
+        """Fetch last CANDLES_PER_SYNC candles for symbol/tf and upsert to DB."""
+        try:
+            spec = state["symbols_cache"].get(symbol)
+            if not spec:
+                return 0
+            symbol_id = spec["symbolId"]
+            digits    = spec["digits"]
+            ct_tf     = PERIOD_CODE.get(tf)
+            if not ct_tf:
+                return 0
+
+            to_ts   = int(time.time() * 1000)
+            from_ts = to_ts - (CANDLES_PER_SYNC * _tf_minutes(tf) * 60 * 1000 * 2)
+
+            req = openapi.ProtoOAGetTrendbarsReq()
+            req.ctidTraderAccountId = ACCOUNT_ID
+            req.symbolId            = symbol_id
+            req.period              = ct_tf
+            req.fromTimestamp       = from_ts
+            req.toTimestamp         = to_ts
+            req.count               = CANDLES_PER_SYNC
+
+            d, msg_id = defer.Deferred(), str(uuid.uuid4())
+            pending_requests[msg_id] = d
+            reactor.callFromThread(lambda: bridge.client.send(req, clientMsgId=msg_id))
+            result = threads.blockingCallFromThread(reactor, wait_for_deferred, d, 15)
+
+            log_ctrader_call("/prices/historical", 0, True)
+
+            inserted = 0
+            for tb in result.trendbar:
+                ts       = tb.utcTimestampInMinutes * 60 * 1000
+                low_raw  = tb.low if hasattr(tb, "low") else 0
+                open_raw = low_raw + (tb.deltaOpen  if hasattr(tb, "deltaOpen")  else 0)
+                high_raw = low_raw + (tb.deltaHigh  if hasattr(tb, "deltaHigh")  else 0)
+                close_raw= low_raw + (tb.deltaClose if hasattr(tb, "deltaClose") else 0)
+                vol      = tb.volume if hasattr(tb, "volume") else 0
+                dt       = datetime.fromtimestamp(ts / 1000.0)
+                cur.execute("""
+                    INSERT INTO market_data
+                      (symbol, timeframe, timestamp, open, high, low, close, volume)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT (symbol, timeframe, timestamp) DO UPDATE
+                      SET open=EXCLUDED.open, high=EXCLUDED.high,
+                          low=EXCLUDED.low,   close=EXCLUDED.close,
+                          volume=EXCLUDED.volume;
+                """, (symbol, tf, dt, open_raw, high_raw, low_raw, close_raw, vol))
+                inserted += 1
+            conn.commit()
+            return inserted
+        except Exception as e:
+            try: conn.rollback()
+            except: pass
+            print(f"[sync_candles] ⚠️  {symbol} {tf}: {e}")
+            return 0
+
+    def _tf_minutes(tf):
+        return {"5min": 5, "15min": 15, "60min": 60, "4H": 240, "Daily": 1440}.get(tf, 15)
+
+    # ── main loop ──
+    print(f"[sync_candles] 🕯️  Candle sync thread started — interval={SYNC_INTERVAL_SEC}s")
     while True:
-        time.sleep(900)
-        # ... candle sync logic ...
+        time.sleep(SYNC_INTERVAL_SEC)
+        if not state.get("authenticated"):
+            continue
+        try:
+            conn = _get_db()
+            cur  = conn.cursor()
+            cur.execute("SELECT DISTINCT symbol FROM market_data ORDER BY symbol;")
+            symbols = [r[0] for r in cur.fetchall()]
+            total = 0
+            for sym in symbols:
+                for tf in TIMEFRAMES:
+                    n = _fetch_and_upsert(sym, tf, conn, cur)
+                    total += n
+                    time.sleep(CALL_DELAY_SEC)
+            cur.close()
+            conn.close()
+            if total > 0:
+                print(f"[sync_candles] ✅ Sync complete — {len(symbols)} symbols, {total} candles upserted")
+        except Exception as e:
+            print(f"[sync_candles] ❌ Sync error: {e}")
 
 @app.route("/proxy/signals", methods=["GET"])
 @require_auth
