@@ -132,27 +132,12 @@ def manage_risk(config):
                     print(f"🔴 CLOSED {sym} pos_id={p_id} — sl_pips=0 in signal record, unrecoverable")
                     return False
 
-                # Calculate absolute SL/TP prices from entry + pips
-                pip_size = 0.0001  # default, will be overridden
-                try:
-                    spec_res = requests.post(f"{BRIDGE_URL}/contract/specs", json={"symbol": sym}, headers=HEADERS, timeout=10)
-                    pip_pos  = spec_res.json().get("contract_specifications", {}).get("pipPosition", 4)
-                    pip_size = 10 ** -pip_pos
-                except Exception:
-                    pass
-
-                if direction == "BUY":
-                    sl_price = p_entry - (sl_pips * pip_size)
-                    tp_price = p_entry + (tp_pips * pip_size) if tp_pips else None
-                else:
-                    sl_price = p_entry + (sl_pips * pip_size)
-                    tp_price = p_entry - (tp_pips * pip_size) if tp_pips else None
-
+                # Pass sl_pips/tp_pips directly — bridge calculates absolute price from entry
                 modify_payload = {"position_id": p_id}
                 if missing_sl:
-                    modify_payload["sl_price"] = round(sl_price, pip_pos + 1)
-                if missing_tp and tp_price:
-                    modify_payload["tp_price"] = round(tp_price, pip_pos + 1)
+                    modify_payload["sl_pips"] = sl_pips
+                if missing_tp and tp_pips:
+                    modify_payload["tp_pips"] = tp_pips
 
                 mod_res = requests.post(f"{BRIDGE_URL}/trade/modify", json=modify_payload, headers=HEADERS, timeout=15)
                 if mod_res.json().get("success"):
