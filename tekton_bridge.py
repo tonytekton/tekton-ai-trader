@@ -1799,7 +1799,67 @@ class Bridge:
                                         entry = _position_to_dict(pos, spec, digits)
                                         state['position_state'][str(pos.positionId)] = entry
                                     state['position_state_ready'] = True
-                                    print(f"✅ position_state seeded: {len(state['position_state'])} open positions")
+                                    count = len(state['position_state'])
+                                    print(f"✅ position_state seeded: {count} open positions")
+
+                                    # Backfill entry prices for pre-existing positions via DealListReq.
+                                    # ReconcileReq does not return openPrice on this broker — the opening
+                                    # deal's executionPrice is the only reliable source for entry price.
+                                    # We fire one DealListReq covering the last 30 days and extract the
+                                    # earliest deal per positionId (the opening deal).
+                                    if count > 0:
+                                        def _backfill_entry_prices():
+                                            try:
+                                                to_ts = int(time.time() * 1000)
+                                                from_ts = to_ts - (30 * 24 * 60 * 60 * 1000)
+                                                deal_req = openapi.ProtoOADealListReq()
+                                                deal_req.ctidTraderAccountId = ACCOUNT_ID
+                                                deal_req.fromTimestamp = from_ts
+                                                deal_req.toTimestamp = to_ts
+                                                deal_req.maxRows = 500
+                                                d_deal, cid_deal = defer.Deferred(), str(uuid.uuid4())
+                                                pending_requests[cid_deal] = d_deal
+                                                reactor.callFromThread(
+                                                    lambda r=deal_req, c=cid_deal: bridge.client.send(r, clientMsgId=c)
+                                                )
+                                                deal_result = threads.blockingCallFromThread(
+                                                    reactor, wait_for_deferred, d_deal, 30
+                                                )
+                                                # Build map: positionId → earliest deal (opening deal)
+                                                opening_deals = {}
+                                                for deal in deal_result.deal:
+                                                    pid = str(deal.positionId)
+                                                    if pid not in opening_deals:
+                                                        opening_deals[pid] = deal
+                                                    else:
+                                                        if deal.executionTimestamp < opening_deals[pid].executionTimestamp:
+                                                            opening_deals[pid] = deal
+                                                # Patch position_state{} with entry prices
+                                                patched = 0
+                                                for pid, ps in state['position_state'].items():
+                                                    if ps.get('entry_price') is None and pid in opening_deals:
+                                                        deal = opening_deals[pid]
+                                                        spec = state['symbol_id_to_spec_map'].get(
+                                                            deal.symbolId, {}
+                                                        )
+                                                        digits = spec.get('digits', 5)
+                                                        raw_price = getattr(deal, 'executionPrice', 0)
+                                                        if raw_price and raw_price > 0:
+                                                            scaled = raw_to_decimal(raw_price, digits)
+                                                            ps['entry_price'] = scaled
+                                                            # Also cache it for /proxy/executions
+                                                            if 'entry_price_cache' not in state:
+                                                                state['entry_price_cache'] = {}
+                                                            state['entry_price_cache'][pid] = scaled
+                                                            patched += 1
+                                                print(f"✅ position_state backfill: {patched}/{count} entry prices patched from DealListReq")
+                                            except Exception as bf_err:
+                                                print(f"⚠️  position_state backfill error: {bf_err}")
+                                                traceback.print_exc()
+
+                                        # Run backfill in a thread — non-blocking to the reactor
+                                        threading.Thread(target=_backfill_entry_prices, daemon=True).start()
+
                                 except Exception as seed_err:
                                     print(f"⚠️  position_state seed error: {seed_err}")
                                     traceback.print_exc()
