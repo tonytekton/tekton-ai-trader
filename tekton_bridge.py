@@ -578,15 +578,25 @@ def system_settings():
         cur = conn.cursor()
         if request.method == "POST":
             data = request.get_json()
-            auto_trade             = data.get("auto_trade", data.get("autoTrade", False))
-            friday_flush           = data.get("friday_flush", data.get("fridayFlush", False))
-            risk_pct               = data.get("risk_pct", 0.01)
-            target_reward          = data.get("target_reward", 1.8)
-            daily_drawdown_limit   = data.get("daily_drawdown_limit", 0.05)
-            max_session_exposure_pct = data.get("max_session_exposure_pct", 4.0)
-            max_lots               = data.get("max_lots", 50.0)
-            min_sl_pips            = data.get("min_sl_pips", 8.0)
-            news_blackout_mins     = data.get("news_blackout_mins", 30)
+
+            # Read-modify-write: fetch current DB values first so a partial POST
+            # cannot silently overwrite fields with hardcoded defaults.
+            cur.execute("SELECT auto_trade, friday_flush, risk_pct, target_reward, daily_drawdown_limit, max_session_exposure_pct, max_lots, min_sl_pips, news_blackout_mins FROM settings WHERE id=1")
+            existing = cur.fetchone()
+            if existing:
+                ex_auto_trade, ex_friday_flush, ex_risk_pct, ex_target_reward, ex_dd_limit, ex_exposure_pct, ex_max_lots, ex_min_sl, ex_blackout = existing
+            else:
+                ex_auto_trade, ex_friday_flush, ex_risk_pct, ex_target_reward, ex_dd_limit, ex_exposure_pct, ex_max_lots, ex_min_sl, ex_blackout = False, False, 0.01, 1.8, 0.05, 4.0, 50.0, 8.0, 30
+
+            auto_trade             = data.get("auto_trade",               data.get("autoTrade",    ex_auto_trade))
+            friday_flush           = data.get("friday_flush",             data.get("fridayFlush",  ex_friday_flush))
+            risk_pct               = data.get("risk_pct",                 ex_risk_pct)
+            target_reward          = data.get("target_reward",            ex_target_reward)
+            daily_drawdown_limit   = data.get("daily_drawdown_limit",     ex_dd_limit)
+            max_session_exposure_pct = data.get("max_session_exposure_pct", ex_exposure_pct)
+            max_lots               = data.get("max_lots",                 ex_max_lots)
+            min_sl_pips            = data.get("min_sl_pips",              ex_min_sl)
+            news_blackout_mins     = data.get("news_blackout_mins",       ex_blackout)
 
             cur.execute("""
                 INSERT INTO settings (id, auto_trade, friday_flush, risk_pct, target_reward,
