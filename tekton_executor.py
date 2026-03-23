@@ -527,7 +527,7 @@ def poll_signals():
             cur  = conn.cursor()
 
             cur.execute("""
-                SELECT signal_uuid, symbol, direction, timeframe, sl_pips, tp_pips
+                SELECT signal_uuid, symbol, signal_type, timeframe, sl_pips, tp_pips
                 FROM signals
                 WHERE status = 'PENDING'
                 AND sl_pips IS NOT NULL
