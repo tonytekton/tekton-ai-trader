@@ -303,6 +303,7 @@ def list_positions():
                 "takeProfit": getattr(pos, 'takeProfit', None),
                 "comment": getattr(pos.tradeData, 'comment', None),
                 "openTimestamp": getattr(pos.tradeData, 'openTimestamp', None),
+                "digits": spec.get("digits", 5),
             })
 
         return jsonify({"success": True, "positions": positions, "count": len(positions)})
@@ -963,7 +964,7 @@ def get_signals():
         # Optional query params: status, symbol, limit (default 200), offset (default 0)
         status_filter     = request.args.get("status", None)
         symbol_filter     = request.args.get("symbol", None)
-        broker_pos_filter = request.args.get("broker_position_id", None)
+        broker_pos_filter = request.args.get("broker_position_id", None) or request.args.get("position_id", None)
         limit = int(request.args.get("limit", 200))
         offset = int(request.args.get("offset", 0))
 
@@ -985,7 +986,7 @@ def get_signals():
             conditions.append("symbol = %s")
             params.append(symbol_filter)
         if broker_pos_filter:
-            conditions.append("broker_position_id = %s")
+            conditions.append("position_id = %s")
             params.append(broker_pos_filter)
 
         where_clause = ("WHERE " + " AND ".join(conditions)) if conditions else ""
