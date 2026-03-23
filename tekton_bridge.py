@@ -921,10 +921,10 @@ def sync_latest_candles():
     Replaces the external tekton_backfill.py cron for ongoing updates.
     Staggered 0.5s between calls to avoid API rate spikes.
     """
-    SYNC_INTERVAL_SEC = 300          # run every 5 minutes
+    SYNC_INTERVAL_SEC = 360          # run every 6 minutes
     TIMEFRAMES        = ["5min", "15min", "60min", "4H", "Daily"]
     CANDLES_PER_SYNC  = 3            # only fetch last 3 candles per symbol/tf
-    CALL_DELAY_SEC    = 0.5          # pause between each API call
+    CALL_DELAY_SEC    = 1.5          # pause between each API call — 250 calls @ 1.5s = ~4min spread
 
     def _get_db():
         return psycopg2.connect(
