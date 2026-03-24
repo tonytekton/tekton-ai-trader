@@ -303,6 +303,13 @@ def list_positions():
             tp_dec    = round(tp_raw / divisor, digits) if tp_raw > 0 else None
             if sl_dec is not None and sl_dec < 0.001: sl_dec = None
             if tp_dec is not None and tp_dec < 0.001: tp_dec = None
+            # Broker quirk: some brokers return SL/TP as truncated integer (e.g. 184 not 184000).
+            # After dividing by divisor this gives 0.184 instead of 184.0.
+            # If result is < 1% of entry, it was under-divided — correct generically.
+            if sl_dec and entry_dec and sl_dec < entry_dec * 0.01:
+                sl_dec = round(sl_dec * divisor, digits)
+            if tp_dec and entry_dec and tp_dec < entry_dec * 0.01:
+                tp_dec = round(tp_dec * divisor, digits)
 
             # Enrich from position_state{} (live ExecutionEvent cache — most up-to-date)
             ps = state.get('position_state', {}).get(pos_id, {})
@@ -667,6 +674,12 @@ def get_executions():
             open_price_raw = getattr(pos.tradeData, 'openPrice', None)
             scaled_sl = round(raw_sl / divisor, digits) if raw_sl > 0 else None
             scaled_tp = round(raw_tp / divisor, digits) if raw_tp > 0 else None
+            # Broker quirk: under-divided SL/TP correction (generic, all symbols)
+            _entry_dec = round(open_price_raw / divisor, digits) if open_price_raw else None
+            if scaled_sl and _entry_dec and scaled_sl < _entry_dec * 0.01:
+                scaled_sl = round(scaled_sl * divisor, digits)
+            if scaled_tp and _entry_dec and scaled_tp < _entry_dec * 0.01:
+                scaled_tp = round(scaled_tp * divisor, digits)
             # Discard bogus SL/TP (cTrader returns 1 raw unit when not set = < 0.001 after scaling)
             if scaled_sl is not None and scaled_sl < 0.001:
                 scaled_sl = None
