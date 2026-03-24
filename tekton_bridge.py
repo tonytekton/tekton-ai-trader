@@ -484,10 +484,13 @@ def get_account_status():
     if start_equity > 0:
         drawdown_pct = ((start_equity - equity) / start_equity) * 100
 
+    balance = state.get("balance_cents", 0) / 100
     return jsonify({
         "success": True,
+        "balance": round(balance, 2),
         "equity": round(equity, 2),
         "free_margin": round(free_margin, 2),
+        "margin_used": round(margin_used, 2),
         "drawdown_pct": round(max(drawdown_pct, 0.0), 2),
         "currency": state.get("account_currency", "EUR"),
         "depositAssetId": state.get("deposit_asset_id"),
