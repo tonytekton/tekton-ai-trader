@@ -175,7 +175,7 @@ const PHASES = [
       { id: 'th_11', title: 'HF-11: Fix TradingSettings max_lots default (5 → 5000)', detail: 'UI default was 5.0 — would reset DB to 5 if page loaded during bridge downtime. Fixed default and fallback to 5000.', file: 'pages/TradingSettings.jsx' },
       { id: 'th_12', title: 'HF-12: Fix Execution Journal duplicate rows', detail: 'open_trades (ReconcileReq) and closed_trades (DealListReq) were merged with no deduplication. cTrader DealListReq returns opening deals for currently-open positions. Fix: strip open position IDs from closed_trades before merge, deduplicate within closed_trades by position ID.', file: 'tekton_bridge.py — SHA 157cd42' },,
 {
-    id: 'p13', title: 'Phase 13 — Signals Log Fix (FAILED status bug)', color: 'red',
+    id: 'p13', title: 'Phase 13 — Signals Log Fix (FAILED status bug)', color: 'red', status: 'complete',
     desc: 'BUG DIAGNOSED (20 Mar 2026): All 196 of 200 signals showing FAILED. Root cause: executor queries column signal_type but signals table stores direction in column named direction. Mismatch → executor SQL exception → every signal marked FAILED. Fix: align column name.',
     tasks: [
       { id: 't13_1', title: 'Confirm DB column name: direction vs signal_type', detail: "Run: SELECT column_name FROM information_schema.columns WHERE table_name='signals' ORDER BY ordinal_position; — confirm actual column name.", file: 'PostgreSQL (tekton-trader DB)' },
