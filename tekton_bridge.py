@@ -1,6 +1,6 @@
-#  Tekton AI Trader Bridge v4.5
-# Date: 2026-03-06
-# MERGED: HOME + PROJECT with all fixes applied cleanly
+#  Tekton AI Trader Bridge v5.0
+# Date: 2026-03-24
+# FIX: pos.price (double) for entry, stopLoss/takeProfit are doubles — no division
 
 import psycopg2
 from twisted.internet import task
@@ -183,7 +183,7 @@ def health():
     return jsonify({
         "success": True,
         "status": "healthy",
-        "version": "4.5",
+        "version": "5.0",
         "architecture": "PURE_PASS_THROUGH_FIXED_TRACKING",
         "authenticated": state["authenticated"],
         "symbols_loaded": len(state["symbols_cache"]),
@@ -294,22 +294,16 @@ def list_positions():
             divisor = 10 ** digits
             pnl_data = pnl_map.get(pos_id, {"grossPnL_cents": 0, "netPnL_cents": 0})
 
-            # Scale raw integer prices → decimal
-            entry_raw = getattr(pos.tradeData, 'openPrice', None)
-            sl_raw    = getattr(pos, 'stopLoss', None) or 0
-            tp_raw    = getattr(pos, 'takeProfit', None) or 0
-            entry_dec = round(entry_raw / divisor, digits) if entry_raw else None
-            sl_dec    = round(sl_raw / divisor, digits) if sl_raw > 0 else None
-            tp_dec    = round(tp_raw / divisor, digits) if tp_raw > 0 else None
-            if sl_dec is not None and sl_dec < 0.001: sl_dec = None
-            if tp_dec is not None and tp_dec < 0.001: tp_dec = None
-            # Broker quirk: some brokers return SL/TP as truncated integer (e.g. 184 not 184000).
-            # After dividing by divisor this gives 0.184 instead of 184.0.
-            # If result is < 1% of entry, it was under-divided — correct generically.
-            if sl_dec and entry_dec and sl_dec < entry_dec * 0.01:
-                sl_dec = round(sl_dec * divisor, digits)
-            if tp_dec and entry_dec and tp_dec < entry_dec * 0.01:
-                tp_dec = round(tp_dec * divisor, digits)
+            # ProtoOAPosition.price = double (VWAP entry, already decimal — no division needed)
+            # ProtoOAPosition.stopLoss = double (absolute price, already decimal)
+            # ProtoOAPosition.takeProfit = double (absolute price, already decimal)
+            # tradeData.openPrice does NOT exist on this broker — use pos.price instead
+            entry_raw = pos.price if pos.HasField('price') else None
+            sl_raw    = pos.stopLoss if pos.HasField('stopLoss') else None
+            tp_raw    = pos.takeProfit if pos.HasField('takeProfit') else None
+            entry_dec = round(float(entry_raw), digits) if entry_raw else None
+            sl_dec    = round(float(sl_raw), digits) if sl_raw and float(sl_raw) > 0 else None
+            tp_dec    = round(float(tp_raw), digits) if tp_raw and float(tp_raw) > 0 else None
 
             # Enrich from position_state{} (live ExecutionEvent cache — most up-to-date)
             ps = state.get('position_state', {}).get(pos_id, {})
@@ -674,12 +668,6 @@ def get_executions():
             open_price_raw = getattr(pos.tradeData, 'openPrice', None)
             scaled_sl = round(raw_sl / divisor, digits) if raw_sl > 0 else None
             scaled_tp = round(raw_tp / divisor, digits) if raw_tp > 0 else None
-            # Broker quirk: under-divided SL/TP correction (generic, all symbols)
-            _entry_dec = round(open_price_raw / divisor, digits) if open_price_raw else None
-            if scaled_sl and _entry_dec and scaled_sl < _entry_dec * 0.01:
-                scaled_sl = round(scaled_sl * divisor, digits)
-            if scaled_tp and _entry_dec and scaled_tp < _entry_dec * 0.01:
-                scaled_tp = round(scaled_tp * divisor, digits)
             # Discard bogus SL/TP (cTrader returns 1 raw unit when not set = < 0.001 after scaling)
             if scaled_sl is not None and scaled_sl < 0.001:
                 scaled_sl = None
