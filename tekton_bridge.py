@@ -153,6 +153,22 @@ def decimal_to_raw(decimal_price, digits):
     return int(round(float(decimal_price) * (10 ** digits)))
 
 
+def _fix_sl_tp_scale(value, entry_price, digits):
+    """Broker quirk: some brokers return ProtoOAPosition.stopLoss/takeProfit as a
+    truncated integer (e.g. 184) rather than full raw points (e.g. 184000).
+    After raw_to_decimal this produces 0.184 instead of 184.0.
+    Detection: if the converted value is < 1% of entry_price, it was under-divided.
+    Fix: multiply back up by 10^digits. Applies to ALL symbols generically.
+    """
+    if value is None or entry_price is None or entry_price == 0:
+        return value
+    if value < entry_price * 0.01:
+        corrected = round(value * (10 ** digits), digits)
+        print(f"⚠️  SL/TP scale fix applied: {value} → {corrected} (entry={entry_price} digits={digits})")
+        return corrected
+    return value
+
+
 def _position_to_dict(pos, spec, digits):
     """Normalise a ProtoOAPosition protobuf object into a clean Python dict.
     Single source of truth for position normalisation — all callers use this.
@@ -172,8 +188,10 @@ def _position_to_dict(pos, spec, digits):
         'volume':       round(pos.tradeData.volume / 10_000_000, 4),
         'volume_raw':   pos.tradeData.volume,
         'entry_price':  raw_to_decimal(getattr(pos.tradeData, 'openPrice', None), digits),
-        'stop_loss':    raw_to_decimal(getattr(pos, 'stopLoss', None), digits),
-        'take_profit':  raw_to_decimal(getattr(pos, 'takeProfit', None), digits),
+        'stop_loss':    _fix_sl_tp_scale(raw_to_decimal(getattr(pos, 'stopLoss', None), digits),
+                            raw_to_decimal(getattr(pos.tradeData, 'openPrice', None), digits), digits),
+        'take_profit':  _fix_sl_tp_scale(raw_to_decimal(getattr(pos, 'takeProfit', None), digits),
+                            raw_to_decimal(getattr(pos.tradeData, 'openPrice', None), digits), digits),
         'comment':      getattr(pos.tradeData, 'comment', None),   # contains signal_uuid
         'open_ts':      getattr(pos.tradeData, 'openTimestamp', None),
         'digits':       digits,
