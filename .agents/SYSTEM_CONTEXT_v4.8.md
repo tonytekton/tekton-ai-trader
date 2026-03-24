@@ -280,7 +280,7 @@ state["position_state_ready"] = True  # False until startup ReconcileReq seed co
 | Phase 10 | Analytics page | ⏳ TODO |
 | Phase 11 | Bridge v4.8 event-driven refactor | 🔄 IN PROGRESS (paused for hotfix stability) |
 | Phase 12 | API Rate Monitor | ⏳ TODO |
-| Phase 13 | Signals FAILED bug — signal_type/direction column mismatch in executor | ⏳ TODO (1-line fix, fast) |
+| Phase 13 | Signals FAILED bug — signal_type/direction column mismatch in executor | ✅ COMPLETE (fix was already applied in prior session) |
 | Phase 14 | Dashboard fixes — balance/equity/openCount/margin from live bridge | ✅ COMPLETE 2026-03-24 |
 | Phase 15 | Multi-timeframe signals + metals/indices candle backfill | ⏳ TODO |
 | Phase 16 | Analytics page + AI recommendations (requires 100+ closed trades) | ⏳ TODO |
