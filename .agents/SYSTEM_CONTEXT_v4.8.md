@@ -1,6 +1,6 @@
 # System Context & Developer Dossier
 ## Tekton AI Trader v4.8 — Read this before making ANY changes.
-### Last updated: 2026-03-20
+### Last updated: 2026-03-24
 
 ---
 
@@ -280,6 +280,10 @@ state["position_state_ready"] = True  # False until startup ReconcileReq seed co
 | Phase 10 | Analytics page | ⏳ TODO |
 | Phase 11 | Bridge v4.8 event-driven refactor | 🔄 IN PROGRESS (paused for hotfix stability) |
 | Phase 12 | API Rate Monitor | ⏳ TODO |
+| Phase 13 | Signals FAILED bug — signal_type/direction column mismatch in executor | ⏳ TODO (1-line fix, fast) |
+| Phase 14 | Dashboard fixes — balance/equity/openCount/margin from live bridge | ✅ COMPLETE 2026-03-24 |
+| Phase 15 | Multi-timeframe signals + metals/indices candle backfill | ⏳ TODO |
+| Phase 16 | Analytics page + AI recommendations (requires 100+ closed trades) | ⏳ TODO |
 
 ### Phase 11 Sub-tasks
 - 11a ✅ raw_to_decimal, decimal_to_raw, _position_to_dict, position_state{} in state dict
@@ -287,9 +291,15 @@ state["position_state_ready"] = True  # False until startup ReconcileReq seed co
 - 11c ⏳ Refactor /positions/list, /proxy/executions, /proxy/signals, /trade/modify, /trade/close, /account/info to serve from position_state{}
 - 11d ⏳ DealListReq pagination, smoke tests, merge to main
 
+### Phase 13 Detail (Fast Fix)
+- `tekton_executor.py` ~line 251: SELECT query uses column `direction` but signals table stores `signal_type`
+- 196/200 signals marked FAILED due to this mismatch
+- Fix: change `direction` → `signal_type` in the SELECT query
+- No schema changes needed — 1-line fix
+
 ---
 
-## Hotfixes Applied to main (2026-03-19 to 2026-03-20)
+## Hotfixes Applied to main (2026-03-19 to 2026-03-24)
 
 | SHA | Date | Fix |
 |---|---|---|
@@ -297,6 +307,9 @@ state["position_state_ready"] = True  # False until startup ReconcileReq seed co
 | 353328f | 2026-03-20 | relativeStopLoss: must be int32 points — float still rejected. Formula: int(round(pips×10)) |
 | 353328f | 2026-03-20 | P&L fix: closePrice tries multiple field names + debug fallback |
 | 6dfc562 | 2026-03-20 | SL/TP in Execution Journal: enrich from position_state{} — ReconcileReq unreliable on this broker |
+| a48487e | 2026-03-24 | Bridge v5.0: pos.price/stopLoss/takeProfit are doubles — remove integer division |
+| 654bf04c | 2026-03-24 | Bridge: /account/status now returns balance + margin_used fields |
+| b3e3eec | 2026-03-24 | UI: Dashboard openCount + margin_used sourced from /positions/list (live). getAccountStatus function updated. |
 
 ---
 
@@ -311,3 +324,5 @@ state["position_state_ready"] = True  # False until startup ReconcileReq seed co
 | 2026-03-18 | max_lots column added to DB (was missing — caused undersizing). Session exposure cap clarified. | Tony + Lester |
 | 2026-03-19 | relativeStopLoss "invalid precision" root cause found and fixed. Pips sent as float 1dp. | Tony + Lester |
 | 2026-03-20 | relativeStopLoss must be int32 points (float still rejected). SL/TP display fixed using position_state{}. P&L closePrice fix. max_lots set to 6 for testing. TradingSettings UI default fixed. | Tony + Lester |
+| 2026-03-23 | Bridge deduplication (execution journal). SL/TP dual-fallback from position_state + ReconcileReq. Settings persist correctly via saveAllSettings. min_sl_pips=8 enforced. | Tony + Lester |
+| 2026-03-24 | Bridge v5.0: pos.price/stopLoss/takeProfit double fix. /account/status adds balance+margin_used. Dashboard Phase 14 complete: openCount+margin from live positions/list. GitHub integration established. | Tony + Lester |
