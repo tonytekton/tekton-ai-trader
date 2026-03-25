@@ -258,14 +258,15 @@ def get_active_symbols():
         cur  = conn.cursor()
         cur.execute("""
             SELECT a.symbol FROM
-              (SELECT symbol FROM market_data WHERE timeframe='15min'
+              (SELECT symbol FROM market_data WHERE timeframe=%s
+            GROUP BY symbol HAVING COUNT(*) > 20
                GROUP BY symbol HAVING COUNT(*) >= 40) a
             INNER JOIN
               (SELECT symbol FROM market_data WHERE timeframe='1H'
                GROUP BY symbol HAVING COUNT(*) >= 20) b
             ON a.symbol = b.symbol
             ORDER BY a.symbol;
-        """)
+        """, (LTF_TIMEFRAME,))
         syms = [r[0] for r in cur.fetchall()]
         cur.execute("SELECT banned_symbols FROM settings WHERE id = 1;")
         brow = cur.fetchone()
@@ -304,9 +305,9 @@ def insert_signal(symbol, direction, sl_pips, tp_pips, confidence, reason):
             INSERT INTO signals
               (symbol, strategy, signal_type, timeframe, confidence_score,
                sl_pips, tp_pips, status)
-            VALUES (%s,%s,%s,'15min',%s,%s,%s,'PENDING')
+            VALUES (%s,%s,%s,%s,%s,%s,%s,'PENDING')
             RETURNING signal_uuid;
-        """, (symbol, STRATEGY_NAME, direction,
+        """, (symbol, STRATEGY_NAME, direction, LTF_TIMEFRAME,
               int(confidence), float(round(sl_pips, 1)), float(round(tp_pips, 1))))
         uuid = cur.fetchone()[0]
         conn.commit(); cur.close(); conn.close()
@@ -450,3 +451,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
