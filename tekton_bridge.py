@@ -1019,7 +1019,7 @@ def get_signals():
         params += [limit, offset]
 
         cur.execute(f"""
-            SELECT signal_uuid, symbol, signal_type, timeframe, confidence_score, sl_pips, tp_pips, status, created_at, position_id, strategy, avg_fill_price
+            SELECT signal_uuid, symbol, signal_type, timeframe, confidence_score, sl_pips, tp_pips, status, created_at, position_id, strategy, avg_fill_price, error_reason
             FROM signals
             {where_clause}
             ORDER BY created_at DESC
@@ -1032,17 +1032,18 @@ def get_signals():
         signals_list = []
         for row in rows:
             signals_list.append({
-                "uuid":       row[0],
-                "symbol":     row[1],
-                "direction":  row[2],
-                "timeframe":  row[3],
-                "confidence": row[4],
-                "sl_pips":    float(row[5]) if row[5] else None,
-                "tp_pips":    float(row[6]) if row[6] else None,
-                "status":     row[7],
+                "uuid":        row[0],
+                "symbol":      row[1],
+                "direction":   row[2],
+                "timeframe":   row[3],
+                "confidence":  row[4],
+                "sl_pips":     float(row[5]) if row[5] else None,
+                "tp_pips":     float(row[6]) if row[6] else None,
+                "status":      row[7],
                 "created_at":  row[8].strftime("%Y-%m-%d %H:%M:%S") if row[8] else "N/A",
                 "position_id": row[9],
                 "strategy":    row[10],
+                "error_reason": row[12],
             })
 
         print(f"📡 API HIT: Signals requested. status={status_filter} symbol={symbol_filter} limit={limit} offset={offset}. Found {len(signals_list)} rows.")
