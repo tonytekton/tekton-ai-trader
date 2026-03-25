@@ -746,87 +746,37 @@ def get_calendar_events():
 @require_auth
 def get_executions():
     try:
-        # --- 1. Fetch Open Positions via ReconcileReq ---
+        # --- 1. Build Open Positions from position_state{} (Phase 11c) ---
+        # No live ReconcileReq — position_state{} is authoritative (seeded at startup
+        # from ReconcileReq and kept live by ExecutionEvent handler).
         open_trades = []
-        recon_msg = openapi.ProtoOAReconcileReq()
-        recon_msg.ctidTraderAccountId = ACCOUNT_ID
-
-        d_recon, client_msg_id_recon = defer.Deferred(), str(uuid.uuid4())
-        pending_requests[client_msg_id_recon] = d_recon
-
-        reactor.callFromThread(lambda: bridge.client.send(recon_msg, clientMsgId=client_msg_id_recon))
-        recon_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_recon, 10)
-
-        for pos in recon_result.position:
-            if hasattr(pos, 'positionStatus') and pos.positionStatus != 1:
-                continue
-
-            spec = state["symbol_id_to_spec_map"].get(pos.tradeData.symbolId, {})
-            name = spec.get("symbolName", f"UNKNOWN_{pos.tradeData.symbolId}")
-            digits = spec.get("digits", 5)
-            trade_comment = getattr(pos.tradeData, 'comment', None)
-            if trade_comment and not isinstance(trade_comment, str):
-                trade_comment = str(trade_comment)  # guard: protobuf may return non-string
-            open_ts = getattr(pos.tradeData, 'openTimestamp', None)
-
-            # ProtoOAPosition fields are decimal doubles (same as /positions/list):
-            #   pos.price      = VWAP entry price (decimal double, use HasField)
-            #   pos.stopLoss   = absolute SL price (decimal double, use HasField — NOT divided)
-            #   pos.takeProfit = absolute TP price (decimal double, use HasField — NOT divided)
-            # tradeData.openPrice does NOT exist on this broker.
-            entry_raw  = pos.price    if pos.HasField('price')      else None
-            sl_raw     = pos.stopLoss if pos.HasField('stopLoss')   else None
-            tp_raw     = pos.takeProfit if pos.HasField('takeProfit') else None
-            scaled_open = round(float(entry_raw), digits) if entry_raw else None
-            scaled_sl   = round(float(sl_raw),   digits) if sl_raw and float(sl_raw) > 0 else None
-            scaled_tp   = round(float(tp_raw),   digits) if tp_raw and float(tp_raw) > 0 else None
+        position_state = state.get('position_state', {})
+        for pid, ps in position_state.items():
+            symbol   = ps.get('symbol', 'UNKNOWN')
+            side     = ps.get('side', 'BUY')
+            volume   = ps.get('volume_raw')
+            entry    = ps.get('entry_price')
+            sl       = ps.get('stop_loss')
+            tp       = ps.get('take_profit')
+            open_ts  = ps.get('open_ts')
+            comment  = ps.get('comment')
+            digits   = ps.get('digits', 5)
             open_trades.append({
-                "id": str(pos.positionId),
-                "signal_uuid": trade_comment if trade_comment else None,
-                "symbol": name,
-                "side": "BUY" if pos.tradeData.tradeSide == TRADE_SIDE_BUY else "SELL",
-                "volume": round(pos.tradeData.volume / 10000000, 2),
-                "entry_price": scaled_open,
-                "stop_loss": scaled_sl,
-                "take_profit": scaled_tp,
-                "close_price": None,
-                "pnl": None,
-                "status": "open",
-                "created_at": datetime.fromtimestamp(open_ts / 1000).isoformat() if open_ts else None,
-                "closed_at": None,
-                "digits": digits
+                "id":           pid,
+                "signal_uuid":  comment if comment else None,
+                "symbol":       symbol,
+                "side":         side,
+                "volume":       round(float(volume) / 10_000_000, 2) if volume else None,
+                "entry_price":  entry,
+                "stop_loss":    sl,
+                "take_profit":  tp,
+                "close_price":  None,
+                "pnl":          None,
+                "status":       "open",
+                "created_at":   datetime.fromtimestamp(open_ts / 1000).isoformat() if open_ts else None,
+                "closed_at":    None,
+                "digits":       digits
             })
-
-        # --- 1b. Enrich open trade SL/TP from position_state{} then ReconcileReq ---
-        # position_state{} uses snake_case keys: stop_loss, take_profit, entry_price
-        # ReconcileReq (recon_result) is a reliable SL/TP source on this broker —
-        # confirmed via /positions/list. Use it as direct fallback after position_state{}.
-        recon_pos_map = {str(p.positionId): p for p in recon_result.position}
-        for t in open_trades:
-            ps = state.get('position_state', {}).get(t['id'], {})
-            # Layer 1: position_state{} (most up-to-date — from live ExecutionEvents)
-            if t['stop_loss'] is None and ps.get('stop_loss'):
-                t['stop_loss'] = ps['stop_loss']
-            if t['take_profit'] is None and ps.get('take_profit'):
-                t['take_profit'] = ps['take_profit']
-            if t['entry_price'] is None and ps.get('entry_price'):
-                t['entry_price'] = ps['entry_price']
-            # Layer 2: ReconcileReq raw values (reliable on this broker after bridge restart
-            # when position_state{} has not yet been seeded by ExecutionEvents)
-            rp = recon_pos_map.get(t['id'])
-            if rp:
-                spec = state["symbol_id_to_spec_map"].get(rp.tradeData.symbolId, {})
-                digits = spec.get("digits", 5)
-                divisor = 10 ** digits
-                if t['stop_loss'] is None:
-                    # stopLoss is decimal double on this broker — no division
-                    rp_sl = rp.stopLoss if rp.HasField('stopLoss') else None
-                    if rp_sl and float(rp_sl) > 0:
-                        t['stop_loss'] = round(float(rp_sl), t.get('digits', digits))
-                if t['take_profit'] is None:
-                    rp_tp = rp.takeProfit if rp.HasField('takeProfit') else None
-                    if rp_tp and float(rp_tp) > 0:
-                        t['take_profit'] = round(float(rp_tp), t.get('digits', digits))
 
         # --- 2. Fetch Closed Positions (Last 30 Days) ---
         closed_trades = []
@@ -852,53 +802,7 @@ def get_executions():
                 position_deals[pos_id] = []
             position_deals[pos_id].append(deal)
 
-        # --- Enrich open trade entry prices via cached OrderListReq ---
-        # OrderListReq is expensive (rate-limited). We only fire it for positions
-        # not yet in state['entry_price_cache'] (pre-bridge positions from ReconcileReq).
-        # Once fetched, prices are stored in the cache — never re-fetched.
-        missing_entry = [t for t in open_trades if t['entry_price'] is None]
-        if missing_entry:
-            # Check cache first — fill what we can without an API call
-            for t in missing_entry:
-                cached = state.get('entry_price_cache', {}).get(t['id'])
-                if cached:
-                    t['entry_price'] = cached
-
-            # Re-check who still needs fetching after cache hit
-            still_missing = [t for t in open_trades if t['entry_price'] is None]
-            if still_missing:
-                try:
-                    order_list_req = openapi.ProtoOAOrderListReq()
-                    order_list_req.ctidTraderAccountId = ACCOUNT_ID
-                    order_list_req.fromTimestamp = from_ts
-                    order_list_req.toTimestamp = to_ts
-
-                    d_orders, client_msg_id_orders = defer.Deferred(), str(uuid.uuid4())
-                    pending_requests[client_msg_id_orders] = d_orders
-                    reactor.callFromThread(lambda: bridge.client.send(order_list_req, clientMsgId=client_msg_id_orders))
-                    order_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_orders, 30)
-
-                    from ctrader_open_api.messages.OpenApiModelMessages_pb2 import ProtoOAOrderStatus
-                    if 'entry_price_cache' not in state:
-                        state['entry_price_cache'] = {}
-                    for order in order_result.order:
-                        if (order.orderStatus == ProtoOAOrderStatus.ORDER_STATUS_FILLED
-                                and not order.closingOrder
-                                and order.positionId
-                                and order.executionPrice):
-                            pos_id = str(order.positionId)
-                            spec = state['symbol_id_to_spec_map'].get(order.tradeData.symbolId, {})
-                            digits = spec.get('digits', 5)
-                            price = round(order.executionPrice, digits)
-                            state['entry_price_cache'][pos_id] = price  # cache it permanently
-
-                    for t in still_missing:
-                        cached = state['entry_price_cache'].get(t['id'])
-                        if cached:
-                            t['entry_price'] = cached
-
-                except Exception as e:
-                    print(f'WARNING: OrderListReq for entry prices failed (non-fatal): {e}')
+        # OrderListReq removed — entry_price now comes from position_state{} directly.
 
         for pos_id, deals in position_deals.items():
             closing_deal = next((d for d in deals if hasattr(d, 'closePositionDetail')), None)
