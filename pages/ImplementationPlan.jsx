@@ -172,7 +172,7 @@ const PHASES = [
       { id: 'th_8', title: 'HF-08: Fix relativeStopLoss int32 rejection (float not accepted)', detail: 'After HF-07, bridge still sent float. cTrader int32 rejects floats. Fix: int(round(pips × 10)) in bridge.', file: 'tekton_bridge.py — SHA 353328f' },
       { id: 'th_9', title: 'HF-09: Fix P&L showing €0.00 on closed trades', detail: 'closePositionDetail.closePrice field name fallback needed. Added fallback to try price and closedBalance.', file: 'tekton_bridge.py — SHA 353328f' },
       { id: 'th_10', title: 'HF-10: Fix SL/TP showing None on all open positions in UI', detail: 'ReconcileReq does not return SL/TP on this broker. Fix: enrich from position_state{} after ReconcileReq loop in get_executions().', file: 'tekton_bridge.py — SHA 6dfc562' },
-      { id: 'th_11', title: 'HF-11: Fix TradingSettings max_lots default (5 → 5000)', detail: 'UI default was 5.0 — would reset DB to 5 if page loaded during bridge downtime. Fixed default and fallback to 5000.', file: 'pages/TradingSettings.jsx' },
+      { id: 'th_11', title: 'HF-11: Fix TradingSettings max_lots default (5 → 50)', detail: 'UI default was 5.0 — would reset DB to 5 if page loaded during bridge downtime. Fixed default and fallback to 50 (safe cap, not 5000).', file: 'pages/TradingSettings.jsx' },
       { id: 'th_12', title: 'HF-12: Fix Execution Journal duplicate rows', detail: 'open_trades (ReconcileReq) and closed_trades (DealListReq) were merged with no deduplication. cTrader DealListReq returns opening deals for currently-open positions. Fix: strip open position IDs from closed_trades before merge, deduplicate within closed_trades by position ID.', file: 'tekton_bridge.py — SHA 157cd42' },,
 {
     id: 'p13', title: 'Phase 13 — Signals Log Fix (FAILED status bug)', color: 'red', status: 'complete',
@@ -371,7 +371,7 @@ export default function ImplementationPlan() {
           </div>
         );
       })}
-      <div className="text-center text-xs text-slate-700 mt-8 pb-4 font-mono">Implementation Plan v4.8.0 — Updated 23 Mar 2026 · Click status icons to update · Press Save Progress to persist</div>
+      <div className="text-center text-xs text-slate-700 mt-8 pb-4 font-mono">Implementation Plan v4.8.0 — Updated 25 Mar 2026 · Click status icons to update · Press Save Progress to persist</div>
     </div>
   );
 }
