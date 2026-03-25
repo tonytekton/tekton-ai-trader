@@ -39,11 +39,11 @@ export default function Executions() {
     if (ex.signal_uuid) {
       return <span className="font-mono text-xs text-slate-500">{ex.signal_uuid.slice(0, 16)}…</span>;
     }
-    // No UUID — trade was opened outside the system, not "MANUAL" by us
+    // No signal UUID — trade was opened outside the Tekton system (e.g. direct cTrader order)
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-slate-600">
         <Link2Off className="w-3 h-3" />
-        <span className="font-mono">No UUID</span>
+        <span className="font-mono text-slate-500 italic">Not a Tekton trade</span>
       </span>
     );
   };
@@ -70,7 +70,7 @@ export default function Executions() {
       <div className="flex items-center gap-2 mb-4 text-xs text-slate-600">
         <Link2Off className="w-3 h-3" />
         <span>
-          "No UUID" = position opened outside the Tekton system (e.g. direct cTrader order).
+          "Not a Tekton trade" = position opened outside the system (e.g. direct cTrader order).
           Tekton-generated trades always have a signal UUID.
         </span>
       </div>
@@ -143,3 +143,4 @@ export default function Executions() {
     </div>
   );
 }
+
