@@ -18,11 +18,23 @@ Deno.serve(async (req) => {
       const createdAt = new Date(s.created_at).getTime();
       const isOld = (now - createdAt) > maxAgeMs;
       const status = isOld && s.status === 'PENDING' ? 'EXPIRED' : (s.status || 'PENDING');
-      return { signal_uuid: s.uuid, symbol: s.symbol, direction: s.direction, timeframe: s.timeframe, confidence: s.confidence, status, sl_pips: s.sl_pips ?? null, tp_pips: s.tp_pips ?? null, created_at: s.created_at };
+      return {
+        signal_uuid:  s.uuid,
+        symbol:       s.symbol,
+        direction:    s.direction,   // signal_type from DB, aliased to direction in bridge
+        timeframe:    s.timeframe,
+        confidence:   s.confidence,
+        status,
+        sl_pips:      s.sl_pips ?? null,
+        tp_pips:      s.tp_pips ?? null,
+        error_reason: s.error_reason ?? null,
+        strategy:     s.strategy ?? null,
+        created_at:   s.created_at,
+      };
     });
     if (filterStatus) signals = signals.filter(s => s.status === filterStatus);
     if (filterSymbol) signals = signals.filter(s => s.symbol === filterSymbol);
-    signals = signals.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 200);
+    signals = signals.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 200);
     return Response.json(signals);
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
