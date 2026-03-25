@@ -57,7 +57,7 @@ BRIDGE_KEY  = os.getenv("BRIDGE_KEY", "")
 SCAN_INTERVAL_SEC   = 300
 SIGNAL_COOLDOWN_HR  = 6
 LTF_TIMEFRAME       = "15min"
-HTF_TIMEFRAME       = "1H"
+HTF_TIMEFRAME       = "60min"
 LTF_CANDLES         = 80
 HTF_CANDLES         = 50
 ATR_PERIOD          = 14
@@ -262,11 +262,11 @@ def get_active_symbols():
             GROUP BY symbol HAVING COUNT(*) > 20
                GROUP BY symbol HAVING COUNT(*) >= 40) a
             INNER JOIN
-              (SELECT symbol FROM market_data WHERE timeframe='1H'
+              (SELECT symbol FROM market_data WHERE timeframe=%s
                GROUP BY symbol HAVING COUNT(*) >= 20) b
             ON a.symbol = b.symbol
             ORDER BY a.symbol;
-        """, (LTF_TIMEFRAME,))
+        """, (LTF_TIMEFRAME, HTF_TIMEFRAME))
         syms = [r[0] for r in cur.fetchall()]
         cur.execute("SELECT banned_symbols FROM settings WHERE id = 1;")
         brow = cur.fetchone()
