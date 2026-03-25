@@ -390,40 +390,13 @@ def list_positions():
         # position_state{} is seeded at startup via live ReconcileReq and kept live by
         # push ExecutionEvents. Falls back to a fresh ReconcileReq if seed not yet ready.
         if not state.get("position_state_ready"):
-            # Seed not done yet (bridge just restarted) — do a one-off ReconcileReq and return.
-            # This path should only fire in the ~10s window after bridge restart.
-            print("⚠️  /positions/list: position_state not ready — falling back to ReconcileReq")
-            start_fb = time.time()
-            req_fb = openapi.ProtoOAReconcileReq()
-            req_fb.ctidTraderAccountId = ACCOUNT_ID
-            d_fb, mid_fb = defer.Deferred(), str(uuid.uuid4())
-            pending_requests[mid_fb] = d_fb
-            reactor.callFromThread(lambda: bridge.client.send(req_fb, clientMsgId=mid_fb))
-            recon_fb = threads.blockingCallFromThread(reactor, wait_for_deferred, d_fb, 10)
-            log_ctrader_call("/positions/list_fallback", int((time.time() - start_fb) * 1000), True)
-            fallback_positions = []
-            for pos in recon_fb.position:
-                if hasattr(pos, "positionStatus") and pos.positionStatus != 1:
-                    continue
-                pid    = str(pos.positionId)
-                spec   = state["symbol_id_to_spec_map"].get(pos.tradeData.symbolId, {})
-                digits = spec.get("digits", 5)
-                d_pos  = _position_to_dict(pos, spec, digits)
-                fallback_positions.append({
-                    "positionId":             pid,
-                    "symbol":                 d_pos["symbol"],
-                    "tradeSide":              d_pos["side"],
-                    "unrealizedNetPnL_cents": 0,
-                    "marginUsed_cents":       d_pos["margin_used_cents"],
-                    "volume":                 d_pos["volume_raw"],
-                    "entryPrice":             d_pos["entry_price"],
-                    "stopLoss":               d_pos["stop_loss"],
-                    "takeProfit":             d_pos["take_profit"],
-                    "comment":                d_pos["comment"],
-                    "openTimestamp":          d_pos["open_ts"],
-                    "digits":                 digits,
-                })
-            return jsonify({"success": True, "positions": fallback_positions, "count": len(fallback_positions), "source": "reconcile_fallback"})
+            # Seed not done yet — run it inline now (blocks until complete or timeout).
+            # Only fires in the brief window after bridge restart before t+20s seed completes.
+            print("⚠️  /positions/list: position_state not ready — running inline seed")
+            seed_position_state_from_live_reconcile()
+            if not state.get("position_state_ready"):
+                # Auth still not ready (very early startup) — honest error, don't lie with stale data
+                return jsonify({"success": False, "error": "Bridge still initialising — retry in a few seconds"}), 503
 
         # Normal path: serve from cached position_state{} + live PnL
         start_time_pnl = time.time()
@@ -1892,7 +1865,7 @@ if __name__ == "__main__":
     reactor.callLater(5, lambda: threading.Thread(target=seed_position_state_from_db, daemon=True).start())
     # Phase 11c: seed position_state{} from live ReconcileReq after auth completes (~8s).
     # Runs after DB seed so DB values are the base, live data overwrites with latest.
-    reactor.callLater(8, lambda: threading.Thread(target=seed_position_state_from_live_reconcile, daemon=True).start())
+    reactor.callLater(20, lambda: threading.Thread(target=seed_position_state_from_live_reconcile, daemon=True).start())
     reactor.run()
 
 
