@@ -710,20 +710,17 @@ def get_executions():
                 trade_comment = str(trade_comment)  # guard: protobuf may return non-string
             open_ts = getattr(pos.tradeData, 'openTimestamp', None)
 
-            raw_sl = getattr(pos, 'stopLoss', 0) or 0
-            raw_tp = getattr(pos, 'takeProfit', 0) or 0
-            divisor = 10 ** digits
-            open_price_raw = getattr(pos.tradeData, 'openPrice', None)
-            scaled_sl = round(raw_sl / divisor, digits) if raw_sl > 0 else None
-            scaled_tp = round(raw_tp / divisor, digits) if raw_tp > 0 else None
-            # Discard bogus SL/TP (cTrader returns 1 raw unit when not set = < 0.001 after scaling)
-            if scaled_sl is not None and scaled_sl < 0.001:
-                scaled_sl = None
-            if scaled_tp is not None and scaled_tp < 0.001:
-                scaled_tp = None
-            # openPrice from ReconcileReq (may be None — cTrader limitation for some brokers)
-            open_price_raw2 = getattr(pos.tradeData, 'openPrice', None)
-            scaled_open = round(open_price_raw2 / divisor, digits) if open_price_raw2 and open_price_raw2 / divisor >= 0.001 else None
+            # ProtoOAPosition fields are decimal doubles (same as /positions/list):
+            #   pos.price      = VWAP entry price (decimal double, use HasField)
+            #   pos.stopLoss   = absolute SL price (decimal double, use HasField — NOT divided)
+            #   pos.takeProfit = absolute TP price (decimal double, use HasField — NOT divided)
+            # tradeData.openPrice does NOT exist on this broker.
+            entry_raw  = pos.price    if pos.HasField('price')      else None
+            sl_raw     = pos.stopLoss if pos.HasField('stopLoss')   else None
+            tp_raw     = pos.takeProfit if pos.HasField('takeProfit') else None
+            scaled_open = round(float(entry_raw), digits) if entry_raw else None
+            scaled_sl   = round(float(sl_raw),   digits) if sl_raw and float(sl_raw) > 0 else None
+            scaled_tp   = round(float(tp_raw),   digits) if tp_raw and float(tp_raw) > 0 else None
             open_trades.append({
                 "id": str(pos.positionId),
                 "signal_uuid": trade_comment if trade_comment else None,
@@ -763,17 +760,14 @@ def get_executions():
                 digits = spec.get("digits", 5)
                 divisor = 10 ** digits
                 if t['stop_loss'] is None:
-                    raw_sl = getattr(rp, 'stopLoss', 0) or 0
-                    if raw_sl > 0:
-                        scaled = round(raw_sl / divisor, digits)
-                        if scaled >= 0.001:
-                            t['stop_loss'] = scaled
+                    # stopLoss is decimal double on this broker — no division
+                    rp_sl = rp.stopLoss if rp.HasField('stopLoss') else None
+                    if rp_sl and float(rp_sl) > 0:
+                        t['stop_loss'] = round(float(rp_sl), t.get('digits', digits))
                 if t['take_profit'] is None:
-                    raw_tp = getattr(rp, 'takeProfit', 0) or 0
-                    if raw_tp > 0:
-                        scaled = round(raw_tp / divisor, digits)
-                        if scaled >= 0.001:
-                            t['take_profit'] = scaled
+                    rp_tp = rp.takeProfit if rp.HasField('takeProfit') else None
+                    if rp_tp and float(rp_tp) > 0:
+                        t['take_profit'] = round(float(rp_tp), t.get('digits', digits))
 
         # --- 2. Fetch Closed Positions (Last 30 Days) ---
         closed_trades = []
@@ -1780,4 +1774,5 @@ if __name__ == "__main__":
     threading.Thread(target=sync_latest_candles, daemon=True).start()
     reactor.callLater(5, lambda: threading.Thread(target=seed_position_state_from_db, daemon=True).start())
     reactor.run()
+
 
