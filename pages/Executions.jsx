@@ -109,10 +109,18 @@ export default function Executions() {
                       <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{fmtPrice(ex.entry_price, ex.digits)}</td>
                       <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{fmtPrice(ex.close_price, ex.digits)}</td>
                       <td className="px-4 py-3.5 text-red-400 font-mono text-xs">
-                        {ex.stop_loss ? (ex.stop_loss / Math.pow(10, ex.digits || 5)).toFixed(ex.digits || 5) : '—'}
+                        {ex.stop_loss
+                          ? Number(ex.stop_loss).toFixed(ex.digits || 5)
+                          : ex.sl_pips
+                            ? <span title="SL price unavailable — showing pips" className="text-slate-500">{ex.sl_pips}p</span>
+                            : '—'}
                       </td>
                       <td className="px-4 py-3.5 text-emerald-400 font-mono text-xs">
-                        {ex.take_profit ? (ex.take_profit / Math.pow(10, ex.digits || 5)).toFixed(ex.digits || 5) : '—'}
+                        {ex.take_profit
+                          ? Number(ex.take_profit).toFixed(ex.digits || 5)
+                          : ex.tp_pips
+                            ? <span title="TP price unavailable — showing pips" className="text-slate-500">{ex.tp_pips}p</span>
+                            : '—'}
                       </td>
                       <td className={`px-4 py-3.5 font-semibold font-mono text-xs ${pnlColor(ex.pnl)}`}>{fmt(ex.pnl)}</td>
                       <td className="px-4 py-3.5">
