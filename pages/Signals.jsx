@@ -48,6 +48,7 @@ export default function Signals() {
   const [selected, setSelected]   = useState(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [symbolFilter, setSymbolFilter] = useState('');
+  const [tfFilter, setTfFilter]         = useState('');
 
   useEffect(() => {
     base44.functions.invoke('getSignalStats')
@@ -60,7 +61,7 @@ export default function Signals() {
     try {
       const res = await base44.functions.invoke('getSignals', { status, symbol });
       const payload = res.data;
-      const arr = Array.isArray(payload) ? payload
+      let arr = Array.isArray(payload) ? payload
         : Array.isArray(payload?.signals) ? payload.signals
         : Array.isArray(payload?.data) ? payload.data
         : [];
@@ -157,6 +158,14 @@ export default function Signals() {
           <option value="">All Symbols</option>
           {(statsData?.symbols || []).map(sym => (<option key={sym} value={sym}>{sym}</option>))}
         </select>
+        <select value={tfFilter} onChange={e => setTfFilter(e.target.value)} className={selectClass}>
+          <option value="">All Timeframes</option>
+          <option value="5min">5 min</option>
+          <option value="15min">15 min</option>
+          <option value="60min">1 Hour</option>
+          <option value="4H">4 Hour</option>
+          <option value="Daily">Daily</option>
+        </select>
       </div>
 
       {/* Table */}
@@ -180,7 +189,9 @@ export default function Signals() {
               ) : signals.length === 0 ? (
                 <tr><td colSpan={9} className="px-4 py-12 text-center text-slate-600">No signals found</td></tr>
               ) : (
-                signals.map((sig) => (
+                signals
+                .filter(sig => !tfFilter || sig.timeframe === tfFilter)
+                .map((sig) => (
                   <tr key={sig.signal_uuid || sig.uuid || sig.id} onClick={() => setSelected(sig)} className="border-b border-slate-800/50 hover:bg-slate-800/40 cursor-pointer transition-colors group">
                     <td className="px-4 py-3.5 text-slate-500 text-xs whitespace-nowrap">{sig.created_at ? new Date(sig.created_at).toLocaleString() : '—'}</td>
                     <td className="px-4 py-3.5 font-semibold text-slate-200">{sig.symbol || '—'}</td>
