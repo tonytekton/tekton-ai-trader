@@ -163,6 +163,51 @@ def get_db_conn():
         sslmode='disable',
     )
 
+
+def seed_position_state_from_db():
+    """
+    On bridge startup, pre-populate position_state{} from the signals DB so that
+    SL/TP/entry data is available immediately — without waiting for new ExecutionEvents.
+    Seeds any signal with status=COMPLETED and a non-null position_id.
+    """
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT position_id, symbol, signal_type, sl_pips, tp_pips, avg_fill_price
+            FROM signals
+            WHERE status = 'COMPLETED'
+              AND position_id IS NOT NULL
+              AND position_id != ''
+        """)
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        if 'position_state' not in state:
+            state['position_state'] = {}
+
+        seeded = 0
+        for pos_id, symbol, side, sl_pips, tp_pips, fill_price in rows:
+            pid = str(pos_id)
+            if pid not in state['position_state']:
+                state['position_state'][pid] = {}
+            ps = state['position_state'][pid]
+            # Only seed fields that are still missing
+            if ps.get('sl_pips') is None and sl_pips:
+                ps['sl_pips'] = float(sl_pips)
+            if ps.get('tp_pips') is None and tp_pips:
+                ps['tp_pips'] = float(tp_pips)
+            if ps.get('entry_price') is None and fill_price:
+                ps['entry_price'] = float(fill_price)
+            ps.setdefault('symbol', symbol)
+            ps.setdefault('side', side)
+            seeded += 1
+
+        print(f"🌱 position_state seeded from DB: {seeded} positions hydrated")
+    except Exception as e:
+        print(f"⚠️  seed_position_state_from_db error: {e}")
+
 # ===== FLASK APP =====
 app = Flask(__name__)
 CORS(app)
@@ -1733,5 +1778,6 @@ if __name__ == "__main__":
     task.LoopingCall(sync_to_cloud_sql).start(60.0)
     reactor.callLater(10, internal_sync_account)
     threading.Thread(target=sync_latest_candles, daemon=True).start()
+    reactor.callLater(5, lambda: threading.Thread(target=seed_position_state_from_db, daemon=True).start())
     reactor.run()
 
