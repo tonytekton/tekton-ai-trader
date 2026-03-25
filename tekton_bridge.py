@@ -72,6 +72,8 @@ state = {
     "equity_cents": 0,
     "margin_used_cents": 0,
     "starting_equity_cents": 0,
+    "position_state": {},           # Phase 11c: keyed by str(positionId)
+    "position_state_ready": False,  # True after live ReconcileReq seed completes
 }
 
 # ===== API CALL TRACKING =====
@@ -208,6 +210,128 @@ def seed_position_state_from_db():
     except Exception as e:
         print(f"⚠️  seed_position_state_from_db error: {e}")
 
+
+# ---------------------------------------------------------------------------
+# Phase 11c: position_state{} helpers
+# ---------------------------------------------------------------------------
+
+def _position_to_dict(pos, spec, digits):
+    """Normalise a ProtoOAPosition protobuf into a clean position_state dict.
+    Single source of truth — all callers (seed, ExecutionEvent handler) use this.
+    ProtoOAPosition.price = decimal double (entry VWAP — use as-is).
+    ProtoOAPosition.stopLoss/takeProfit = decimal double (use HasField, no division).
+    ProtoOAPosition.tradeData.volume = raw centilots integer.
+    """
+    pip_pos  = spec.get("pipPosition", digits - 1)
+    side_val = getattr(pos.tradeData, "tradeSide", None)
+    side     = "BUY" if side_val == 1 else "SELL"
+
+    entry    = round(float(pos.price), digits)      if pos.HasField("price")      else None
+    sl       = round(float(pos.stopLoss), digits)   if pos.HasField("stopLoss")   and float(pos.stopLoss)   > 0 else None
+    tp       = round(float(pos.takeProfit), digits) if pos.HasField("takeProfit") and float(pos.takeProfit) > 0 else None
+
+    return {
+        "id":               str(pos.positionId),
+        "symbol":           spec.get("symbolName", f"UNKNOWN_{pos.tradeData.symbolId}"),
+        "symbol_id":        pos.tradeData.symbolId,
+        "side":             side,
+        "volume_raw":       pos.tradeData.volume,
+        "entry_price":      entry,
+        "stop_loss":        sl,
+        "take_profit":      tp,
+        "comment":          getattr(pos.tradeData, "comment", None),
+        "open_ts":          getattr(pos.tradeData, "openTimestamp", None),
+        "digits":           digits,
+        "pip_position":     pip_pos,
+        "margin_used_cents": getattr(pos, "usedMargin", 0),
+    }
+
+
+def seed_position_state_from_live_reconcile():
+    """
+    On bridge startup, seed position_state{} from a live ReconcileReq.
+    Runs after authentication — gives us accurate volume_raw, digits, pip_position,
+    entry_price, sl, tp for all currently open positions.
+    Sets state['position_state_ready'] = True when complete so /positions/list
+    can serve from cache rather than falling back to a fresh ReconcileReq.
+    """
+    try:
+        req = openapi.ProtoOAReconcileReq()
+        req.ctidTraderAccountId = ACCOUNT_ID
+        d, mid = defer.Deferred(), str(uuid.uuid4())
+        pending_requests[mid] = d
+        reactor.callFromThread(lambda: bridge.client.send(req, clientMsgId=mid))
+        result = threads.blockingCallFromThread(reactor, wait_for_deferred, d, 15)
+
+        if "position_state" not in state:
+            state["position_state"] = {}
+
+        seeded = 0
+        for pos in result.position:
+            if hasattr(pos, "positionStatus") and pos.positionStatus != 1:
+                continue
+            pos_id = str(pos.positionId)
+            spec   = state["symbol_id_to_spec_map"].get(pos.tradeData.symbolId, {})
+            digits = spec.get("digits", 5)
+            d_pos  = _position_to_dict(pos, spec, digits)
+            # Merge — don't overwrite fields already enriched by ExecutionEvents
+            ps = state["position_state"].setdefault(pos_id, {})
+            for k, v in d_pos.items():
+                if v is not None and ps.get(k) is None:
+                    ps[k] = v
+            seeded += 1
+
+        state["position_state_ready"] = True
+        print(f"🌱 position_state seeded from live ReconcileReq: {seeded} positions hydrated")
+
+    except Exception as e:
+        # Non-fatal — /positions/list will fall back to direct ReconcileReq
+        state["position_state_ready"] = False
+        print(f"⚠️  seed_position_state_from_live_reconcile error: {e}")
+
+
+def _handle_unsolicited_execution_event(payload):
+    """
+    Handle push ExecutionEvents from cTrader (no clientMsgId — not a response to a request).
+    Updates position_state{} live: new opens add an entry, closes remove it.
+    Called from on_message whenever an ExecutionEvent arrives without a pending clientMsgId.
+    """
+    try:
+        exec_type = getattr(payload, "executionType", None)
+        # executionType: 2=ORDER_FILLED, 3=ORDER_CANCELLED, 4=ORDER_EXPIRED,
+        #                5=ORDER_AMENDED, 6=ORDER_REJECTED
+        # For position_state purposes we care about position open/close/amend.
+        pos = getattr(payload, "position", None)
+        if pos is None:
+            return
+
+        pos_id = str(pos.positionId)
+        spec   = state["symbol_id_to_spec_map"].get(pos.tradeData.symbolId, {})
+        digits = spec.get("digits", 5)
+
+        # positionStatus: 1=OPEN, 2=CLOSED
+        pos_status = getattr(pos, "positionStatus", None)
+
+        if pos_status == 2:
+            # Position closed — remove from state
+            if pos_id in state.get("position_state", {}):
+                del state["position_state"][pos_id]
+                print(f"📤 position_state: removed closed position {pos_id}")
+        else:
+            # New or amended position — upsert
+            if "position_state" not in state:
+                state["position_state"] = {}
+            d_pos = _position_to_dict(pos, spec, digits)
+            ps    = state["position_state"].setdefault(pos_id, {})
+            # Always overwrite with latest from cTrader push (most authoritative)
+            for k, v in d_pos.items():
+                if v is not None:
+                    ps[k] = v
+            print(f"📥 position_state: upserted {d_pos.get('symbol','?')} pos {pos_id} ({d_pos.get('side','?')})")
+
+    except Exception as e:
+        print(f"⚠️  _handle_unsolicited_execution_event error: {e}")
+
 # ===== FLASK APP =====
 app = Flask(__name__)
 CORS(app)
@@ -297,84 +421,83 @@ def list_positions():
     if not state["authenticated"]:
         return jsonify({"success": False, "error": "Not authenticated"}), 503
     try:
-        start_time = time.time()
-        req_positions = openapi.ProtoOAReconcileReq()
-        req_positions.ctidTraderAccountId = ACCOUNT_ID
+        # Phase 11c: serve from position_state{} — no ReconcileReq needed.
+        # position_state{} is seeded at startup via live ReconcileReq and kept live by
+        # push ExecutionEvents. Falls back to a fresh ReconcileReq if seed not yet ready.
+        if not state.get("position_state_ready"):
+            # Seed not done yet (bridge just restarted) — do a one-off ReconcileReq and return.
+            # This path should only fire in the ~10s window after bridge restart.
+            print("⚠️  /positions/list: position_state not ready — falling back to ReconcileReq")
+            start_fb = time.time()
+            req_fb = openapi.ProtoOAReconcileReq()
+            req_fb.ctidTraderAccountId = ACCOUNT_ID
+            d_fb, mid_fb = defer.Deferred(), str(uuid.uuid4())
+            pending_requests[mid_fb] = d_fb
+            reactor.callFromThread(lambda: bridge.client.send(req_fb, clientMsgId=mid_fb))
+            recon_fb = threads.blockingCallFromThread(reactor, wait_for_deferred, d_fb, 10)
+            log_ctrader_call("/positions/list_fallback", int((time.time() - start_fb) * 1000), True)
+            fallback_positions = []
+            for pos in recon_fb.position:
+                if hasattr(pos, "positionStatus") and pos.positionStatus != 1:
+                    continue
+                pid    = str(pos.positionId)
+                spec   = state["symbol_id_to_spec_map"].get(pos.tradeData.symbolId, {})
+                digits = spec.get("digits", 5)
+                d_pos  = _position_to_dict(pos, spec, digits)
+                fallback_positions.append({
+                    "positionId":             pid,
+                    "symbol":                 d_pos["symbol"],
+                    "tradeSide":              d_pos["side"],
+                    "unrealizedNetPnL_cents": 0,
+                    "marginUsed_cents":       d_pos["margin_used_cents"],
+                    "volume":                 d_pos["volume_raw"],
+                    "entryPrice":             d_pos["entry_price"],
+                    "stopLoss":               d_pos["stop_loss"],
+                    "takeProfit":             d_pos["take_profit"],
+                    "comment":                d_pos["comment"],
+                    "openTimestamp":          d_pos["open_ts"],
+                    "digits":                 digits,
+                })
+            return jsonify({"success": True, "positions": fallback_positions, "count": len(fallback_positions), "source": "reconcile_fallback"})
 
-        d_positions, client_msg_id = defer.Deferred(), str(uuid.uuid4())
-        pending_requests[client_msg_id] = d_positions
-
-        reactor.callFromThread(lambda: bridge.client.send(req_positions, clientMsgId=client_msg_id))
-        reconcile_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_positions, 10)
-        log_ctrader_call("/positions/list", int((time.time() - start_time) * 1000), True)
-
+        # Normal path: serve from cached position_state{} + live PnL
         start_time_pnl = time.time()
         pnl_msg = openapi.ProtoOAGetPositionUnrealizedPnLReq()
         pnl_msg.ctidTraderAccountId = ACCOUNT_ID
-
-        d_pnl, client_msg_id_pnl = defer.Deferred(), str(uuid.uuid4())
-        pending_requests[client_msg_id_pnl] = d_pnl
-
-        reactor.callFromThread(lambda: bridge.client.send(pnl_msg, clientMsgId=client_msg_id_pnl))
+        d_pnl, mid_pnl = defer.Deferred(), str(uuid.uuid4())
+        pending_requests[mid_pnl] = d_pnl
+        reactor.callFromThread(lambda: bridge.client.send(pnl_msg, clientMsgId=mid_pnl))
         pnl_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_pnl, 10)
         log_ctrader_call("/positions/list_pnl", int((time.time() - start_time_pnl) * 1000), True)
 
         pnl_map = {}
         if hasattr(pnl_result, "positionUnrealizedPnL"):
             for pnl_entry in pnl_result.positionUnrealizedPnL:
-                pos_id = str(pnl_entry.positionId)
-                pnl_map[pos_id] = {
+                pid = str(pnl_entry.positionId)
+                pnl_map[pid] = {
                     "grossPnL_cents": safe_get_field(pnl_entry, "grossUnrealizedPnL", 0),
-                    "netPnL_cents": safe_get_field(pnl_entry, "netUnrealizedPnL", 0),
+                    "netPnL_cents":   safe_get_field(pnl_entry, "netUnrealizedPnL", 0),
                 }
 
         positions = []
-        for pos in reconcile_result.position:
-            if hasattr(pos, 'positionStatus') and pos.positionStatus != 1:
-                continue
-            pos_id = str(pos.positionId)
-            spec   = state["symbol_id_to_spec_map"].get(pos.tradeData.symbolId, {})
-            name   = spec.get("symbolName", f"UNKNOWN_{pos.tradeData.symbolId}")
-            digits = spec.get("digits", 5)
-            divisor = 10 ** digits
+        for pos_id, ps in state.get("position_state", {}).items():
             pnl_data = pnl_map.get(pos_id, {"grossPnL_cents": 0, "netPnL_cents": 0})
-
-            # ProtoOAPosition.price = double (VWAP entry, already decimal — no division needed)
-            # ProtoOAPosition.stopLoss = double (absolute price, already decimal)
-            # ProtoOAPosition.takeProfit = double (absolute price, already decimal)
-            # tradeData.openPrice does NOT exist on this broker — use pos.price instead
-            entry_raw = pos.price if pos.HasField('price') else None
-            sl_raw    = pos.stopLoss if pos.HasField('stopLoss') else None
-            tp_raw    = pos.takeProfit if pos.HasField('takeProfit') else None
-            entry_dec = round(float(entry_raw), digits) if entry_raw else None
-            sl_dec    = round(float(sl_raw), digits) if sl_raw and float(sl_raw) > 0 else None
-            tp_dec    = round(float(tp_raw), digits) if tp_raw and float(tp_raw) > 0 else None
-
-            # Enrich from position_state{} (live ExecutionEvent cache — most up-to-date)
-            ps = state.get('position_state', {}).get(pos_id, {})
-            if entry_dec is None and ps.get('entry_price'):
-                entry_dec = ps['entry_price']
-            if sl_dec is None and ps.get('stop_loss'):
-                sl_dec = ps['stop_loss']
-            if tp_dec is None and ps.get('take_profit'):
-                tp_dec = ps['take_profit']
-
             positions.append({
-                "positionId": pos_id,
-                "symbol": name,
-                "tradeSide": "BUY" if pos.tradeData.tradeSide == 1 else "SELL",
+                "positionId":             pos_id,
+                "symbol":                 ps.get("symbol", "UNKNOWN"),
+                "tradeSide":              ps.get("side", "BUY"),
                 "unrealizedNetPnL_cents": pnl_data["netPnL_cents"],
-                "marginUsed_cents": pos.usedMargin,
-                "volume": pos.tradeData.volume,
-                "entryPrice": entry_dec,
-                "stopLoss": sl_dec,
-                "takeProfit": tp_dec,
-                "comment": getattr(pos.tradeData, 'comment', None),
-                "openTimestamp": getattr(pos.tradeData, 'openTimestamp', None),
-                "digits": digits,
+                "marginUsed_cents":       ps.get("margin_used_cents", 0),
+                "volume":                 ps.get("volume_raw", 0),
+                "entryPrice":             ps.get("entry_price"),
+                "stopLoss":               ps.get("stop_loss"),
+                "takeProfit":             ps.get("take_profit"),
+                "comment":                ps.get("comment"),
+                "openTimestamp":          ps.get("open_ts"),
+                "digits":                 ps.get("digits", 5),
             })
 
-        return jsonify({"success": True, "positions": positions, "count": len(positions)})
+        return jsonify({"success": True, "positions": positions, "count": len(positions), "source": "position_state"})
 
     except Exception as e:
         print(f"❌ ERROR /positions/list: {str(e)}")
@@ -1665,6 +1788,14 @@ class Bridge:
                         }
                 return
 
+            # Phase 11c: handle unsolicited push ExecutionEvents (no clientMsgId)
+            # Updates position_state{} live — opens add, closes remove, amends update.
+            if pt == openapi.ProtoOAExecutionEvent().payloadType:
+                exec_payload = openapi.ProtoOAExecutionEvent()
+                exec_payload.ParseFromString(msg.payload)
+                _handle_unsolicited_execution_event(exec_payload)
+                return
+
             if pt == openapi.ProtoOAVersionRes().payloadType:
                 self.client.send(openapi.ProtoOAApplicationAuthReq(clientId=CLIENT_ID, clientSecret=CLIENT_SECRET))
             elif pt == openapi.ProtoOAApplicationAuthRes().payloadType:
@@ -1794,6 +1925,9 @@ if __name__ == "__main__":
     reactor.callLater(10, internal_sync_account)
     threading.Thread(target=sync_latest_candles, daemon=True).start()
     reactor.callLater(5, lambda: threading.Thread(target=seed_position_state_from_db, daemon=True).start())
+    # Phase 11c: seed position_state{} from live ReconcileReq after auth completes (~8s).
+    # Runs after DB seed so DB values are the base, live data overwrites with latest.
+    reactor.callLater(8, lambda: threading.Thread(target=seed_position_state_from_live_reconcile, daemon=True).start())
     reactor.run()
 
 
