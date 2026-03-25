@@ -487,6 +487,56 @@ def poll_signals():
                 time.sleep(30)
                 continue
 
+            # --- FRIDAY FLUSH GATE ---
+            # If friday_flush enabled: block new entries after 15:45 UTC on Friday,
+            # and close all open positions at 16:00 UTC.
+            if settings.get("friday_flush"):
+                from datetime import datetime, timezone
+                now_utc = datetime.now(timezone.utc)
+                is_friday = now_utc.weekday() == 4  # Monday=0, Friday=4
+                if is_friday:
+                    hhmm = now_utc.hour * 60 + now_utc.minute
+                    cutoff  = 15 * 60 + 45   # 15:45 UTC — stop new entries
+                    flush_t = 16 * 60 + 0    # 16:00 UTC — close all positions
+                    flush_window = 16 * 60 + 15  # 16:15 UTC — stop trying to close
+
+                    if flush_t <= hhmm < flush_window:
+                        # Close all open positions via bridge
+                        print("🔴 FRIDAY FLUSH: 16:00 UTC — closing all open positions.")
+                        try:
+                            import requests
+                            bridge_url = os.getenv("BRIDGE_URL", "http://localhost:8080")
+                            bridge_key = os.getenv("BRIDGE_KEY", "")
+                            headers = {"X-Bridge-Key": bridge_key}
+                            # Get open positions
+                            pos_resp = requests.get(f"{bridge_url}/positions/list", headers=headers, timeout=10)
+                            positions = pos_resp.json().get("positions", []) if pos_resp.ok else []
+                            for pos in positions:
+                                pid = pos.get("position_id") or pos.get("id")
+                                sym = pos.get("symbol", "?")
+                                if pid:
+                                    close_resp = requests.post(
+                                        f"{bridge_url}/trade/close",
+                                        json={"position_id": pid},
+                                        headers=headers,
+                                        timeout=10
+                                    )
+                                    if close_resp.ok:
+                                        print(f"  ✅ Closed {sym} pos {pid}")
+                                    else:
+                                        print(f"  ⚠️ Failed to close {sym} pos {pid}: {close_resp.text[:80]}")
+                        except Exception as flush_err:
+                            print(f"⚠️ Friday Flush error: {flush_err}")
+                        time.sleep(30)
+                        continue
+
+                    elif hhmm >= cutoff:
+                        print(f"🚫 FRIDAY FLUSH: After 15:45 UTC on Friday — no new entries.")
+                        time.sleep(30)
+                        continue
+
+
+
             # --- SESSION EXPOSURE GATE ---
             # max_session_exposure_pct = max drawdown % allowed across all open positions
             # Gate fires when live unrealised loss exceeds the limit (e.g. -4.0%)
@@ -543,16 +593,19 @@ def poll_signals():
                 rr = float(tp_pips) / float(sl_pips) if float(sl_pips) > 0 else 0
 
                 if sl_pips <= 0 or tp_pips <= 0:
-                    print(f"⚠️ Invalid SL/TP for {sym}: sl={sl_pips} tp={tp_pips}. Marking FAILED.")
-                    cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
+                    reason = f"Invalid SL/TP values (sl={sl_pips}, tp={tp_pips})"
+                    print(f"⚠️ {reason} for {sym}. Marking FAILED.")
+                    cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
                     conn.commit()
                 elif float(sl_pips) < min_sl:
-                    print(f"🚫 SL too tight for {sym}: {sl_pips}p < {min_sl}p minimum. Marking FAILED.")
-                    cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
+                    reason = f"SL too tight: {float(sl_pips):.1f} pips < {min_sl:.0f} pip minimum"
+                    print(f"🚫 {reason} for {sym}. Marking FAILED.")
+                    cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
                     conn.commit()
                 elif rr < 1.5:
-                    print(f"🚫 RR too low for {sym}: {rr:.2f} < 1.5 minimum. Marking FAILED.")
-                    cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
+                    reason = f"RR too low: {rr:.2f}R < 1.5R minimum (sl={float(sl_pips):.1f}, tp={float(tp_pips):.1f})"
+                    print(f"🚫 {reason} for {sym}. Marking FAILED.")
+                    cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
                     conn.commit()
                 else:
                     cur.execute("UPDATE signals SET status = 'EXECUTING' WHERE signal_uuid = %s", (str(s_uuid),))
@@ -561,16 +614,15 @@ def poll_signals():
                     result = execute_trade(s_uuid, sym, s_type, tf, float(sl_pips), float(tp_pips))
                     if result:
                         # FIX 2: unpack (pos_id, fill_price) tuple and store avg_fill_price
-                        # FIX 3: status = EXECUTED (not COMPLETED) for open positions
-                        #         broker_position_id written immediately after fill
                         pos_id, fill_price = result
                         cur.execute(
-                            "UPDATE signals SET status = 'EXECUTED', broker_position_id = %s, avg_fill_price = %s WHERE signal_uuid = %s",
-                            (str(pos_id), fill_price if fill_price else None, str(s_uuid))
+                            "UPDATE signals SET status = 'COMPLETED', position_id = %s, avg_fill_price = %s WHERE signal_uuid = %s",
+                            (pos_id, fill_price if fill_price else None, str(s_uuid))
                         )
-                        print(f"✅ signals updated: EXECUTED pos_id={pos_id} fill={fill_price}")
+                        print(f"✅ signals updated: pos_id={pos_id} fill={fill_price}")
                     else:
-                        cur.execute("UPDATE signals SET status = 'FAILED' WHERE signal_uuid = %s", (str(s_uuid),))
+                        reason = "Bridge execution failed — check bridge logs"
+                        cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
                     conn.commit()
 
         except Exception as e:
