@@ -390,13 +390,11 @@ def list_positions():
         # position_state{} is seeded at startup via live ReconcileReq and kept live by
         # push ExecutionEvents. Falls back to a fresh ReconcileReq if seed not yet ready.
         if not state.get("position_state_ready"):
-            # Seed not done yet — run it inline now (blocks until complete or timeout).
+            # Seed not done yet — kick it off in a background thread and return 503.
             # Only fires in the brief window after bridge restart before t+20s seed completes.
-            print("⚠️  /positions/list: position_state not ready — running inline seed")
-            seed_position_state_from_live_reconcile()
-            if not state.get("position_state_ready"):
-                # Auth still not ready (very early startup) — honest error, don't lie with stale data
-                return jsonify({"success": False, "error": "Bridge still initialising — retry in a few seconds"}), 503
+            print("⚠️  /positions/list: position_state not ready — kicking background seed")
+            threading.Thread(target=seed_position_state_from_live_reconcile, daemon=True).start()
+            return jsonify({"success": False, "error": "Bridge still initialising — retry in a few seconds"}), 503
 
         # Normal path: serve from cached position_state{} + live PnL
         start_time_pnl = time.time()
