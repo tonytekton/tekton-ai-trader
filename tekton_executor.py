@@ -455,8 +455,10 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
                 print(f"⚠️ Invalid position_id in bridge response: '{pos_id}' — marking FAILED")
                 return None
 
-            print(f"✅ Trade Executed: {symbol} ID: {pos_id} @ {fill_price}")
-            return (str(pos_id), fill_price)  # FIX 2: return tuple (pos_id, fill_price)
+            sl_price = result.get("sl_price")   # absolute SL price from broker
+            tp_price = result.get("tp_price")   # absolute TP price from broker
+            print(f"✅ Trade Executed: {symbol} ID: {pos_id} @ {fill_price} SL={sl_price} TP={tp_price}")
+            return (str(pos_id), fill_price, sl_price, tp_price)  # extended tuple
         else:
             print(f"❌ Execution Failed: {result.get('error')}")
             return None
@@ -613,13 +615,19 @@ def poll_signals():
 
                     result = execute_trade(s_uuid, sym, s_type, tf, float(sl_pips), float(tp_pips))
                     if result:
-                        # FIX 2: unpack (pos_id, fill_price) tuple and store avg_fill_price
-                        pos_id, fill_price = result
+                        # Unpack extended tuple (pos_id, fill_price, sl_price, tp_price)
+                        pos_id, fill_price, sl_price, tp_price = result
                         cur.execute(
-                            "UPDATE signals SET status = 'COMPLETED', position_id = %s, avg_fill_price = %s WHERE signal_uuid = %s",
-                            (pos_id, fill_price if fill_price else None, str(s_uuid))
+                            """UPDATE signals SET status = 'COMPLETED', position_id = %s,
+                               avg_fill_price = %s, sl_price = %s, tp_price = %s
+                               WHERE signal_uuid = %s""",
+                            (pos_id,
+                             float(fill_price) if fill_price else None,
+                             float(sl_price)   if sl_price   else None,
+                             float(tp_price)   if tp_price   else None,
+                             str(s_uuid))
                         )
-                        print(f"✅ signals updated: pos_id={pos_id} fill={fill_price}")
+                        print(f"✅ signals updated: pos_id={pos_id} fill={fill_price} sl={sl_price} tp={tp_price}")
                     else:
                         reason = "Bridge execution failed — check bridge logs"
                         cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
@@ -634,5 +642,6 @@ def poll_signals():
 
 if __name__ == "__main__":
     poll_signals()
+
 
 
