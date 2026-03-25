@@ -62,7 +62,7 @@ export default function SystemContext() {
         <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20"><BookOpen className="w-6 h-6 text-blue-400" /></div>
         <div>
           <h1 className="text-2xl font-bold text-slate-100 tracking-tight">System Context & Developer Dossier</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Tekton AI Trader v4.8 — Read this before making any changes. Last updated: 20 Mar 2026</p>
+          <p className="text-slate-500 text-sm mt-0.5">Tekton AI Trader v4.8 — Read this before making any changes. Last updated: 25 Mar 2026</p>
         </div>
         <div className="ml-auto flex items-center gap-2 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1.5 rounded-full">
           <CheckCircle className="w-3.5 h-3.5" />Production Stable
@@ -123,7 +123,7 @@ export default function SystemContext() {
       <Section icon={GitBranch} title="Branch Strategy" color="purple">
         <div className="space-y-2">
           {[
-            { branch: 'main', desc: 'Production. All live scripts run from here.', status: 'Stable — v4.7 + hotfixes through 2026-03-20', color: 'text-emerald-400' },
+            { branch: 'main', desc: 'Production. All live scripts run from here.', status: 'Stable — v4.7 + hotfixes through 2026-03-25 (HF-15)', color: 'text-emerald-400' },
             { branch: 'feature/bridge-v4.8-event-driven', desc: 'Bridge v4.8 refactor only. Nothing else.', status: 'Active dev — paused for hotfix stability', color: 'text-yellow-400' },
           ].map(b => (
             <div key={b.branch} className="bg-slate-900/60 rounded-lg p-3 border border-slate-800">
@@ -234,7 +234,7 @@ max_lots                 DOUBLE    DEFAULT 5000   ← current live: 6 (testing c
 min_sl_pips              DOUBLE    DEFAULT 8.0
 news_blackout_mins       INT       DEFAULT 30`}</Code>
         <div className="mt-2 p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20 text-xs text-yellow-300">
-          <strong>max_lots warning:</strong> Default = 5000 (large account). Current live value = 6 (Tony's testing cap, set 2026-03-20). If DB shows 50 or 5 it has been incorrectly reset — fix via POST /data/settings.
+          <strong>max_lots warning:</strong> Default = 5000 (large account). Current live value = 6 (Tony's testing cap). UI fallback default = 50 (safe cap if DB unreachable). If DB shows 5 it has been incorrectly reset — fix via POST /data/settings.
         </div>
       </Section>
 
@@ -271,7 +271,7 @@ news_blackout_mins       INT       DEFAULT 30`}</Code>
         <Decision id="11" text="Execution Journal deduplication: strip open position IDs from closed_trades before merge. Deduplicate within closed_trades by position ID." />
       </Section>
 
-      <Section icon={Wrench} title="Hotfixes Applied to main (2026-03-16 to 2026-03-20)" color="orange">
+      <Section icon={Wrench} title="Hotfixes Applied to main (2026-03-16 to 2026-03-25)" color="orange">
         <HF id="01" text="Restore .env file after repo reset — missing .env caused Bridge to lose all config and auth tokens." />
         <HF id="02" text="Fix API auth header: Authorization: Bearer → X-Bridge-Key." />
         <HF id="03" text="Fix pipPosition value (4 → 5 for EURUSD) — incorrect value caused 10× position sizing errors." />
@@ -284,11 +284,16 @@ news_blackout_mins       INT       DEFAULT 30`}</Code>
         <HF id="10" sha="6dfc562→d8bad81" text="SL/TP showing None on open positions: fixed camelCase→snake_case field names in enrichment + added ReconcileReq fallback layer." />
         <HF id="11" text="TradingSettings max_lots UI default fixed: 5.0 → 5000." />
         <HF id="12" sha="157cd42" text="Execution Journal duplicate rows: deduplicate open_trades vs closed_trades by position ID after merge." />
+        <HF id="13" text="Dashboard openCount + margin_used: fixed to read from live /positions/list via getAccountStatus. Eliminated stale zeroes on Dashboard." />
+        <HF id="14" text="getAccountMetrics deprecated and removed from Dashboard. getAccountStatus is now sole source for balance/equity/free_margin/margin_used/open_count." />
+        <HF id="15" text="Analytics.jsx invokeFunction import replaced with base44.functions.invoke. TradingSettings max_lots UI fallback corrected 5000 → 50 (safer default)." />
       </Section>
 
       <Section icon={ScrollText} title="Change Log" color="blue">
         <div className="space-y-0">
           {[
+            { date: '2026-03-25', change: 'HF-13→15: Dashboard live metrics fix, getAccountMetrics deprecated, Analytics invokeFunction fix, max_lots fallback corrected to 50. Full UI sync to GitHub. All pages + functions pushed.' },
+            { date: '2026-03-24', change: 'Phase 13 complete (FAILED signal bug — no fix needed, was already correct). Phase 14 complete (Dashboard zeros fixed via getAccountStatus + /positions/list).' },
             { date: '2026-03-20', change: 'HF-07→12: relSL int32 fix, SL/TP enrichment fix, deduplication fix, max_lots UI fix. System Context updated to v4.8.' },
             { date: '2026-03-19', change: 'HF-07: relativeStopLoss "invalid precision" root cause found. Pips sent as float 1dp.' },
             { date: '2026-03-18', change: 'HF-04: max_lots column added to DB. Session exposure cap clarified.' },
