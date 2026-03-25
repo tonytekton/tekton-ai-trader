@@ -261,20 +261,18 @@ export default function Dashboard() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [mRes, sRes, settRes, calRes, rateRes] = await Promise.allSettled([
-        base44.functions.invoke('getAccountMetrics'),
+      const [sRes, settRes, calRes, rateRes] = await Promise.allSettled([
         base44.functions.invoke('getAccountStatus'),
         base44.functions.invoke('loadAllSettings'),
         base44.functions.invoke('getEconomicCalendar'),
         base44.functions.invoke('getApiRateStats'),
       ]);
 
-      if (mRes.status === 'fulfilled' && mRes.value?.data) {
-        const d = mRes.value.data?.data ?? mRes.value.data;
-        setMetrics(d);
-      }
       if (sRes.status === 'fulfilled' && sRes.value?.data) {
-        setStatus(sRes.value.data?.data ?? sRes.value.data);
+        const d = sRes.value.data?.data ?? sRes.value.data;
+        setStatus(d);
+        // getAccountStatus returns all metrics — balance, equity, free_margin, margin_used, open_count
+        setMetrics(d);
       }
       if (settRes.status === 'fulfilled' && settRes.value?.data && !settRes.value.data.error) {
         setSettings(settRes.value.data);
