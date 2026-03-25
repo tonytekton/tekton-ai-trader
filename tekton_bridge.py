@@ -930,10 +930,10 @@ def get_executions():
                 enrich_cur = enrich_conn.cursor()
                 placeholders = ",".join(["%s"] * len(uuids))
                 enrich_cur.execute(
-                    f"SELECT signal_uuid::text, sl_pips, tp_pips, strategy, avg_fill_price FROM signals WHERE signal_uuid::text IN ({placeholders})",
+                    f"SELECT signal_uuid::text, sl_pips, tp_pips, strategy, avg_fill_price, sl_price, tp_price FROM signals WHERE signal_uuid::text IN ({placeholders})",
                     uuids
                 )
-                signal_map = {str(row[0]): {"sl_pips": row[1], "tp_pips": row[2], "strategy": row[3], "avg_fill_price": row[4]} for row in enrich_cur.fetchall()}
+                signal_map = {str(row[0]): {"sl_pips": row[1], "tp_pips": row[2], "strategy": row[3], "avg_fill_price": row[4], "sl_price": row[5], "tp_price": row[6]} for row in enrich_cur.fetchall()}
                 enrich_cur.close()
                 enrich_conn.close()
                 for t in open_trades:
@@ -944,6 +944,11 @@ def get_executions():
                         t["strategy"] = sig["strategy"]
                         if t["entry_price"] is None and sig.get("avg_fill_price"):
                             t["entry_price"] = float(sig["avg_fill_price"])
+                        # Use stored absolute SL/TP prices from signals as position_state fallback
+                        if t["stop_loss"] is None and sig.get("sl_price"):
+                            t["stop_loss"]   = float(sig["sl_price"])
+                        if t["take_profit"] is None and sig.get("tp_price"):
+                            t["take_profit"] = float(sig["tp_price"])
         except Exception as enrich_err:
             import traceback as _tb
             print(f"WARNING Signal enrichment failed (non-fatal): {enrich_err}")
@@ -962,10 +967,12 @@ def get_executions():
                 enrich_cur2 = enrich_conn2.cursor()
                 placeholders2 = ",".join(["%s"] * len(pos_ids))
                 enrich_cur2.execute(
-                    f"SELECT position_id, signal_uuid::text, sl_pips, tp_pips, strategy FROM signals WHERE position_id IN ({placeholders2})",
+                    f"SELECT position_id, signal_uuid::text, sl_pips, tp_pips, strategy, sl_price, tp_price, avg_fill_price FROM signals WHERE position_id IN ({placeholders2})",
                     pos_ids
                 )
-                pos_signal_map = {row[0]: {"signal_uuid": row[1], "sl_pips": row[2], "tp_pips": row[3], "strategy": row[4]} for row in enrich_cur2.fetchall()}
+                pos_signal_map = {row[0]: {"signal_uuid": row[1], "sl_pips": row[2], "tp_pips": row[3],
+                                           "strategy": row[4], "sl_price": row[5], "tp_price": row[6],
+                                           "avg_fill_price": row[7]} for row in enrich_cur2.fetchall()}
                 enrich_cur2.close()
                 enrich_conn2.close()
                 for t in closed_trades:
@@ -976,6 +983,13 @@ def get_executions():
                         t["sl_pips"] = float(sig["sl_pips"]) if sig["sl_pips"] else None
                         t["tp_pips"] = float(sig["tp_pips"]) if sig["tp_pips"] else None
                         t["strategy"] = sig["strategy"]
+                        # Use stored absolute SL/TP price if available (avoids "Xp" fallback)
+                        if sig.get("sl_price") and not t.get("stop_loss"):
+                            t["stop_loss"]   = float(sig["sl_price"])
+                        if sig.get("tp_price") and not t.get("take_profit"):
+                            t["take_profit"] = float(sig["tp_price"])
+                        if sig.get("avg_fill_price") and not t.get("entry_price"):
+                            t["entry_price"] = float(sig["avg_fill_price"])
         except Exception as enrich_err2:
             print(f"WARNING Closed trade enrichment failed (non-fatal): {enrich_err2}")
 
@@ -1188,23 +1202,40 @@ def execute_trade():
             print(f"❌ Broker Rejected Order: {error_desc}")
             return jsonify({"success": False, "error": error_desc}), 400
 
+        digits        = spec.get("digits", 5) if spec else 5
         pos_id        = result.position.positionId if hasattr(result, 'position') else 0
         # ProtoOAOrder.executionPrice is 0.0 for MARKET orders (filled async).
-        # Use ProtoOAPosition.price instead — it is the decimal fill price set by the broker.
-        entry_price   = None
+        # ProtoOAPosition.price is a decimal double — MUST use HasField(), not getattr().
+        # getattr returns 0 (not None) for unset protobuf fields — silently fails the > 0 check.
+        entry_price = None
+        sl_abs      = None
+        tp_abs      = None
         if hasattr(result, 'position') and result.position:
-            raw_pos_price = getattr(result.position, 'price', None)
-            if raw_pos_price and raw_pos_price > 0:
-                digits = spec.get("digits", 5) if spec else 5
-                entry_price = round(float(raw_pos_price), digits)
-        digits = spec.get("digits", 5) if spec else 5
+            pos = result.position
+            if pos.HasField('price') and float(pos.price) > 0:
+                entry_price = round(float(pos.price), digits)
+            # Also store SL/TP prices in position_state{} so proxy/executions can serve them
+            sl_abs = round(float(pos.stopLoss),   digits) if pos.HasField('stopLoss')   and float(pos.stopLoss)   > 0 else None
+            tp_abs = round(float(pos.takeProfit), digits) if pos.HasField('takeProfit') and float(pos.takeProfit) > 0 else None
+            pid_str = str(pos_id)
+            if pid_str not in state.get('position_state', {}):
+                state.setdefault('position_state', {})[pid_str] = {}
+            ps = state['position_state'][pid_str]
+            if entry_price and ps.get('entry_price') is None:
+                ps['entry_price'] = entry_price
+            if sl_abs and ps.get('stop_loss') is None:
+                ps['stop_loss'] = sl_abs
+            if tp_abs and ps.get('take_profit') is None:
+                ps['take_profit'] = tp_abs
 
-        print(f"✅ Executed {symbol}: pos_id={pos_id} raw={raw_pos_price} scaled={entry_price} digits={digits}")
+        print(f"✅ Executed {symbol}: pos_id={pos_id} entry={entry_price} digits={digits}")
 
         return jsonify({
             "success":     True,
             "position_id": pos_id,
-            "entry_price": entry_price   # scaled decimal, ready to store in signals.avg_fill_price
+            "entry_price": entry_price,   # scaled decimal, ready to store in signals.avg_fill_price
+            "sl_price":    sl_abs,        # absolute SL price (decimal) — store in signals.sl_price
+            "tp_price":    tp_abs,        # absolute TP price (decimal) — store in signals.tp_price
         })
 
     except Exception as e:
