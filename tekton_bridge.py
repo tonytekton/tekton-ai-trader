@@ -1253,7 +1253,7 @@ def modify_trade():
         position_id = data.get("position_id")
 
         # Accepts sl_price/tp_price (absolute decimal) OR sl_pips/tp_pips (relative to entry).
-        # Pips mode takes priority — bridge calculates absolute price from position entry + side.
+        # Pips mode takes priority — bridge calculates absolute price from cached entry + side.
         sl_price = data.get("sl_price") or data.get("stopLoss_raw")
         tp_price = data.get("tp_price") or data.get("takeProfit_raw")
         sl_pips  = data.get("sl_pips")
@@ -1264,47 +1264,40 @@ def modify_trade():
         if sl_price is None and tp_price is None and sl_pips is None and tp_pips is None:
             return jsonify({"success": False, "error": "At least one of sl_price, tp_price, sl_pips, tp_pips required"}), 400
 
-        recon_msg = openapi.ProtoOAReconcileReq()
-        recon_msg.ctidTraderAccountId = ACCOUNT_ID
-        d_recon, mid_recon = defer.Deferred(), str(uuid.uuid4())
-        pending_requests[mid_recon] = d_recon
-        reactor.callFromThread(lambda: bridge.client.send(recon_msg, clientMsgId=mid_recon))
-        recon_res = threads.blockingCallFromThread(reactor, wait_for_deferred, d_recon, 10)
+        # Phase 11c: look up position from position_state{} — no ReconcileReq needed.
+        # position_state{} is seeded at startup and kept live by ProtoOAExecutionEvent pushes.
+        ps = state.get("position_state", {}).get(str(position_id))
+        if not ps:
+            return jsonify({"success": False, "error": f"Position {position_id} not found in position_state — may already be closed"}), 404
 
-        target_pos = next((p for p in recon_res.position if str(p.positionId) == str(position_id)), None)
-        if not target_pos:
-            return jsonify({"success": False, "error": "Position not found"}), 404
+        digits   = ps.get("digits", 5)
+        pip_pos  = ps.get("pip_position", digits - 1)
+        pip_size = 10 ** -pip_pos
 
-        spec   = state["symbol_id_to_spec_map"].get(target_pos.tradeData.symbolId, {})
-        digits = spec.get("digits", 5)
-        pip_pos = spec.get("pipPosition", digits - 1)
-        pip_size = 10 ** -pip_pos  # e.g. pipPosition=4 → pip_size=0.0001
-
-        # If pips provided, derive absolute price from position entry
+        # If pips provided, derive absolute price from cached entry price
         if sl_pips is not None or tp_pips is not None:
-            open_price_raw = getattr(target_pos.tradeData, 'openPrice', None)
-            if not open_price_raw:
-                return jsonify({"success": False, "error": "Cannot resolve entry price from position — use sl_price/tp_price instead"}), 400
-            entry_price = open_price_raw / (10 ** digits)
-            is_buy = target_pos.tradeData.tradeSide == 1  # TRADE_SIDE_BUY = 1
+            entry_price = ps.get("entry_price")
+            if not entry_price:
+                return jsonify({"success": False, "error": "Cannot resolve entry price from position_state — use sl_price/tp_price instead"}), 400
+            is_buy = ps.get("side", "BUY") == "BUY"
 
             if sl_pips is not None:
-                sl_pips_f = float(sl_pips)
-                sl_price = entry_price - (sl_pips_f * pip_size) if is_buy else entry_price + (sl_pips_f * pip_size)
+                sl_price = entry_price - (float(sl_pips) * pip_size) if is_buy else entry_price + (float(sl_pips) * pip_size)
             if tp_pips is not None:
-                tp_pips_f = float(tp_pips)
-                tp_price = entry_price + (tp_pips_f * pip_size) if is_buy else entry_price - (tp_pips_f * pip_size)
+                tp_price = entry_price + (float(tp_pips) * pip_size) if is_buy else entry_price - (float(tp_pips) * pip_size)
 
         req = openapi.ProtoOAAmendPositionSLTPReq()
         req.ctidTraderAccountId = ACCOUNT_ID
         req.positionId = int(position_id)
 
+        # ProtoOAAmendPositionSLTPReq expects DECIMAL DOUBLE — pass directly, no raw conversion.
+        # BUG FIX: previous code was sending int(round(price * 10^digits)) — cTrader rejected this.
         if sl_price is not None:
-            req.stopLoss = int(round(float(sl_price) * (10**digits)))
+            req.stopLoss   = round(float(sl_price), digits)
         if tp_price is not None:
-            req.takeProfit = int(round(float(tp_price) * (10**digits)))
+            req.takeProfit = round(float(tp_price), digits)
 
-        print(f"🛠️ Modifying ID {position_id} | sl_pips={sl_pips} tp_pips={tp_pips} | Raw SL: {getattr(req, 'stopLoss', 'N/A')} | Raw TP: {getattr(req, 'takeProfit', 'N/A')}")
+        print(f"🛠️ Modifying ID {position_id} | sl_pips={sl_pips} tp_pips={tp_pips} | SL={getattr(req, 'stopLoss', 'N/A')} TP={getattr(req, 'takeProfit', 'N/A')}")
 
         d_mod, mid_mod = defer.Deferred(), str(uuid.uuid4())
         pending_requests[mid_mod] = d_mod
@@ -1313,6 +1306,12 @@ def modify_trade():
 
         if hasattr(result, 'errorCode'):
             return jsonify({"success": False, "error": f"{result.errorCode}: {getattr(result, 'description', '')}"}), 400
+
+        # Update position_state{} immediately so subsequent reads reflect the change
+        if sl_price is not None:
+            state["position_state"][str(position_id)]["stop_loss"]   = round(float(sl_price), digits)
+        if tp_price is not None:
+            state["position_state"][str(position_id)]["take_profit"] = round(float(tp_price), digits)
 
         return jsonify({"success": True, "positionId": position_id, "message": "Protection attached"})
 
@@ -1334,22 +1333,13 @@ def close_trade():
             return jsonify({"success": False, "error": "position_id required"}), 400
 
         if not volume_centilots:
-            recon_msg = openapi.ProtoOAReconcileReq()
-            recon_msg.ctidTraderAccountId = ACCOUNT_ID
-
-            d_recon, client_msg_id_recon = defer.Deferred(), str(uuid.uuid4())
-            pending_requests[client_msg_id_recon] = d_recon
-
-            reactor.callFromThread(lambda: bridge.client.send(recon_msg, clientMsgId=client_msg_id_recon))
-            recon_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_recon, 10)
-
-            for pos in recon_result.position:
-                if str(pos.positionId) == str(position_id):
-                    volume_centilots = pos.tradeData.volume
-                    break
-
+            # Phase 11c: get volume from position_state{} — no ReconcileReq needed
+            ps = state.get("position_state", {}).get(str(position_id))
+            if not ps:
+                return jsonify({"success": False, "error": f"Position {position_id} not found in position_state — may already be closed"}), 404
+            volume_centilots = ps.get("volume_raw")
             if not volume_centilots:
-                return jsonify({"success": False, "error": f"Position {position_id} not found or already closed"})
+                return jsonify({"success": False, "error": f"Position {position_id} has no volume in position_state"}), 400
 
         start_time = time.time()
         req = openapi.ProtoOAClosePositionReq()
