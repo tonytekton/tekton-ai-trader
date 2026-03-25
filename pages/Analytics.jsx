@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { invokeFunction } from "@/api/functions";
+import { base44 } from '@/api/base44Client';
 
 // ── Colour palette per strategy ──────────────────────────────────────────────
 const STRAT_COLORS = [
@@ -65,7 +65,7 @@ export default function Analytics() {
     setLoading(true);
     setError(null);
     try {
-      const res = await invokeFunction("getAnalytics");
+      const res = await base44.functions.invoke('getAnalytics');
       if (res?.ok) setData(res);
       else setError(res?.error || "Unknown error");
     } catch (e) {
