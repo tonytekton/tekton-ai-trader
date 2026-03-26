@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
-import { DollarSign, Activity, Zap, RefreshCw, ShieldAlert, TrendingDown, Layers, AlertTriangle, PowerOff, Calendar, Radio } from 'lucide-react';
+import { DollarSign, Activity, Zap, RefreshCw, ShieldAlert, TrendingDown, Layers, AlertTriangle, PowerOff, Calendar, Radio, XCircle, Trash2 } from 'lucide-react';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n, prefix = '$') =>
@@ -246,6 +246,88 @@ function ApiRateMonitor({ data }) {
   );
 }
 
+// ── Flush Confirm Modal ──────────────────────────────────────────────────────
+function FlushConfirmModal({ onConfirm, onCancel, flushing, flushResult }) {
+  const [typed, setTyped] = useState('');
+  const confirmed = typed.trim().toUpperCase() === 'CLOSE ALL';
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-slate-950 shadow-2xl p-6 flex flex-col gap-5">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center flex-shrink-0">
+            <XCircle className="w-5 h-5 text-red-400" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-red-400 uppercase tracking-widest">Manual Flush — Close All Positions</p>
+            <p className="text-xs text-slate-500 mt-0.5">This will immediately close every open position via the bridge.</p>
+          </div>
+        </div>
+
+        {!flushResult ? (
+          <>
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-300 leading-relaxed">
+              ⚠️ This action cannot be undone. All open positions will be sent a market close order right now, regardless of P&L.
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs text-slate-400">
+                Type <span className="font-mono font-bold text-white">CLOSE ALL</span> to confirm
+              </label>
+              <input
+                autoFocus
+                type="text"
+                value={typed}
+                onChange={e => setTyped(e.target.value)}
+                placeholder="CLOSE ALL"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-mono text-white placeholder-slate-600 focus:outline-none focus:border-red-500/50"
+                onKeyDown={e => e.key === 'Enter' && confirmed && !flushing && onConfirm()}
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={onCancel}
+                disabled={flushing}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-slate-700 text-slate-400 text-sm hover:border-slate-500 hover:text-slate-300 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onConfirm}
+                disabled={!confirmed || flushing}
+                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2
+                  ${confirmed && !flushing
+                    ? 'bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/30'
+                    : 'bg-slate-800 border border-slate-700 text-slate-600 cursor-not-allowed'}`}
+              >
+                {flushing ? (
+                  <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Closing…</>
+                ) : (
+                  <><Trash2 className="w-3.5 h-3.5" /> Close All Now</>
+                )}
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className={`rounded-lg border px-4 py-3 text-sm leading-relaxed ${
+              flushResult.error
+                ? 'border-red-500/30 bg-red-500/5 text-red-300'
+                : 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300'
+            }`}>
+              {flushResult.error ? `❌ ${flushResult.error}` : flushResult.summary}
+            </div>
+            <button
+              onClick={onCancel}
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-700 text-slate-300 text-sm hover:border-slate-500 transition-all"
+            >
+              Close
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [metrics, setMetrics]       = useState(null);
@@ -258,6 +340,9 @@ export default function Dashboard() {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [halting, setHalting]       = useState(false);
   const [haltDone, setHaltDone]     = useState(false);
+  const [showFlushModal, setShowFlushModal] = useState(false);
+  const [flushing, setFlushing]     = useState(false);
+  const [flushResult, setFlushResult] = useState(null);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -329,6 +414,28 @@ export default function Dashboard() {
     }
   };
 
+  const handleManualFlush = async () => {
+    setFlushing(true);
+    setFlushResult(null);
+    try {
+      const resp = await base44.functions.invoke('manualFlush', {});
+      if (resp?.flushed != null) {
+        const closed = resp.flushed ?? 0;
+        const failed = resp.failed ?? 0;
+        setFlushResult({
+          summary: `✅ Manual flush complete — ${closed} position${closed !== 1 ? 's' : ''} closed${failed > 0 ? `, ${failed} failed` : ''}. Check execution journal for details.`
+        });
+      } else {
+        setFlushResult({ error: resp?.error || 'Unexpected response from bridge.' });
+      }
+    } catch (e) {
+      setFlushResult({ error: e.message || 'Flush failed — check bridge logs.' });
+    } finally {
+      setFlushing(false);
+      fetchAll();
+    }
+  };
+
   const openCount     = status?.open_count ?? null;
   const drawdownPct   = status?.drawdown_pct ?? 0;
   const drawdownLimit = settings?.daily_drawdown_limit != null ? settings.daily_drawdown_limit * 100 : 5.0;
@@ -344,6 +451,14 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen p-4 md:p-8 max-w-7xl mx-auto">
+      {showFlushModal && (
+        <FlushConfirmModal
+          flushing={flushing}
+          flushResult={flushResult}
+          onConfirm={handleManualFlush}
+          onCancel={() => { setShowFlushModal(false); setFlushResult(null); }}
+        />
+      )}
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-6">
@@ -398,17 +513,27 @@ export default function Dashboard() {
           </span>
           {autoTrade && <span className="text-xs text-slate-500">— system is executing signals autonomously</span>}
         </div>
-        <button
-          onClick={handleHalt}
-          disabled={halting || !autoTrade}
-          className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold border transition-all
-            ${haltDone ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-              autoTrade ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20' :
-              'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed'}`}
-        >
-          <PowerOff className="w-3.5 h-3.5" />
-          {haltDone ? 'Trading Halted' : halting ? 'Halting…' : 'Halt Trading'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleHalt}
+            disabled={halting || !autoTrade}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold border transition-all
+              ${haltDone ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                autoTrade ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20' :
+                'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed'}`}
+          >
+            <PowerOff className="w-3.5 h-3.5" />
+            {haltDone ? 'Trading Halted' : halting ? 'Halting…' : 'Halt Trading'}
+          </button>
+          <button
+            onClick={() => { setFlushResult(null); setShowFlushModal(true); }}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold border transition-all bg-orange-500/10 text-orange-400 border-orange-500/20 hover:bg-orange-500/20"
+            title="Close all open positions immediately"
+          >
+            <XCircle className="w-3.5 h-3.5" />
+            Manual Flush
+          </button>
+        </div>
       </div>
 
       {/* ── Account Metrics ── */}
