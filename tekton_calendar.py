@@ -6,7 +6,9 @@ Fetches the ForexFactory weekly XML calendar feed, parses medium + high impact
 events, and upserts them into the economic_events SQL table.
 
 Designed to run as a cron job every 6 hours:
-  0 */6 * * * /opt/tekton/venv/bin/python /opt/tekton/tekton_calendar.py >> /opt/tekton/combined_trades.log 2>&1
+  0 */6 * * * /home/tony/tekton-ai-trader/venv/bin/python /home/tony/tekton-ai-trader/tekton_calendar.py >> /home/tony/tekton-ai-trader/combined_trades.log 2>&1
+
+Also runs at system startup via the tekton-calendar.service systemd unit.
 
 SQL table required (run once):
   CREATE TABLE IF NOT EXISTS economic_events (
@@ -27,6 +29,10 @@ import logging
 import psycopg2
 from datetime import datetime, timezone, timedelta
 from urllib.request import urlopen, Request
+from dotenv import load_dotenv
+
+# Load .env from the same directory as this script (same pattern as executor/bridge)
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
 
 logging.basicConfig(
     level=logging.INFO,
