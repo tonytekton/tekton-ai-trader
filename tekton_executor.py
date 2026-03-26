@@ -499,7 +499,7 @@ def poll_signals():
             # - No new entries before cutoff UTC on flush day
             # - Close all open positions at flush_t UTC
             # - Dedup guard: _last_flush_date ensures flush fires once per day only
-            # ⚠️ TEST OVERRIDE ACTIVE: Thursday 05:00 UTC (13:00 KL) — revert after test
+            # Friday Flush timing — production values
             # ---------------------------------------------------------------------------
             from datetime import datetime, timezone, date as date_type
             global _last_flush_date
@@ -512,11 +512,10 @@ def poll_signals():
                 time.sleep(300)
                 continue
 
-            # ⚠️ TEST OVERRIDE: weekday==3 (Thursday) at 05:00 UTC acts as flush day
-            _flush_day     = 3        # TODO revert to 4 (Friday) after test
-            _cutoff_hhmm   = 4 * 60 + 45   # TODO revert to 15*60+45 (15:45 UTC) after test
-            _flush_hhmm    = 5 * 60 + 0    # TODO revert to 16*60+0  (16:00 UTC) after test
-            _flush_window  = 5 * 60 + 15   # TODO revert to 16*60+15 (16:15 UTC) after test
+            _flush_day     = 4        # Friday
+            _cutoff_hhmm   = 15 * 60 + 45  # 15:45 UTC — no new entries after this
+            _flush_hhmm    = 16 * 60 + 0   # 16:00 UTC — close all positions
+            _flush_window  = 16 * 60 + 15  # 16:15 UTC — flush window ends
 
             if settings.get("friday_flush") and weekday == _flush_day:
                 hhmm         = now_utc.hour * 60 + now_utc.minute
