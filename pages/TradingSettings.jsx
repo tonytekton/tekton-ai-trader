@@ -22,6 +22,7 @@ export default function TradingSettings() {
     max_session_exposure_pct: 4.0,
     max_lots: 50,
     min_sl_pips: 8.0,
+    api_rate_limit: 75,
     auto_trade: false,
     friday_flush: false,
   });
@@ -41,6 +42,7 @@ export default function TradingSettings() {
             max_session_exposure_pct: d.max_session_exposure_pct ?? 4.0,
             max_lots:                 d.max_lots ?? 50,
             min_sl_pips:              d.min_sl_pips              ?? 8.0,
+            api_rate_limit:           d.api_rate_limit           ?? 75,
             auto_trade:               d.auto_trade               ?? false,
             friday_flush:             d.friday_flush             ?? false,
           });
@@ -71,6 +73,7 @@ export default function TradingSettings() {
           max_session_exposure_pct: form.max_session_exposure_pct,
           max_lots:                 form.max_lots,
           min_sl_pips:              form.min_sl_pips,
+          api_rate_limit:           parseInt(form.api_rate_limit) || 75,
         }),
       });
       const result = await res.json();
@@ -94,6 +97,7 @@ export default function TradingSettings() {
     { key: 'max_session_exposure_pct', label: 'Max Session Exposure (%)',  hint: 'e.g. 4.0 = max 4% total open risk at any time',            step: '0.1',  suffix: '%'    },
     { key: 'max_lots',                 label: 'Max Lot Size',              hint: 'Hard cap on any single trade. DB currently 6 (test). Fallback 50.',step: '1',    suffix: 'lots' },
     { key: 'min_sl_pips',              label: 'Min Stop Loss (pips)',       hint: 'e.g. 8 = reject signals with SL tighter than 8p',          step: '0.5',  suffix: 'pips' },
+  { key: 'api_rate_limit',           label: 'API Rate Limit (req/min)',   hint: 'cTrader API max calls/min. Default 75. Warning at 80%, Critical at 93%', step: '1', suffix: 'req/min' },
   ];
 
   const toggleFields = [
