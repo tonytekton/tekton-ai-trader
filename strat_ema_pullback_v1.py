@@ -486,6 +486,12 @@ def save_signal(symbol: str, direction: str, reason: str,
 
 def run_scan():
     print(f"[{_ts()}] 🧠 EPS scan started")
+    try:
+        get_symbol_specs()  # pre-check — raises if bridge specs unavailable
+    except Exception as spec_err:
+        print(f"[{_ts()}] ❌ BRIDGE SPECS FAILED — skipping scan cycle. Check /symbols/list endpoint. Error: {spec_err}")
+        time.sleep(SCAN_INTERVAL_SEC)
+        continue
     symbols = get_active_symbols()
     print(f"[{_ts()}] 📊 {len(symbols)} symbols with 4H+15min data")
 
