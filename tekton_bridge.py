@@ -742,6 +742,49 @@ def get_calendar_events():
         return jsonify({"success": False, "error": str(e)}), 500
 
         
+def fetch_all_deals(from_ts: int, to_ts: int, max_rows_per_page: int = 500) -> list:
+    """
+    Paginate through ProtoOADealListReq until hasMore=False.
+    cTrader returns up to max_rows_per_page deals per call, oldest-first.
+    We walk forward using the last deal's executionTimestamp as the next fromTimestamp.
+    Returns a flat list of all ProtoOADeal objects across all pages.
+    """
+    all_deals = []
+    page_from_ts = from_ts
+    page = 0
+
+    while True:
+        page += 1
+        req = openapi.ProtoOADealListReq()
+        req.ctidTraderAccountId = ACCOUNT_ID
+        req.fromTimestamp = page_from_ts
+        req.toTimestamp   = to_ts
+        req.maxRows       = max_rows_per_page
+
+        d, mid = defer.Deferred(), str(uuid.uuid4())
+        pending_requests[mid] = d
+        reactor.callFromThread(lambda: bridge.client.send(req, clientMsgId=mid))
+        result = threads.blockingCallFromThread(reactor, wait_for_deferred, d, 30)
+
+        deals = list(result.deal)
+        all_deals.extend(deals)
+
+        has_more = getattr(result, 'hasMore', False)
+        print(f"📄 fetch_all_deals page {page}: {len(deals)} deals, hasMore={has_more}")
+
+        if not has_more or not deals:
+            break
+
+        # Advance window: next page starts from the timestamp of the last deal returned + 1ms
+        last_ts = getattr(deals[-1], 'executionTimestamp', None)
+        if not last_ts or last_ts >= to_ts:
+            break
+        page_from_ts = last_ts + 1
+
+    print(f"✅ fetch_all_deals: {len(all_deals)} total deals across {page} page(s)")
+    return all_deals
+
+
 @app.route("/proxy/executions", methods=["GET"])
 @require_auth
 def get_executions():
@@ -783,20 +826,11 @@ def get_executions():
         to_ts = int(time.time() * 1000)
         from_ts = to_ts - (30 * 24 * 60 * 60 * 1000)
 
-        deal_req = openapi.ProtoOADealListReq()
-        deal_req.ctidTraderAccountId = ACCOUNT_ID
-        deal_req.fromTimestamp = from_ts
-        deal_req.toTimestamp = to_ts
-        deal_req.maxRows = 500
-
-        d_deals, client_msg_id_deals = defer.Deferred(), str(uuid.uuid4())
-        pending_requests[client_msg_id_deals] = d_deals
-
-        reactor.callFromThread(lambda: bridge.client.send(deal_req, clientMsgId=client_msg_id_deals))
-        deal_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_deals, 30)
+        # Paginated DealListReq — fetches all pages until hasMore=False (Phase 11d)
+        all_deals = fetch_all_deals(from_ts, to_ts)
 
         position_deals = {}
-        for deal in deal_result.deal:
+        for deal in all_deals:
             pos_id = str(deal.positionId)
             if pos_id not in position_deals:
                 position_deals[pos_id] = []
@@ -1339,22 +1373,13 @@ def get_positions_history():
         from_timestamp = int(data.get("from_timestamp", to_timestamp - (30 * 24 * 60 * 60 * 1000)))
 
         start_time = time.time()
-        req = openapi.ProtoOADealListReq()
-        req.ctidTraderAccountId = ACCOUNT_ID
-        req.fromTimestamp = from_timestamp
-        req.toTimestamp = to_timestamp
-        req.maxRows = min(limit, 1000)
-
-        d, client_msg_id = defer.Deferred(), str(uuid.uuid4())
-        pending_requests[client_msg_id] = d
-
-        reactor.callFromThread(lambda: bridge.client.send(req, clientMsgId=client_msg_id))
-        result = threads.blockingCallFromThread(reactor, wait_for_deferred, d, 30)
-        log_ctrader_call("/deals/closed", int((time.time() - start_time) * 1000), True)
+        # Paginated DealListReq — fetches all pages until hasMore=False (Phase 11d)
+        all_deals = fetch_all_deals(from_timestamp, to_timestamp)
+        log_ctrader_call("/deals/closed", 0, True)
 
         positions = []
         position_deals = {}
-        for deal in result.deal:
+        for deal in all_deals:
             pos_id = str(deal.positionId)
             if pos_id not in position_deals:
                 position_deals[pos_id] = []
