@@ -94,7 +94,8 @@ def get_symbol_specs() -> dict:
         print(f"[{_ts()}] 📋 Bridge specs: {len(specs)} symbols")
         return specs
     except Exception as e:
-        print(f"[{_ts()}] ⚠️  Bridge specs error: {e}")
+        print(f"[{_ts()}] ❌ Bridge specs UNAVAILABLE — skipping scan cycle: {e}")
+        raise
         return {}
 
 
