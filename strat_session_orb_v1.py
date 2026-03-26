@@ -331,6 +331,12 @@ def main():
             time.sleep(SCAN_INTERVAL_SEC)
             continue
         try:
+            try:
+                get_symbol_specs()  # pre-check — raises if bridge specs unavailable
+            except Exception as spec_err:
+                print(f"[{_ts()}] ❌ BRIDGE SPECS FAILED — skipping scan cycle. Check /symbols/list endpoint. Error: {spec_err}")
+                time.sleep(SCAN_INTERVAL_SEC)
+                continue
             symbols = get_active_symbols()
             print(f"[{_ts()}] 📊 {len(symbols)} symbols in session window")
             accepted = 0
