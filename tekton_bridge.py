@@ -60,6 +60,7 @@ state = {
     "authenticated": False,
     "symbols_cache": {},
     "symbol_id_to_spec_map": {},
+    "api_rate_limit": 75,  # cached from settings table, updated on POST /data/settings
     "symbol_id_to_name_map": {},
     "asset_map": {},
     "account_type": "Unknown",
@@ -86,6 +87,13 @@ def log_ctrader_call(endpoint, duration_ms, success=True):
         "duration_ms": duration_ms,
         "success": success
     })
+    # Rate limit guardrail — warn if approaching cTrader API rate limit
+    rate  = len(get_calls_in_window(60))
+    limit = state.get("api_rate_limit", 75)
+    if rate > int(limit * 0.93):
+        print(f"🚨 CRITICAL: cTrader API rate {rate}/min — THROTTLE NON-ESSENTIAL CALLS (limit={limit})")
+    elif rate > int(limit * 0.80):
+        print(f"⚠️  WARNING: cTrader API rate {rate}/min — approaching limit (limit={limit})")
 
 def cleanup_old_calls():
     cutoff = time.time() - (24 * 60 * 60)
@@ -653,11 +661,13 @@ def system_settings():
             max_lots               = data.get("max_lots", 50.0)
             min_sl_pips            = data.get("min_sl_pips", 8.0)
             news_blackout_mins     = data.get("news_blackout_mins", 30)
+            api_rate_limit         = data.get("api_rate_limit", 75)
 
             cur.execute("""
                 INSERT INTO settings (id, auto_trade, friday_flush, risk_pct, target_reward,
-                                      daily_drawdown_limit, max_session_exposure_pct, max_lots, min_sl_pips, news_blackout_mins)
-                VALUES (1, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                      daily_drawdown_limit, max_session_exposure_pct, max_lots, min_sl_pips,
+                                      news_blackout_mins, api_rate_limit)
+                VALUES (1, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (id) DO UPDATE SET
                     auto_trade               = EXCLUDED.auto_trade,
                     friday_flush             = EXCLUDED.friday_flush,
@@ -667,14 +677,19 @@ def system_settings():
                     max_session_exposure_pct = EXCLUDED.max_session_exposure_pct,
                     max_lots                 = EXCLUDED.max_lots,
                     min_sl_pips              = EXCLUDED.min_sl_pips,
-                    news_blackout_mins       = EXCLUDED.news_blackout_mins
+                    news_blackout_mins       = EXCLUDED.news_blackout_mins,
+                    api_rate_limit           = EXCLUDED.api_rate_limit
             """, (auto_trade, friday_flush, risk_pct, target_reward,
-                    daily_drawdown_limit, max_session_exposure_pct, max_lots, min_sl_pips, news_blackout_mins))
+                    daily_drawdown_limit, max_session_exposure_pct, max_lots, min_sl_pips,
+                    news_blackout_mins, api_rate_limit))
             conn.commit()
+            # Refresh cached rate limit in state{}
+            state["api_rate_limit"] = int(api_rate_limit)
         else:
             cur.execute("""
                 SELECT auto_trade, friday_flush, risk_pct, target_reward,
-                       daily_drawdown_limit, max_session_exposure_pct, max_lots, min_sl_pips, news_blackout_mins
+                       daily_drawdown_limit, max_session_exposure_pct, max_lots, min_sl_pips, news_blackout_mins,
+                       api_rate_limit
                 FROM settings WHERE id = 1
             """)
             row = cur.fetchone()
@@ -689,7 +704,8 @@ def system_settings():
                     "max_session_exposure_pct": float(row[5]),
                     "max_lots":                 float(row[6]),
                     "min_sl_pips":              float(row[7]) if row[7] is not None else 8.0,
-                    "news_blackout_mins":        int(row[8]) if row[8] is not None else 30
+                    "news_blackout_mins":        int(row[8]) if row[8] is not None else 30,
+                    "api_rate_limit":            int(row[9]) if row[9] is not None else 75
                 })
         cur.close()
         conn.close()
@@ -703,7 +719,8 @@ def system_settings():
             "max_session_exposure_pct": float(max_session_exposure_pct),
             "max_lots":                 float(max_lots),
             "min_sl_pips":              float(min_sl_pips),
-            "news_blackout_mins":        int(news_blackout_mins)
+            "news_blackout_mins":        int(news_blackout_mins),
+            "api_rate_limit":            int(api_rate_limit)
         })
     except Exception as e:
         print(f"⚠️ system_settings error: {e}")
