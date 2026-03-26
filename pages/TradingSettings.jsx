@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Save, CheckCircle, AlertCircle } from 'lucide-react';
 
-// Call bridge directly — avoids Base44 function relay which adds 150s+ latency
-const BRIDGE_URL = 'http://35.234.132.174:8080';
-const BRIDGE_KEY = import.meta.env.VITE_BRIDGE_KEY || '';
-
-async function bridgeFetch(path, options = {}) {
-  const res = await fetch(`${BRIDGE_URL}${path}`, {
+// Both load and save route through backend functions — BRIDGE_KEY is server-side only
+async function apiFetch(path, options = {}) {
+  const res = await fetch(path, {
     ...options,
-    headers: { 'X-Bridge-Key': BRIDGE_KEY, 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
   });
-  if (!res.ok) throw new Error(`Bridge ${path} returned ${res.status}`);
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
 }
 
 export default function TradingSettings() {
@@ -20,7 +18,7 @@ export default function TradingSettings() {
     target_reward: 2.0,
     drawdown_display: 7.5,
     max_session_exposure_pct: 4.0,
-    max_lots: 50,
+    max_lots: 6,
     min_sl_pips: 8.0,
     auto_trade: false,
     friday_flush: false,
@@ -33,7 +31,7 @@ export default function TradingSettings() {
   const [error, setError]       = useState(null);
 
   useEffect(() => {
-    bridgeFetch('/data/settings')
+    apiFetch('/api/functions/loadAllSettings')
       .then(d => {
         if (d && !d.error) {
           setForm({
@@ -41,7 +39,7 @@ export default function TradingSettings() {
             target_reward:            d.target_reward            ?? 2.0,
             drawdown_display:         d.daily_drawdown_limit != null ? parseFloat((d.daily_drawdown_limit * 100).toPrecision(6)) : 7.5,
             max_session_exposure_pct: d.max_session_exposure_pct ?? 4.0,
-            max_lots:                 d.max_lots ?? 50,
+            max_lots:                 d.max_lots                 ?? 6,
             min_sl_pips:              d.min_sl_pips              ?? 8.0,
             auto_trade:               d.auto_trade               ?? false,
             friday_flush:             d.friday_flush             ?? false,
@@ -61,11 +59,8 @@ export default function TradingSettings() {
     setSaving(true);
     setError(null);
     try {
-      // Route through backend function — BRIDGE_KEY is a server-side secret,
-      // not available as a build-time VITE_ env var in the frontend.
-      const res = await fetch('/api/functions/saveAllSettings', {
+      const result = await apiFetch('/api/functions/saveAllSettings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           auto_trade:               form.auto_trade,
           friday_flush:             form.friday_flush,
@@ -79,7 +74,6 @@ export default function TradingSettings() {
           news_blackout_mins:       form.news_blackout_mins,
         }),
       });
-      const result = await res.json();
       if (result.success) {
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
@@ -94,19 +88,19 @@ export default function TradingSettings() {
   };
 
   const numericFields = [
-    { key: 'risk_pct_display',         label: 'Risk Percentage (%)',       hint: 'e.g. 1.0 = 1% risk per trade',                             step: '0.1',  suffix: '%'    },
-    { key: 'target_reward',            label: 'Target Reward',             hint: 'e.g. 2.0 = 1:2 RR minimum',                                step: '0.1',  suffix: null   },
-    { key: 'drawdown_display',         label: 'Daily Drawdown Limit (%)',  hint: 'e.g. 7.5 = 7.5% max daily loss',                           step: '0.1',  suffix: '%'    },
-    { key: 'max_session_exposure_pct', label: 'Max Session Exposure (%)',  hint: 'e.g. 4.0 = max 4% total open risk at any time',            step: '0.1',  suffix: '%'    },
-    { key: 'max_lots',                 label: 'Max Lot Size',              hint: 'Hard cap on any single trade. DB currently 6 (test). Fallback 50.',step: '1',    suffix: 'lots' },
-    { key: 'min_sl_pips',              label: 'Min Stop Loss (pips)',       hint: 'e.g. 8 = reject signals with SL tighter than 8p',          step: '0.5',  suffix: 'pips' },
-    { key: 'news_blackout_mins',       label: 'News Blackout Window (min)',  hint: 'Block trades this many minutes before AND after a HIGH-impact event', step: '5', suffix: 'min'  },
+    { key: 'risk_pct_display',         label: 'Risk Percentage (%)',        hint: 'e.g. 1.0 = 1% risk per trade',                                          step: '0.1', suffix: '%'    },
+    { key: 'target_reward',            label: 'Target Reward',              hint: 'e.g. 2.0 = 1:2 RR minimum',                                             step: '0.1', suffix: null   },
+    { key: 'drawdown_display',         label: 'Daily Drawdown Limit (%)',   hint: 'e.g. 7.5 = 7.5% max daily loss',                                         step: '0.1', suffix: '%'    },
+    { key: 'max_session_exposure_pct', label: 'Max Session Exposure (%)',   hint: 'e.g. 4.0 = max 4% total open risk at any time',                          step: '0.1', suffix: '%'    },
+    { key: 'max_lots',                 label: 'Max Lot Size',               hint: 'Hard cap on any single trade (testing = 6, live = 50)',                  step: '1',   suffix: 'lots' },
+    { key: 'min_sl_pips',              label: 'Min Stop Loss (pips)',        hint: 'Reject signals with SL tighter than this',                               step: '0.5', suffix: 'pips' },
+    { key: 'news_blackout_mins',       label: 'News Blackout Window (min)', hint: 'Block trades this many minutes before AND after a HIGH-impact event',    step: '5',   suffix: 'min'  },
   ];
 
   const toggleFields = [
-    { key: 'auto_trade',          label: 'Auto Trade',       hint: 'Enable autonomous trade execution',            activeColor: 'emerald' },
-    { key: 'friday_flush',        label: 'Friday Flush',     hint: 'Close all positions at 16:00 UTC on Fridays',  activeColor: 'amber'   },
-    { key: 'news_filter_enabled', label: 'News Filter',      hint: 'Block new trades within the news blackout window around HIGH-impact events', activeColor: 'blue' },
+    { key: 'auto_trade',          label: 'Auto Trade',   hint: 'Enable autonomous trade execution',                           activeColor: 'emerald' },
+    { key: 'friday_flush',        label: 'Friday Flush', hint: 'Close all positions at 16:00 UTC on Fridays',                activeColor: 'amber'   },
+    { key: 'news_filter_enabled', label: 'News Filter',  hint: 'Block new trades within the blackout window around HIGH-impact events', activeColor: 'blue' },
   ];
 
   if (loading) return (
