@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Tekton Calendar Fetcher every 6 hours
+Requires=tekton-calendar.service
+
+[Timer]
+OnBootSec=30sec
+OnUnitActiveSec=6h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
