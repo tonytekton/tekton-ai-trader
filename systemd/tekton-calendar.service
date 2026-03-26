@@ -1,0 +1,13 @@
+[Unit]
+Description=Tekton Calendar Fetcher — ForexFactory economic events
+After=network-online.target tekton-ai-trader-bridge.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=tony
+WorkingDirectory=/home/tony/tekton-ai-trader
+EnvironmentFile=/home/tony/tekton-ai-trader/.env
+ExecStart=/home/tony/tekton-ai-trader/venv/bin/python /home/tony/tekton-ai-trader/tekton_calendar.py
+StandardOutput=append:/home/tony/tekton-ai-trader/combined_trades.log
+StandardError=append:/home/tony/tekton-ai-trader/combined_trades.log
