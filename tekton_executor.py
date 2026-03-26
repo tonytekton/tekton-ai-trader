@@ -539,7 +539,7 @@ def poll_signals():
                         if not positions:
                             print("  ℹ️ No open positions to close.")
                         for pos in positions:
-                            pid = pos.get("position_id") or pos.get("id")
+                            pid = pos.get("positionId") or pos.get("position_id") or pos.get("id")
                             sym = pos.get("symbol", "?")
                             if pid:
                                 close_resp = requests.post(
