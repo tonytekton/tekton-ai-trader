@@ -1156,7 +1156,6 @@ def execute_trade():
 
         symbol  = data.get("symbol")
         side    = data.get("signal_type") or data.get("side")
-        vol     = data.get("volume_centilots") or data.get("volume")
         comment = data.get("comment", "")
 
         spec = state["symbols_cache"].get(symbol, {})
@@ -1164,6 +1163,15 @@ def execute_trade():
             return jsonify({"success": False, "error": f"Symbol {symbol} not found"}), 404
 
         symbol_id = spec.get("symbolId") or spec.get("symbol_id")
+
+        # Volume: accept either centilots (int) or lots (float).
+        # Executor sends centilots already. Direct/manual calls may send lots.
+        # Detect: if value is a float OR < 1000, treat as lots and convert.
+        raw_vol = data.get("volume_centilots") or data.get("volume")
+        if isinstance(raw_vol, float) or (isinstance(raw_vol, (int, float)) and raw_vol < 1000):
+            vol = int(round(float(raw_vol) * 10_000_000))  # lots → centilots
+        else:
+            vol = int(raw_vol)  # already centilots
 
         req = openapi.ProtoOANewOrderReq()
         req.ctidTraderAccountId = ACCOUNT_ID
