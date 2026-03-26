@@ -661,13 +661,12 @@ def system_settings():
             max_lots               = data.get("max_lots", 50.0)
             min_sl_pips            = data.get("min_sl_pips", 8.0)
             news_blackout_mins     = data.get("news_blackout_mins", 30)
-            api_rate_limit         = data.get("api_rate_limit", 75)
 
             cur.execute("""
                 INSERT INTO settings (id, auto_trade, friday_flush, risk_pct, target_reward,
                                       daily_drawdown_limit, max_session_exposure_pct, max_lots, min_sl_pips,
-                                      news_blackout_mins, api_rate_limit)
-                VALUES (1, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                      news_blackout_mins)
+                VALUES (1, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (id) DO UPDATE SET
                     auto_trade               = EXCLUDED.auto_trade,
                     friday_flush             = EXCLUDED.friday_flush,
@@ -677,19 +676,15 @@ def system_settings():
                     max_session_exposure_pct = EXCLUDED.max_session_exposure_pct,
                     max_lots                 = EXCLUDED.max_lots,
                     min_sl_pips              = EXCLUDED.min_sl_pips,
-                    news_blackout_mins       = EXCLUDED.news_blackout_mins,
-                    api_rate_limit           = EXCLUDED.api_rate_limit
+                    news_blackout_mins       = EXCLUDED.news_blackout_mins
             """, (auto_trade, friday_flush, risk_pct, target_reward,
                     daily_drawdown_limit, max_session_exposure_pct, max_lots, min_sl_pips,
-                    news_blackout_mins, api_rate_limit))
+                    news_blackout_mins))
             conn.commit()
-            # Refresh cached rate limit in state{}
-            state["api_rate_limit"] = int(api_rate_limit)
         else:
             cur.execute("""
                 SELECT auto_trade, friday_flush, risk_pct, target_reward,
-                       daily_drawdown_limit, max_session_exposure_pct, max_lots, min_sl_pips, news_blackout_mins,
-                       api_rate_limit
+                       daily_drawdown_limit, max_session_exposure_pct, max_lots, min_sl_pips, news_blackout_mins
                 FROM settings WHERE id = 1
             """)
             row = cur.fetchone()
@@ -704,8 +699,7 @@ def system_settings():
                     "max_session_exposure_pct": float(row[5]),
                     "max_lots":                 float(row[6]),
                     "min_sl_pips":              float(row[7]) if row[7] is not None else 8.0,
-                    "news_blackout_mins":        int(row[8]) if row[8] is not None else 30,
-                    "api_rate_limit":            int(row[9]) if row[9] is not None else 75
+                    "news_blackout_mins":        int(row[8]) if row[8] is not None else 30
                 })
         cur.close()
         conn.close()
@@ -719,8 +713,7 @@ def system_settings():
             "max_session_exposure_pct": float(max_session_exposure_pct),
             "max_lots":                 float(max_lots),
             "min_sl_pips":              float(min_sl_pips),
-            "news_blackout_mins":        int(news_blackout_mins),
-            "api_rate_limit":            int(api_rate_limit)
+            "news_blackout_mins":        int(news_blackout_mins)
         })
     except Exception as e:
         print(f"⚠️ system_settings error: {e}")
