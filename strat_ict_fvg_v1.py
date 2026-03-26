@@ -80,7 +80,7 @@ def get_symbol_specs():
         return specs
 
     except Exception as e:
-        print(f"⚠️ Could not fetch bridge specs: {e} — falling back to defaults")
+        print(f"❌ Bridge specs UNAVAILABLE — skipping scan cycle: {e} — falling back to defaults")
         return {}
 
 
