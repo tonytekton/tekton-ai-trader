@@ -1309,8 +1309,9 @@ def modify_trade():
         reactor.callFromThread(lambda: bridge.client.send(req, clientMsgId=mid_mod))
         result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_mod, 15)
 
-        if hasattr(result, 'errorCode'):
-            return jsonify({"success": False, "error": f"{result.errorCode}: {getattr(result, 'description', '')}"}), 400
+        if hasattr(result, 'errorCode') and result.errorCode:
+            desc = getattr(result, 'description', '') or str(result.errorCode)
+            return jsonify({"success": False, "error": f"cTrader error {result.errorCode}: {desc}"}), 400
 
         # Update position_state{} immediately so subsequent reads reflect the change
         if sl_price is not None:
