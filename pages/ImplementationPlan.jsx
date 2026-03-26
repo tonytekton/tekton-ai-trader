@@ -125,7 +125,7 @@ const PHASES = [
     ],
   },
   {
-    id: 'p11', title: 'Phase 11 — Bridge Architectural Refactor (v4.8)', color: 'red',
+    id: 'p11', title: 'Phase 11 — Bridge Architectural Refactor (v4.8)', color: 'red', status: 'complete',
     desc: 'Full event-driven rewrite of tekton_bridge.py. Eliminates all polling of cTrader on read paths. Introduces price normalisation layer. Fixes 4 known bugs. Design in BRIDGE_REFACTOR_DESIGN.md.',
     tasks: [
       { id: 't11_1', title: 'Phase 11a — Add price normalisation helpers', detail: 'Add raw_to_decimal(raw_int, digits) and decimal_to_raw(decimal, digits) near top of bridge. All price conversions must go through these — never inline. Agreed Decision #13/#20/#21.', file: 'tekton_bridge.py' },
@@ -140,11 +140,11 @@ const PHASES = [
       { id: 't11_10', title: 'Phase 11c — Refactor /proxy/executions open trades from position_state{}', detail: 'Remove ReconcileReq and OrderListReq serial calls from get_executions(). Serve open trades from position_state{}. SQL enrichment (sl_pips, tp_pips, strategy) retained.', file: 'tekton_bridge.py' },
       { id: 't11_11', title: 'Phase 11c — Refactor /trade/close to use position_state{}', detail: 'Remove ReconcileReq used only to get volume. Look up position_state[position_id][volume_raw] instead. One fewer cTrader call per close.', file: 'tekton_bridge.py' },
       { id: 't11_12', title: 'Phase 11c — Refactor /account/info to serve from state{}', detail: 'Remove ProtoOATraderReq on every call. Serve balance/equity/margin from state{} (kept live by TraderUpdatedEvent). Add ?refresh=true param to force a live fetch if needed.', file: 'tekton_bridge.py' },
-      { id: 't11_13', title: 'Phase 11d — Add DealListReq pagination', detail: 'Replace single DealListReq with fetch_all_deals() helper that loops on hasMore. Apply in /proxy/executions closed trades and /positions/history. Fixes silent data loss for accounts with >500 deals in 30 days.', file: 'tekton_bridge.py' },
-      { id: 't11_14', title: 'Phase 11d — Push BRIDGE_REFACTOR_DESIGN.md to GitHub', detail: 'Ensure BRIDGE_REFACTOR_DESIGN.md is committed to repo root so it is version-controlled alongside the code.', file: 'GitHub' },
-      { id: 't11_15', title: 'Phase 11d — Smoke test: execute trade, verify position_state populated', detail: 'Execute a test trade. Confirm ExecutionEvent fires, position appears in position_state{}, /positions/list returns it without any ReconcileReq call in logs.', file: 'Terminal + combined_trades.log' },
-      { id: 't11_16', title: 'Phase 11d — Smoke test: modify SL/TP, verify correct prices sent', detail: 'Call /trade/modify with decimal SL/TP. Confirm bridge sends decimal double to cTrader. Confirm position_state{} updates via ExecutionEvent.', file: 'Terminal + combined_trades.log' },
-      { id: 't11_17', title: 'Phase 11d — Verify monitor poll latency improvement', detail: 'Time a full monitor loop before and after refactor. Target: <100ms per poll vs ~3s before. Check combined_trades.log for zero ReconcileReq calls during normal operation.', file: 'combined_trades.log' },
+      { id: 't11_13', title: 'Phase 11d — Add DealListReq pagination', detail: 'Replace single DealListReq with fetch_all_deals() helper that loops on hasMore. Apply in /proxy/executions closed trades and /positions/history. Fixes silent data loss for accounts with >500 deals in 30 days.', file: 'tekton_bridge.py' , status: 'complete'},
+      { id: 't11_14', title: 'Phase 11d — Push BRIDGE_REFACTOR_DESIGN.md to GitHub', detail: 'Ensure BRIDGE_REFACTOR_DESIGN.md is committed to repo root so it is version-controlled alongside the code.', file: 'GitHub' , status: 'complete'},
+      { id: 't11_15', title: 'Phase 11d — Smoke test: execute trade, verify position_state populated', detail: 'Execute a test trade. Confirm ExecutionEvent fires, position appears in position_state{}, /positions/list returns it without any ReconcileReq call in logs.', file: 'Terminal + combined_trades.log', status: 'complete' },
+      { id: 't11_16', title: 'Phase 11d — Smoke test: modify SL/TP, verify correct prices sent', detail: 'Call /trade/modify with decimal SL/TP. Confirm bridge sends decimal double to cTrader. Confirm position_state{} updates via ExecutionEvent.', file: 'Terminal + combined_trades.log', status: 'complete' },
+      { id: 't11_17', title: 'Phase 11d — Verify monitor poll latency improvement', detail: 'Time a full monitor loop before and after refactor. Target: <100ms per poll vs ~3s before. Check combined_trades.log for zero ReconcileReq calls during normal operation.', file: 'combined_trades.log' , status: 'complete'},
     ],
   },
   {
