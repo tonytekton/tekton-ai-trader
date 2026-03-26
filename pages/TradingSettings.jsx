@@ -24,6 +24,8 @@ export default function TradingSettings() {
     min_sl_pips: 8.0,
     auto_trade: false,
     friday_flush: false,
+    news_filter_enabled: true,
+    news_blackout_mins: 30,
   });
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
@@ -43,6 +45,8 @@ export default function TradingSettings() {
             min_sl_pips:              d.min_sl_pips              ?? 8.0,
             auto_trade:               d.auto_trade               ?? false,
             friday_flush:             d.friday_flush             ?? false,
+            news_filter_enabled:      d.news_filter_enabled      ?? true,
+            news_blackout_mins:       d.news_blackout_mins       ?? 30,
           });
         }
       })
@@ -71,6 +75,8 @@ export default function TradingSettings() {
           max_session_exposure_pct: form.max_session_exposure_pct,
           max_lots:                 form.max_lots,
           min_sl_pips:              form.min_sl_pips,
+          news_filter_enabled:      form.news_filter_enabled,
+          news_blackout_mins:       form.news_blackout_mins,
         }),
       });
       const result = await res.json();
@@ -94,11 +100,13 @@ export default function TradingSettings() {
     { key: 'max_session_exposure_pct', label: 'Max Session Exposure (%)',  hint: 'e.g. 4.0 = max 4% total open risk at any time',            step: '0.1',  suffix: '%'    },
     { key: 'max_lots',                 label: 'Max Lot Size',              hint: 'Hard cap on any single trade. DB currently 6 (test). Fallback 50.',step: '1',    suffix: 'lots' },
     { key: 'min_sl_pips',              label: 'Min Stop Loss (pips)',       hint: 'e.g. 8 = reject signals with SL tighter than 8p',          step: '0.5',  suffix: 'pips' },
+    { key: 'news_blackout_mins',       label: 'News Blackout Window (min)',  hint: 'Block trades this many minutes before AND after a HIGH-impact event', step: '5', suffix: 'min'  },
   ];
 
   const toggleFields = [
-    { key: 'auto_trade',   label: 'Auto Trade',   hint: 'Enable autonomous trade execution',           activeColor: 'emerald' },
-    { key: 'friday_flush', label: 'Friday Flush', hint: 'Close all positions at 16:00 UTC on Fridays', activeColor: 'amber'   },
+    { key: 'auto_trade',          label: 'Auto Trade',       hint: 'Enable autonomous trade execution',            activeColor: 'emerald' },
+    { key: 'friday_flush',        label: 'Friday Flush',     hint: 'Close all positions at 16:00 UTC on Fridays',  activeColor: 'amber'   },
+    { key: 'news_filter_enabled', label: 'News Filter',      hint: 'Block new trades within the news blackout window around HIGH-impact events', activeColor: 'blue' },
   ];
 
   if (loading) return (
@@ -130,6 +138,7 @@ export default function TradingSettings() {
           const colors = {
             emerald: { track: active ? 'bg-emerald-500' : 'bg-slate-700', badge: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
             amber:   { track: active ? 'bg-amber-500'  : 'bg-slate-700', badge: 'text-amber-400  bg-amber-500/10  border-amber-500/20'  },
+            blue:    { track: active ? 'bg-blue-500'   : 'bg-slate-700', badge: 'text-blue-400   bg-blue-500/10   border-blue-500/20'   },
           };
           const c = colors[activeColor];
           return (
