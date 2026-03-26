@@ -44,6 +44,11 @@ INDEX_QUOTE_MAP = {
 # Immune to cTrader position visibility latency (~200-500ms after order sent).
 _executing_symbols: set = set()
 
+# Friday Flush dedup guard — tracks the last date flush was fired.
+# Prevents the 16:00-16:15 window from re-closing already-closed positions
+# on every 30s loop iteration.
+_last_flush_date = None
+
 # ---------------------------------------------------------------------------
 # IN-MEMORY CACHE  —  reduces cTrader API calls significantly
 # ---------------------------------------------------------------------------
@@ -455,10 +460,8 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
                 print(f"⚠️ Invalid position_id in bridge response: '{pos_id}' — marking FAILED")
                 return None
 
-            sl_price = result.get("sl_price")   # absolute SL price from broker
-            tp_price = result.get("tp_price")   # absolute TP price from broker
-            print(f"✅ Trade Executed: {symbol} ID: {pos_id} @ {fill_price} SL={sl_price} TP={tp_price}")
-            return (str(pos_id), fill_price, sl_price, tp_price)  # extended tuple
+            print(f"✅ Trade Executed: {symbol} ID: {pos_id} @ {fill_price}")
+            return (str(pos_id), fill_price)  # FIX 2: return tuple (pos_id, fill_price)
         else:
             print(f"❌ Execution Failed: {result.get('error')}")
             return None
@@ -490,52 +493,70 @@ def poll_signals():
                 continue
 
             # --- FRIDAY FLUSH GATE ---
-            # If friday_flush enabled: block new entries after 15:45 UTC on Friday,
-            # and close all open positions at 16:00 UTC.
-            if settings.get("friday_flush"):
-                from datetime import datetime, timezone
-                now_utc = datetime.now(timezone.utc)
-                is_friday = now_utc.weekday() == 4  # Monday=0, Friday=4
-                if is_friday:
-                    hhmm = now_utc.hour * 60 + now_utc.minute
-                    cutoff  = 15 * 60 + 45   # 15:45 UTC — stop new entries
-                    flush_t = 16 * 60 + 0    # 16:00 UTC — close all positions
-                    flush_window = 16 * 60 + 15  # 16:15 UTC — stop trying to close
+            # ---------------------------------------------------------------------------
+            # FRIDAY FLUSH GATE (t13b_1, t13b_2, t13b_3, t13b_5)
+            # - No new trades on Saturday or Sunday (markets closed)
+            # - No new entries after 15:45 UTC on Friday
+            # - Close all open positions at 16:00 UTC on Friday
+            # - Dedup guard: _last_flush_date ensures flush fires once per Friday only
+            # ---------------------------------------------------------------------------
+            from datetime import datetime, timezone, date as date_type
+            global _last_flush_date
+            now_utc  = datetime.now(timezone.utc)
+            weekday  = now_utc.weekday()  # 0=Mon … 4=Fri, 5=Sat, 6=Sun
 
-                    if flush_t <= hhmm < flush_window:
-                        # Close all open positions via bridge
-                        print("🔴 FRIDAY FLUSH: 16:00 UTC — closing all open positions.")
-                        try:
-                            import requests
-                            bridge_url = os.getenv("BRIDGE_URL", "http://localhost:8080")
-                            bridge_key = os.getenv("BRIDGE_KEY", "")
-                            headers = {"X-Bridge-Key": bridge_key}
-                            # Get open positions
-                            pos_resp = requests.get(f"{bridge_url}/positions/list", headers=headers, timeout=10)
-                            positions = pos_resp.json().get("positions", []) if pos_resp.ok else []
-                            for pos in positions:
-                                pid = pos.get("position_id") or pos.get("id")
-                                sym = pos.get("symbol", "?")
-                                if pid:
-                                    close_resp = requests.post(
-                                        f"{bridge_url}/trade/close",
-                                        json={"position_id": pid},
-                                        headers=headers,
-                                        timeout=10
-                                    )
-                                    if close_resp.ok:
-                                        print(f"  ✅ Closed {sym} pos {pid}")
-                                    else:
-                                        print(f"  ⚠️ Failed to close {sym} pos {pid}: {close_resp.text[:80]}")
-                        except Exception as flush_err:
-                            print(f"⚠️ Friday Flush error: {flush_err}")
+            # t13b_5: Hard gate — no trades on Saturday or Sunday
+            if weekday in (5, 6):
+                print(f"💤 WEEKEND: Markets closed ({['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][weekday]}) — sleeping 5 min.")
+                time.sleep(300)
+                continue
+
+            if settings.get("friday_flush") and weekday == 4:
+                hhmm         = now_utc.hour * 60 + now_utc.minute
+                cutoff       = 15 * 60 + 45   # 15:45 UTC — stop new entries
+                flush_t      = 16 * 60 + 0    # 16:00 UTC — close all positions
+                flush_window = 16 * 60 + 15   # 16:15 UTC — stop retrying
+
+                if flush_t <= hhmm < flush_window:
+                    # t13b_3: Only fire flush once per Friday
+                    today = now_utc.date()
+                    if _last_flush_date == today:
+                        print("✅ FRIDAY FLUSH already fired today — skipping.")
                         time.sleep(30)
                         continue
 
-                    elif hhmm >= cutoff:
-                        print(f"🚫 FRIDAY FLUSH: After 15:45 UTC on Friday — no new entries.")
-                        time.sleep(30)
-                        continue
+                    print("🔴 FRIDAY FLUSH: 16:00 UTC — closing all open positions.")
+                    try:
+                        pos_resp  = requests.get(f"{BRIDGE_BASE_URL}/positions/list", headers=HEADERS, timeout=10)
+                        positions = pos_resp.json().get("positions", []) if pos_resp.ok else []
+                        if not positions:
+                            print("  ℹ️ No open positions to close.")
+                        for pos in positions:
+                            pid = pos.get("position_id") or pos.get("id")
+                            sym = pos.get("symbol", "?")
+                            if pid:
+                                close_resp = requests.post(
+                                    f"{BRIDGE_BASE_URL}/trade/close",
+                                    json={"position_id": pid},
+                                    headers=HEADERS,
+                                    timeout=10
+                                )
+                                if close_resp.ok:
+                                    print(f"  ✅ Closed {sym} pos {pid}")
+                                else:
+                                    print(f"  ⚠️ Failed to close {sym} pos {pid}: {close_resp.text[:80]}")
+                        # Mark flush fired for today — prevents re-firing this Friday
+                        _last_flush_date = today
+                        print(f"🔴 FRIDAY FLUSH complete. _last_flush_date = {today}")
+                    except Exception as flush_err:
+                        print(f"⚠️ Friday Flush error: {flush_err}")
+                    time.sleep(30)
+                    continue
+
+                elif hhmm >= cutoff:
+                    print(f"🚫 FRIDAY FLUSH: After 15:45 UTC — no new entries.")
+                    time.sleep(30)
+                    continue
 
 
 
@@ -615,19 +636,13 @@ def poll_signals():
 
                     result = execute_trade(s_uuid, sym, s_type, tf, float(sl_pips), float(tp_pips))
                     if result:
-                        # Unpack extended tuple (pos_id, fill_price, sl_price, tp_price)
-                        pos_id, fill_price, sl_price, tp_price = result
+                        # FIX 2: unpack (pos_id, fill_price) tuple and store avg_fill_price
+                        pos_id, fill_price = result
                         cur.execute(
-                            """UPDATE signals SET status = 'COMPLETED', position_id = %s,
-                               avg_fill_price = %s, sl_price = %s, tp_price = %s
-                               WHERE signal_uuid = %s""",
-                            (pos_id,
-                             float(fill_price) if fill_price else None,
-                             float(sl_price)   if sl_price   else None,
-                             float(tp_price)   if tp_price   else None,
-                             str(s_uuid))
+                            "UPDATE signals SET status = 'COMPLETED', position_id = %s, avg_fill_price = %s WHERE signal_uuid = %s",
+                            (pos_id, fill_price if fill_price else None, str(s_uuid))
                         )
-                        print(f"✅ signals updated: pos_id={pos_id} fill={fill_price} sl={sl_price} tp={tp_price}")
+                        print(f"✅ signals updated: pos_id={pos_id} fill={fill_price}")
                     else:
                         reason = "Bridge execution failed — check bridge logs"
                         cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
@@ -642,6 +657,5 @@ def poll_signals():
 
 if __name__ == "__main__":
     poll_signals()
-
 
 
