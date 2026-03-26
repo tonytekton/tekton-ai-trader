@@ -279,6 +279,12 @@ def get_active_symbols():
 def run_strategy():
     print(f"🧠 AI Brain Active [{datetime.now().strftime('%H:%M:%S')}] - Scanning Market...")
 
+    try:
+        get_symbol_specs()  # pre-check — raises if bridge specs unavailable
+    except Exception as spec_err:
+        print(f"[{_ts()}] ❌ BRIDGE SPECS FAILED — skipping scan cycle. Check /symbols/list endpoint. Error: {spec_err}")
+        time.sleep(SCAN_INTERVAL_SEC)
+        continue
     symbols = get_active_symbols()
     print(f"📊 Scanning {len(symbols)} active symbols found in database...")
 
