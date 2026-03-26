@@ -2,6 +2,7 @@ import time
 import sys
 import requests
 import os
+import psycopg2
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,6 +17,64 @@ sys.stderr = sys.stdout
 BRIDGE_URL = os.getenv("BRIDGE_URL", "http://localhost:8080")
 BRIDGE_KEY = os.getenv("BRIDGE_KEY")
 HEADERS    = {"X-Bridge-Key": BRIDGE_KEY}
+
+DB_PARAMS = {
+    "host":     os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
+    "database": "tekton-trader",
+    "user":     "postgres",
+    "password": os.getenv("CLOUD_SQL_DB_PASSWORD"),
+}
+
+# Known quote currencies for index/commodity symbols
+INDEX_QUOTE_MAP = {
+    "UK100":  "GBP", "DE40":   "EUR", "FR40":   "EUR", "EU50":   "EUR",
+    "JP225":  "JPY", "US30":   "USD", "US500":  "USD", "USTEC":  "USD",
+    "AUS200": "AUD", "HK50":   "HKD",
+    "XAUUSD": "USD", "XAGUSD": "USD", "XTIUSD": "USD", "XBRUSD": "USD",
+}
+
+
+# ---------------------------------------------------------------------------
+# NEWS WINDOW CHECK
+# ---------------------------------------------------------------------------
+def is_news_window(symbol: str, buffer_mins: int = 10) -> bool:
+    """
+    Returns True if a HIGH-impact event is within ±buffer_mins for any
+    currency in the given symbol.  Failure is silent — returns False so
+    trading is never blocked by a DB outage.
+    """
+    currencies = set()
+    if symbol in INDEX_QUOTE_MAP:
+        currencies.add(INDEX_QUOTE_MAP[symbol])
+    elif len(symbol) == 6 and symbol.isalpha():
+        currencies.add(symbol[:3].upper())
+        currencies.add(symbol[3:].upper())
+    if not currencies:
+        return False
+    try:
+        conn = psycopg2.connect(**DB_PARAMS)
+        cur  = conn.cursor()
+        cur.execute("""
+            SELECT indicator_name, currency, event_date
+            FROM economic_events
+            WHERE impact_level = 'HIGH'
+            AND currency = ANY(%s)
+            AND event_date BETWEEN NOW() - INTERVAL '%s minutes'
+                              AND NOW() + INTERVAL '%s minutes'
+            ORDER BY event_date ASC
+            LIMIT 1
+        """, (list(currencies), buffer_mins, buffer_mins))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if row:
+            ev_name, ev_ccy, ev_dt = row
+            print(f"📰 NEWS WINDOW [{symbol}]: {ev_name} ({ev_ccy}) at {ev_dt.strftime('%H:%M')} UTC")
+            return True
+        return False
+    except Exception as e:
+        print(f"⚠️ is_news_window check failed: {e} — skipping news gate")
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -206,6 +265,10 @@ def manage_risk(config):
         current_r       = reward_distance / risk_distance
 
         if current_r >= target_r:
+            # NEWS WINDOW GUARD: suppress close/modify actions during high-impact events
+            if is_news_window(symbol, buffer_mins=10):
+                print(f"⏸️ NEWS HOLD [{symbol}] [{pos_id}] — at {current_r:.2f}R but suppressing action during news window.")
+                continue
             print(f"🎯 {symbol} [{pos_id}] hit {current_r:.2f}R ≥ {target_r}R — closing position.")
             close_res  = requests.post(
                 f"{BRIDGE_URL}/trade/close",
