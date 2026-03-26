@@ -6,7 +6,7 @@ export default function TradingSettings() {
   const [form, setForm] = useState({
     risk_pct_display: 1.0, target_reward: 1.8, drawdown_display: 5.0,
     max_session_exposure_pct: 4.0, max_lots: 50.0, min_sl_pips: 8.0,
-    news_blackout_mins: 30, auto_trade: false, friday_flush: false,
+    news_blackout_mins: 30, auto_trade: false, friday_flush: false, news_filter_enabled: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -26,6 +26,7 @@ export default function TradingSettings() {
           news_blackout_mins:       d.news_blackout_mins ?? 30,
           auto_trade:               d.auto_trade ?? false,
           friday_flush:             d.friday_flush ?? false,
+          news_filter_enabled:      d.news_filter_enabled ?? false,
         });
       }
     }).finally(() => setLoading(false));
@@ -37,7 +38,7 @@ export default function TradingSettings() {
   const handleSave = async () => {
     setSaving(true);
     await base44.functions.invoke('saveAllSettings', {
-      auto_trade: form.auto_trade, friday_flush: form.friday_flush,
+      auto_trade: form.auto_trade, friday_flush: form.friday_flush, news_filter_enabled: form.news_filter_enabled,
       risk_pct: form.risk_pct_display / 100, target_reward: form.target_reward,
       daily_drawdown_limit: form.drawdown_display / 100,
       max_session_exposure_pct: form.max_session_exposure_pct,
@@ -61,7 +62,8 @@ export default function TradingSettings() {
 
   const toggleFields = [
     { key: 'auto_trade',   label: 'Auto Trade',   hint: 'Enable autonomous trade execution',              activeColor: 'emerald' },
-    { key: 'friday_flush', label: 'Friday Flush', hint: 'Close all positions at 16:00 UTC on Fridays',    activeColor: 'amber'   },
+    { key: 'friday_flush',        label: 'Friday Flush',   hint: 'Close all positions at 16:00 UTC on Fridays',    activeColor: 'amber'   },
+    { key: 'news_filter_enabled', label: 'News Filter',    hint: 'Block trades within news blackout window',             activeColor: 'violet'  },
   ];
 
   if (loading) return (
@@ -85,6 +87,7 @@ export default function TradingSettings() {
           const colors = {
             emerald: { track: active ? 'bg-emerald-500' : 'bg-slate-700', badge: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
             amber:   { track: active ? 'bg-amber-500'  : 'bg-slate-700', badge: 'text-amber-400  bg-amber-500/10  border-amber-500/20'  },
+            violet:  { track: active ? 'bg-violet-500' : 'bg-slate-700', badge: 'text-violet-400 bg-violet-500/10 border-violet-500/20' },
           };
           const c = colors[activeColor];
           return (
