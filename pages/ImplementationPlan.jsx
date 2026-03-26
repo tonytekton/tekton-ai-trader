@@ -154,7 +154,7 @@ const PHASES = [
       { id: 't12_1', title: 'Verify rate reduction after Phase 11 refactor', detail: 'Check /stats/api-usage. Confirm calls-per-minute drops significantly vs pre-refactor baseline. Document before/after numbers.', file: 'Bridge /stats/api-usage endpoint' },
       { id: 't12_2', title: 'Add rate limit warning log in bridge', detail: 'If requests_last_60s > 60, log WARNING. If > 70, log CRITICAL and throttle non-essential calls.', file: 'tekton_bridge.py' },
       { id: 't12_3', title: 'Add API Rate Monitor widget to Dashboard', detail: 'Gauge showing requests/min vs limit. Green <50, Amber 50-65, Red >65. Auto-refreshes every 10s.', file: 'Base44 UI → Dashboard page' },
-      { id: 't12_4', title: 'Add api_rate_limit column to settings table', detail: 'Store the rate limit value in SQL so it can be updated from UI. ALTER TABLE settings ADD COLUMN api_rate_limit INT DEFAULT 75.', file: 'PostgreSQL + TradingSettings page' },
+      { id: 't12_4', title: 'Note: 75 req/min is a Spotware platform hard limit', detail: 'The cTrader Open API rate limit of 75 calls/min is imposed by Spotware — it is NOT configurable. The bridge monitors against this fixed ceiling only. No DB column or UI setting needed.', file: 'N/A', status: 'complete' },
     ],
   },
 
