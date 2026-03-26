@@ -16,10 +16,16 @@ Deno.serve(async (req) => {
       max_session_exposure_pct,
       max_lots,
       min_sl_pips,
+      news_filter_enabled,
+      news_blackout_mins,
     } = body;
 
     const bridgeUrl = Deno.env.get('BRIDGE_URL');
     const bridgeKey = Deno.env.get('BRIDGE_KEY');
+
+    if (!bridgeUrl || !bridgeKey) {
+      return Response.json({ error: 'Bridge URL or key not configured' }, { status: 500 });
+    }
 
     const res = await fetch(`${bridgeUrl}/data/settings`, {
       method: 'POST',
@@ -33,6 +39,8 @@ Deno.serve(async (req) => {
         max_session_exposure_pct,
         max_lots,
         min_sl_pips,
+        news_filter_enabled:  news_filter_enabled  ?? true,
+        news_blackout_mins:   news_blackout_mins   ?? 30,
       }),
     });
 
