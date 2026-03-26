@@ -112,8 +112,8 @@ def get_symbol_specs():
         print(f"[{_ts()}] 📋 Bridge specs loaded: {len(specs)} symbols")
         return specs
     except Exception as e:
-        print(f"[{_ts()}] ⚠️ Bridge specs error: {e}")
-        return {}
+        print(f"[{_ts()}] ❌ Bridge specs UNAVAILABLE — skipping scan cycle: {e}")
+        raise
 
 def get_pip_info(symbol):
     specs = get_symbol_specs()
@@ -367,4 +367,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
