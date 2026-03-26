@@ -288,11 +288,16 @@ def _handle_unsolicited_execution_event(payload):
                 state["position_state"] = {}
             d_pos = _position_to_dict(pos, spec, digits)
             ps    = state["position_state"].setdefault(pos_id, {})
-            # Always overwrite with latest from cTrader push (most authoritative)
+            # Always overwrite with latest from cTrader push (most authoritative).
+            # Exception: if spec lookup failed (UNKNOWN symbol), preserve existing
+            # symbol/symbol_id from position_state — don't overwrite with UNKNOWN.
+            existing_symbol = ps.get("symbol", "")
             for k, v in d_pos.items():
                 if v is not None:
+                    if k == "symbol" and v.startswith("UNKNOWN_") and existing_symbol and not existing_symbol.startswith("UNKNOWN_"):
+                        continue  # keep the known symbol name we already have
                     ps[k] = v
-            print(f"📥 position_state: upserted {d_pos.get('symbol','?')} pos {pos_id} ({d_pos.get('side','?')})")
+            print(f"📥 position_state: upserted {ps.get('symbol','?')} pos {pos_id} ({d_pos.get('side','?')})")
 
     except Exception as e:
         print(f"⚠️  _handle_unsolicited_execution_event error: {e}")
