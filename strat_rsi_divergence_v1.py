@@ -352,6 +352,12 @@ def main():
     while True:
         print(f"[{_ts()}] 🧠 RSID scan started")
         try:
+            try:
+                get_symbol_specs()  # pre-check — raises if bridge specs unavailable
+            except Exception as spec_err:
+                print(f"[{_ts()}] ❌ BRIDGE SPECS FAILED — skipping scan cycle. Check /symbols/list endpoint. Error: {spec_err}")
+                time.sleep(SCAN_INTERVAL_SEC)
+                continue
             symbols = get_active_symbols()
             print(f"[{_ts()}] 📊 {len(symbols)} symbols")
             for sym in symbols:
