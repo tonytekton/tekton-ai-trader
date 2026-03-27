@@ -67,7 +67,8 @@ function StatusBadge({ online }) {
 
 // AI_BUDGET constants
 const AI_MONTHLY_BUDGET  = 75000;
-const AI_DAILY_BUDGET    = Math.round(AI_MONTHLY_BUDGET / 260); // 288
+const AI_YEARLY_BUDGET   = 900000;
+const AI_DAILY_BUDGET    = Math.round(AI_YEARLY_BUDGET / 260); // 3461
 const MSG_MONTHLY_BUDGET = 1925;
 
 function AiCreditsMonitor({ data }) {
