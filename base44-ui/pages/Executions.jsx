@@ -106,7 +106,7 @@ export default function Executions() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800">
-                {['POS ID','Signal UUID','Symbol','Side','Lots','Entry','Close','SL','TP','P&L','Status','Open Time','Close Time'].map(h=>(
+                {['POS ID','Signal UUID','Symbol','Strategy','Side','Lots','Entry','Close','SL','TP','P&L','Status','Open Time','Close Time'].map(h=>(
                   <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold tracking-widest uppercase text-slate-600">{h}</th>
                 ))}
               </tr>
@@ -115,7 +115,7 @@ export default function Executions() {
               {loading && executions.length===0 ? (
                 Array(8).fill(0).map((_,i)=>(
                   <tr key={i} className="border-b border-slate-800/50 shimmer">
-                    {Array(13).fill(0).map((_,j)=>(<td key={j} className="px-4 py-4"><div className="h-3 bg-slate-800 rounded w-full"/></td>))}
+                    {Array(14).fill(0).map((_,j)=>(<td key={j} className="px-4 py-4"><div className="h-3 bg-slate-800 rounded w-full"/></td>))}
                   </tr>
                 ))
               ) : filtered.length===0 ? (
@@ -128,6 +128,7 @@ export default function Executions() {
                     <td className="px-4 py-3.5 font-mono text-xs text-slate-400">{ex.id || '—'}</td>
                     <td className="px-4 py-3.5">{uuidCell(ex)}</td>
                     <td className="px-4 py-3.5 font-semibold text-slate-200">{ex.symbol||'—'}</td>
+                    <td className="px-4 py-3.5 text-xs text-violet-400 font-semibold whitespace-nowrap">{ex.strategy||'—'}</td>
                     <td className="px-4 py-3.5"><span className={`text-xs font-bold ${ex.side==='BUY'||ex.side==='LONG'?'text-emerald-400':'text-red-400'}`}>{ex.side||'—'}</span></td>
                     <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{ex.volume??'—'}</td>
                     <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{fmtP(ex.entry_price,ex.digits)}</td>
