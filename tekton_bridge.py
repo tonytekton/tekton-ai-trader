@@ -220,6 +220,38 @@ def _position_to_dict(pos, spec, digits):
     }
 
 
+def _resolve_unknown_symbols_in_position_state():
+    """
+    Second-pass resolver: any position_state entry with symbol starting 'UNKNOWN_'
+    gets re-resolved using symbol_id_to_spec_map (full spec) or symbol_id_to_name_map
+    (name-only fallback from ProtoOASymbolsListRes lightweight list).
+
+    Called after seed_position_state_from_live_reconcile() AND after the symbols
+    batch fetch completes, to handle the race condition where ReconcileReq runs
+    before symbol specs are loaded.
+    """
+    pos_state = state.get("position_state", {})
+    resolved = 0
+    for pos_id, ps in pos_state.items():
+        if not ps.get("symbol", "").startswith("UNKNOWN_"):
+            continue
+        sym_id = ps.get("symbol_id")
+        if sym_id is None:
+            continue
+        # Try full spec first
+        spec = state["symbol_id_to_spec_map"].get(sym_id, {})
+        name = spec.get("symbolName")
+        if not name:
+            # Fall back to lightweight name map from SymbolsListRes
+            name = state["symbol_id_to_name_map"].get(sym_id)
+        if name:
+            ps["symbol"] = name
+            resolved += 1
+            print(f"🔍 symbol resolved: pos {pos_id} → {name}")
+    if resolved:
+        print(f"✅ _resolve_unknown_symbols: resolved {resolved} UNKNOWN positions")
+
+
 def seed_position_state_from_live_reconcile():
     """
     On bridge startup, seed position_state{} from a live ReconcileReq.
@@ -227,6 +259,10 @@ def seed_position_state_from_live_reconcile():
     entry_price, sl, tp for all currently open positions.
     Sets state['position_state_ready'] = True when complete so /positions/list
     can serve from cache rather than falling back to a fresh ReconcileReq.
+
+    Note: symbol specs may not be loaded yet at seed time (race condition).
+    _resolve_unknown_symbols_in_position_state() is called after seeding AND
+    after the symbols batch fetch completes to ensure all symbols resolve.
     """
     try:
         req = openapi.ProtoOAReconcileReq()
@@ -252,10 +288,15 @@ def seed_position_state_from_live_reconcile():
             for k, v in d_pos.items():
                 if v is not None and ps.get(k) is None:
                     ps[k] = v
+            # Always store symbol_id so resolver can re-attempt later
+            ps["symbol_id"] = pos.tradeData.symbolId
             seeded += 1
 
         state["position_state_ready"] = True
         print(f"🌱 position_state seeded from live ReconcileReq: {seeded} positions hydrated")
+
+        # Attempt immediate resolve — may partially work if spec map is already loaded
+        _resolve_unknown_symbols_in_position_state()
 
     except Exception as e:
         # Non-fatal — /positions/list will fall back to direct ReconcileReq
@@ -1826,6 +1867,9 @@ class Bridge:
 
                         completed_batches[0] += 1
                         if completed_batches[0] == total_batches:
+                            # Resolve any UNKNOWN symbols in position_state now that specs are loaded
+                            threading.Thread(target=_resolve_unknown_symbols_in_position_state, daemon=True).start()
+
                             if "subscribed_symbol_ids" not in state:
                                 state["subscribed_symbol_ids"] = set()
 
