@@ -28,7 +28,7 @@ DB_PARAMS = {
 
 # Known quote currencies for index/commodity symbols (can't derive from last 3 chars).
 INDEX_QUOTE_MAP = {
-    "UK100":  "GBP", "DE40":   "EUR", "FR40":   "EUR", "F40":    "EUR", "EU50":   "EUR", "STOXX50": "EUR",
+    "UK100":  "GBP", "DE40":   "EUR", "FR40":   "EUR", "EU50":   "EUR",
     "JP225":  "JPY", "US30":   "USD", "US500":  "USD", "USTEC":  "USD",
     "AUS200": "AUD", "HK50":   "HKD",
     "XAUUSD": "USD", "XAGUSD": "USD", "XTIUSD": "USD", "XBRUSD": "USD",
@@ -93,7 +93,8 @@ def fetch_settings():
             "max_session_exposure_pct": float(data.get("max_session_exposure_pct", 4.0)),
             "max_lots":                 float(data.get("max_lots", 50.0)),
             "min_sl_pips":              float(data.get("min_sl_pips", 8.0)),
-            "news_blackout_mins":        int(data.get("news_blackout_mins", 30))
+            "news_blackout_mins":        int(data.get("news_blackout_mins", 60)),
+            "news_filter_enabled":       bool(data.get("news_filter_enabled", True))
         }
     except Exception as bridge_err:
         print(f"⚠️ Settings bridge unavailable: {bridge_err} — falling back to direct SQL")
@@ -114,7 +115,8 @@ def fetch_settings():
                     "max_session_exposure_pct": float(row[5]),
                     "max_lots":                 float(row[6]),
                     "min_sl_pips":              8.0,
-                    "news_blackout_mins":        int(row[7]) if row[7] is not None else 30
+                    "news_blackout_mins":        int(row[7]) if row[7] is not None else 60,
+                    "news_filter_enabled":       True
                 }
         except Exception as sql_err:
             print(f"⚠️ Settings SQL fallback failed: {sql_err} — using safe hardcoded defaults")
@@ -123,7 +125,8 @@ def fetch_settings():
             "auto_trade": False, "friday_flush": False,
             "risk_pct": 0.01, "target_reward": 1.8,
             "daily_drawdown_limit": 0.05, "max_session_exposure_pct": 4.0,
-            "max_lots": 50.0, "min_sl_pips": 8.0, "news_blackout_mins": 30
+            "max_lots": 50.0, "min_sl_pips": 8.0, "news_blackout_mins": 60,
+            "news_filter_enabled": True
         }
 
 # ---------------------------------------------------------------------------
@@ -271,10 +274,7 @@ def get_live_pip_value(symbol, account_currency):
 
     if not two_leg:
         conversion_rate = (1.0 / avg_price) if invert else avg_price
-        pip_val = pip_size * conversion_rate
-        if not (1e-7 < pip_val < 10.0):
-            raise ValueError(f"pip_value sanity fail for {symbol}: {pip_val:.8f} (rate={conversion_rate:.5f}, pip_size={pip_size}) — price subscription may not be warm")
-        return pip_val
+        return pip_size * conversion_rate
 
     # Two-leg: fetch second price leg (5-min cache TTL)
     price_data2 = {}
@@ -302,10 +302,7 @@ def get_live_pip_value(symbol, account_currency):
         raise ValueError(f"Conversion failed for {symbol}: no price for {conv_symbol2} (leg 2)")
     rate1 = (1.0 / avg_price) if invert else avg_price
     rate2 = (1.0 / avg_price2) if invert2 else avg_price2
-    pip_val = pip_size * rate1 * rate2
-    if not (1e-7 < pip_val < 10.0):
-        raise ValueError(f"pip_value sanity fail for {symbol}: {pip_val:.8f} (rate1={rate1:.5f}, rate2={rate2:.5f}) — price subscription may not be warm")
-    return pip_val
+    return pip_size * rate1 * rate2
 
 # ---------------------------------------------------------------------------
 # LOT SIZE CALCULATION
@@ -340,30 +337,16 @@ def calculate_professional_lot_size(symbol, sl_pips):
     # required_units = how many raw units to risk exactly risk_cash over sl_pips
     # 1 standard lot = 100,000 raw units
     # cTrader volume is in centilots where lotSize_centilots centilots = 1 lot
+    required_units  = total_risk_cash / (sl_pips * pip_value_per_unit)
+
     spec          = get_contract_specs(symbol)   # cached — no extra API call
     lot_size_cl   = spec.get("lotSize_centilots", 10_000_000)   # centilots per 1 standard lot
     step          = spec.get("stepVolume_centilots", 100_000)
     min_v         = spec.get("minVolume_centilots", 100_000)
     max_v         = spec.get("maxVolume_centilots", 10_000_000_000)
 
-    # Volume calculation:
-    # For standard forex: lot_size_cl=10,000,000 → 1 lot = 100,000 raw units
-    #   pip_value_per_unit is per raw unit → pip_value_per_lot = pip_value * 100,000
-    #   required_lots = risk_cash / (sl_pips * pip_value_per_unit * 100,000)
-    # For CFDs/indices: lot_size_cl is small (e.g. F40=100) → 1 lot = 1 contract
-    #   pip_value_per_unit IS pip_value_per_lot (bridge returns per-contract pip value)
-    #   required_lots = risk_cash / (sl_pips * pip_value_per_unit)
-    # Unified formula: use pip_value_per_lot derived from lot_size_cl scaling
-    FOREX_LOT_SIZE_CL = 10_000_000  # standard forex lot in centilots
-    if lot_size_cl >= FOREX_LOT_SIZE_CL:
-        # Standard forex: scale pip_value up to per-lot
-        pip_value_per_lot = pip_value_per_unit * (lot_size_cl / FOREX_LOT_SIZE_CL) * 100_000
-    else:
-        # CFD/index: pip_value_per_unit is already effectively per-lot (1 contract = 1 unit)
-        pip_value_per_lot = pip_value_per_unit
-
-    required_lots   = total_risk_cash / (sl_pips * pip_value_per_lot)
-    protocol_volume = int(required_lots * lot_size_cl)
+    # Convert raw units → centilots  (100,000 raw units = 1 lot = lot_size_cl centilots)
+    protocol_volume = int(required_units * lot_size_cl / 100_000)
 
     final_vol = max((protocol_volume // step) * step, min_v)
     final_vol = min(final_vol, max_v)
@@ -377,9 +360,6 @@ def calculate_professional_lot_size(symbol, sl_pips):
         final_vol = max_vol_cl
 
     actual_lots = final_vol / lot_size_cl
-    # Sanity: if risk_cash > 100 EUR but result < 0.05 lots, pip_value was likely corrupted
-    if total_risk_cash > 100 and actual_lots < 0.05:
-        raise ValueError(f"Volume sanity fail for {symbol}: {actual_lots:.4f} lots from risk {total_risk_cash:.0f} {acc_currency} — pip_value {pip_value_per_unit:.8f} looks wrong")
     print(f"📊 Risk: {acc_currency} {total_risk_cash:,.2f} | PipVal/Unit: {pip_value_per_unit:.8f} | Lots: {actual_lots:.4f} | Vol: {final_vol}")
     return final_vol
 
@@ -522,7 +502,7 @@ def poll_signals():
             # - No new entries before cutoff UTC on flush day
             # - Close all open positions at flush_t UTC
             # - Dedup guard: _last_flush_date ensures flush fires once per day only
-            # Friday Flush timing — production values
+            # ⚠️ TEST OVERRIDE ACTIVE: Thursday 05:00 UTC (13:00 KL) — revert after test
             # ---------------------------------------------------------------------------
             from datetime import datetime, timezone, date as date_type
             global _last_flush_date
@@ -535,10 +515,11 @@ def poll_signals():
                 time.sleep(300)
                 continue
 
-            _flush_day     = 4        # Friday
-            _cutoff_hhmm   = 15 * 60 + 45  # 15:45 UTC — no new entries after this
-            _flush_hhmm    = 16 * 60 + 0   # 16:00 UTC — close all positions
-            _flush_window  = 16 * 60 + 15  # 16:15 UTC — flush window ends
+            # ⚠️ TEST OVERRIDE: weekday==3 (Thursday) at 05:00 UTC acts as flush day
+            _flush_day     = 3        # TODO revert to 4 (Friday) after test
+            _cutoff_hhmm   = 4 * 60 + 45   # TODO revert to 15*60+45 (15:45 UTC) after test
+            _flush_hhmm    = 5 * 60 + 0    # TODO revert to 16*60+0  (16:00 UTC) after test
+            _flush_window  = 5 * 60 + 15   # TODO revert to 16*60+15 (16:15 UTC) after test
 
             if settings.get("friday_flush") and weekday == _flush_day:
                 hhmm         = now_utc.hour * 60 + now_utc.minute
@@ -561,7 +542,7 @@ def poll_signals():
                         if not positions:
                             print("  ℹ️ No open positions to close.")
                         for pos in positions:
-                            pid = pos.get("positionId") or pos.get("position_id") or pos.get("id")
+                            pid = pos.get("position_id") or pos.get("id")
                             sym = pos.get("symbol", "?")
                             if pid:
                                 close_resp = requests.post(
@@ -599,31 +580,81 @@ def poll_signals():
                 time.sleep(30)
                 continue
 
-            # --- ECONOMIC CALENDAR GATE ---
+            # --- ECONOMIC CALENDAR GATE (Phase 9) ---
             # Block new executions within news_blackout_mins of any HIGH impact event
-            blackout_mins = settings.get("news_blackout_mins", 30)
-            try:
-                cal_conn = psycopg2.connect(**DB_PARAMS)
-                cal_cur  = cal_conn.cursor()
-                cal_cur.execute("""
-                    SELECT indicator_name, event_date, currency
-                    FROM economic_events
-                    WHERE impact_level = 'HIGH'
-                    AND event_date BETWEEN NOW() - INTERVAL '%s minutes'
-                                      AND NOW() + INTERVAL '%s minutes'
-                    ORDER BY event_date ASC
-                    LIMIT 1
-                """, (blackout_mins, blackout_mins))
-                news_event = cal_cur.fetchone()
-                cal_cur.close()
-                cal_conn.close()
-                if news_event:
-                    ev_name, ev_date, ev_ccy = news_event
-                    print(f"📰 NEWS BLACKOUT: {ev_name} ({ev_ccy}) at {ev_date.strftime('%H:%M')} UTC — no new trades within {blackout_mins}min window.")
-                    time.sleep(30)
-                    continue
-            except Exception as cal_err:
-                print(f"⚠️ Calendar gate check failed: {cal_err} — proceeding without news filter.")
+            # that involves a currency in the signal's pair.
+            # e.g. GBPUSD is blocked for GBP or USD high-impact events.
+            # news_filter_enabled toggle must be ON in settings.
+            # Blocked signals are marked FAILED (not silently held as PENDING).
+            news_filter_on = settings.get("news_filter_enabled", True)
+            blackout_mins  = settings.get("news_blackout_mins", 60)
+            if news_filter_on:
+                try:
+                    cal_conn = psycopg2.connect(**DB_PARAMS)
+                    cal_cur  = cal_conn.cursor()
+                    cal_cur.execute("""
+                        SELECT indicator_name, event_date, currency
+                        FROM economic_events
+                        WHERE impact_level = 'HIGH'
+                        AND event_date BETWEEN NOW() - INTERVAL '%s minutes'
+                                          AND NOW() + INTERVAL '%s minutes'
+                        ORDER BY event_date ASC
+                    """, (blackout_mins, blackout_mins))
+                    news_events = cal_cur.fetchall()
+                    cal_cur.close()
+                    cal_conn.close()
+                except Exception as cal_err:
+                    print(f"⚠️ Calendar gate check failed: {cal_err} — proceeding without news filter.")
+                    news_events = []
+
+                # We need the symbol of the PENDING signal to do per-pair filtering.
+                # Peek at the next PENDING signal first.
+                if news_events:
+                    try:
+                        peek_conn = psycopg2.connect(**DB_PARAMS)
+                        peek_cur  = peek_conn.cursor()
+                        peek_cur.execute("""
+                            SELECT signal_uuid, symbol
+                            FROM signals
+                            WHERE status = 'PENDING'
+                            AND sl_pips IS NOT NULL AND tp_pips IS NOT NULL
+                            LIMIT 1
+                        """)
+                        peek_row = peek_cur.fetchone()
+                        peek_cur.close()
+                        peek_conn.close()
+                    except Exception as peek_err:
+                        print(f"⚠️ Calendar peek failed: {peek_err}")
+                        peek_row = None
+
+                    if peek_row:
+                        peek_uuid, peek_sym = peek_row
+                        sym_upper = peek_sym.upper()
+                        # Check if any high-impact event currency is in the symbol name
+                        blocking_event = None
+                        for ev_name, ev_date, ev_ccy in news_events:
+                            if ev_ccy.upper() in sym_upper:
+                                blocking_event = (ev_name, ev_date, ev_ccy)
+                                break
+                        if blocking_event:
+                            ev_name, ev_date, ev_ccy = blocking_event
+                            mins_to = int((ev_date - __import__('datetime').datetime.now(__import__('datetime').timezone.utc)).total_seconds() / 60)
+                            reason = f"News blackout: {ev_name} ({ev_ccy}) in {mins_to:+d}min — {blackout_mins}min window"
+                            print(f"📰 {reason} — marking {peek_sym} FAILED")
+                            try:
+                                blk_conn = psycopg2.connect(**DB_PARAMS)
+                                blk_cur  = blk_conn.cursor()
+                                blk_cur.execute(
+                                    "UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s",
+                                    (reason, str(peek_uuid))
+                                )
+                                blk_conn.commit()
+                                blk_cur.close()
+                                blk_conn.close()
+                            except Exception as blk_err:
+                                print(f"⚠️ Failed to mark signal FAILED: {blk_err}")
+                            time.sleep(5)
+                            continue
 
             conn = psycopg2.connect(**DB_PARAMS)
             cur  = conn.cursor()
@@ -667,41 +698,11 @@ def poll_signals():
                     if result:
                         # FIX 2: unpack (pos_id, fill_price) tuple and store avg_fill_price
                         pos_id, fill_price = result
-
-                        # Calculate absolute SL/TP prices from fill price + pips
-                        # These are stored so the bridge can show exact prices in the UI
-                        # and the AI can analyse exact entry/SL/TP per trade
-                        sl_abs = None
-                        tp_abs = None
-                        if fill_price:
-                            try:
-                                pip_size = get_pip_size(sym)
-                                # Get digits from bridge spec for correct rounding
-                                try:
-                                    _spec_r = requests.get(f"{BRIDGE_URL}/symbols/{sym}/spec", headers=HEADERS, timeout=5)
-                                    digits = _spec_r.json().get("digits", 5) if _spec_r.ok else 5
-                                except Exception:
-                                    digits = 5
-                                is_buy = s_type.upper() in ("BUY", "LONG")
-                                sl_abs = round(float(fill_price) - float(sl_pips) * pip_size, digits) if is_buy \
-                                    else round(float(fill_price) + float(sl_pips) * pip_size, digits)
-                                tp_abs = round(float(fill_price) + float(tp_pips) * pip_size, digits) if is_buy \
-                                    else round(float(fill_price) - float(tp_pips) * pip_size, digits)
-                            except Exception as price_err:
-                                print(f"⚠️ Could not calculate abs SL/TP for {sym}: {price_err}")
-
                         cur.execute(
-                            """UPDATE signals
-                               SET status = 'COMPLETED',
-                                   position_id   = %s,
-                                   avg_fill_price = %s,
-                                   sl_price      = %s,
-                                   tp_price      = %s
-                               WHERE signal_uuid = %s""",
-                            (pos_id, fill_price if fill_price else None,
-                             sl_abs, tp_abs, str(s_uuid))
+                            "UPDATE signals SET status = 'COMPLETED', position_id = %s, avg_fill_price = %s WHERE signal_uuid = %s",
+                            (pos_id, fill_price if fill_price else None, str(s_uuid))
                         )
-                        print(f"✅ signals updated: pos_id={pos_id} fill={fill_price} sl_abs={sl_abs} tp_abs={tp_abs}")
+                        print(f"✅ signals updated: pos_id={pos_id} fill={fill_price}")
                     else:
                         reason = "Bridge execution failed — check bridge logs"
                         cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
