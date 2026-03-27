@@ -593,61 +593,82 @@ def list_symbols():
 def get_account_status():
     """Endpoint for Executor, Monitor, and Base44 UI to check live account health.
 
-    Equity is computed as: balance + sum of unrealized net P&L across all open positions
-    in position_state{}. This gives true floating equity rather than ProtoOATraderRes.moneyBalance
-    which is static and does not reflect open position P&L.
+    Fires a live ProtoOAGetPositionUnrealizedPnLReq to get true floating P&L,
+    then computes equity = balance + floating_pnl. This matches cTrader's own
+    equity calculation and reflects open position P&L in real time.
 
     Fields returned:
       balance       - account balance in account currency (cents / 100)
-      equity        - balance + floating P&L (live)
+      equity        - balance + live floating P&L
       free_margin   - equity - margin_used
-      margin_used   - sum of usedMargin across all open positions (cents / 100)
+      margin_used   - sum of usedMargin across open positions (cents / 100)
       drawdown_pct  - (starting_equity - equity) / starting_equity * 100
-      daily_pnl     - equity - starting_equity (today's P&L)
+      daily_pnl     - equity - starting_equity (today's P&L in account currency)
       open_count    - number of open positions in position_state{}
       currency      - account deposit currency
     """
-    balance = state.get("balance_cents", 0) / 100
+    try:
+        balance = state.get("balance_cents", 0) / 100
+        pos_state = state.get("position_state", {})
+        open_count = len(pos_state)
 
-    # --- Live equity: balance + sum of unrealized net P&L from position_state{} ---
-    pos_state = state.get("position_state", {})
-    open_count = len(pos_state)
-    floating_pnl_cents = sum(
-        ps.get("unrealizedNetPnL_cents", 0)
-        for ps in pos_state.values()
-    )
-    # margin_used: prefer summing from position_state for accuracy;
-    # fall back to state["margin_used_cents"] if position_state is empty
-    if open_count > 0:
-        margin_used_cents = sum(
-            ps.get("margin_used_cents", 0)
-            for ps in pos_state.values()
-        )
-    else:
-        margin_used_cents = state.get("margin_used_cents", 0)
+        # --- Fire live ProtoOAGetPositionUnrealizedPnLReq for true floating equity ---
+        floating_pnl_cents = 0
+        if open_count > 0:
+            try:
+                pnl_msg = openapi.ProtoOAGetPositionUnrealizedPnLReq()
+                pnl_msg.ctidTraderAccountId = ACCOUNT_ID
+                d_pnl, mid_pnl = defer.Deferred(), str(uuid.uuid4())
+                pending_requests[mid_pnl] = d_pnl
+                reactor.callFromThread(lambda: bridge.client.send(pnl_msg, clientMsgId=mid_pnl))
+                pnl_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_pnl, 10)
+                log_ctrader_call("/account/status_pnl", int(0), True)
+                if hasattr(pnl_result, "positionUnrealizedPnL"):
+                    for pnl_entry in pnl_result.positionUnrealizedPnL:
+                        floating_pnl_cents += safe_get_field(pnl_entry, "netUnrealizedPnL", 0)
+                        # Also update position_state{} cache so /positions/list is fast
+                        pid = str(pnl_entry.positionId)
+                        if pid in pos_state:
+                            pos_state[pid]["unrealizedNetPnL_cents"] = safe_get_field(pnl_entry, "netUnrealizedPnL", 0)
+            except Exception as pnl_err:
+                print(f"⚠️  /account/status PnL fetch failed: {pnl_err} — using cached values")
+                floating_pnl_cents = sum(
+                    ps.get("unrealizedNetPnL_cents", 0) for ps in pos_state.values()
+                )
 
-    equity = balance + (floating_pnl_cents / 100)
-    margin_used = margin_used_cents / 100
-    free_margin = equity - margin_used
+        # margin_used: sum from position_state for accuracy
+        if open_count > 0:
+            margin_used_cents = sum(ps.get("margin_used_cents", 0) for ps in pos_state.values())
+        else:
+            margin_used_cents = state.get("margin_used_cents", 0)
 
-    start_equity = state.get("starting_equity_cents", 0) / 100
-    drawdown_pct = 0.0
-    daily_pnl = None
-    if start_equity > 0:
-        drawdown_pct = ((start_equity - equity) / start_equity) * 100
-        daily_pnl = round(equity - start_equity, 2)
+        equity      = balance + (floating_pnl_cents / 100)
+        margin_used = margin_used_cents / 100
+        free_margin = equity - margin_used
 
-    return jsonify({
-        "success":      True,
-        "balance":      round(balance, 2),
-        "equity":       round(equity, 2),
-        "free_margin":  round(free_margin, 2),
-        "margin_used":  round(margin_used, 2),
-        "drawdown_pct": round(max(drawdown_pct, 0.0), 2),
-        "daily_pnl":    daily_pnl,
-        "open_count":   open_count,
-        "currency":     state.get("account_currency", "EUR"),
-    })
+        start_equity = state.get("starting_equity_cents", 0) / 100
+        drawdown_pct = 0.0
+        daily_pnl    = None
+        if start_equity > 0:
+            drawdown_pct = ((start_equity - equity) / start_equity) * 100
+            daily_pnl    = round(equity - start_equity, 2)
+
+        return jsonify({
+            "success":      True,
+            "balance":      round(balance, 2),
+            "equity":       round(equity, 2),
+            "free_margin":  round(free_margin, 2),
+            "margin_used":  round(margin_used, 2),
+            "drawdown_pct": round(max(drawdown_pct, 0.0), 2),
+            "daily_pnl":    daily_pnl,
+            "open_count":   open_count,
+            "currency":     state.get("account_currency", "EUR"),
+        })
+
+    except Exception as e:
+        print(f"❌ ERROR /account/status: {e}")
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/proxy/account-summary", methods=["GET"])
 @require_auth
