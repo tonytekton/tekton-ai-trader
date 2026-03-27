@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
+import { AnalyticsRecommendation } from '@/api/entities';
 import { DollarSign, Activity, Zap, RefreshCw, ShieldAlert, TrendingDown, Layers, AlertTriangle, PowerOff, Calendar, Radio } from 'lucide-react';
 
 const fmt = (n, prefix = '$') =>
@@ -63,6 +64,51 @@ function StatusBadge({ online }) {
     </span>
   );
 }
+
+function AiRecommendationsWidget({ rec }) {
+  if (!rec) return null;
+  // Extract just the executive summary and priority actions from the full text
+  const text = rec.recommendations || '';
+  const execMatch = text.match(/###?\s*1\.\s*Executive Summary[\s\S]*?(?=###?\s*2\.|$)/i);
+  const priorityMatch = text.match(/###?\s*7\.\s*Priority Action List[\s\S]*?(?=###?\s*\d+\.|$)/i);
+  const execSummary = execMatch ? execMatch[0].replace(/###?\s*1\.\s*Executive Summary\s*/i,'').trim() : '';
+  const priorityList = priorityMatch ? priorityMatch[0].replace(/###?\s*7\.\s*Priority Action List\s*/i,'').trim() : '';
+  const flagged = rec.flagged_strategies || [];
+  const genDate = rec.generated_at ? new Date(rec.generated_at).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
+
+  return (
+    <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-5 mb-6">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-indigo-400 text-lg">🤖</span>
+          <p className="text-xs font-semibold uppercase tracking-widest text-indigo-400">AI Strategy Insights</p>
+          {flagged.length > 0 && (
+            <span className="px-2 py-0.5 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-full">⚠️ {flagged.length} flagged</span>
+          )}
+        </div>
+        <span className="text-xs text-slate-600">{genDate}</span>
+      </div>
+      {flagged.length > 0 && (
+        <div className="flex gap-1 flex-wrap mb-3">
+          {flagged.map(s => (
+            <span key={s} className="px-2 py-0.5 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded">{s}</span>
+          ))}
+        </div>
+      )}
+      {execSummary && (
+        <p className="text-xs text-slate-400 leading-relaxed mb-3 line-clamp-3">{execSummary}</p>
+      )}
+      {priorityList && (
+        <div>
+          <p className="text-xs font-semibold text-indigo-400/70 uppercase mb-1">Priority Actions</p>
+          <pre className="text-xs text-slate-400 whitespace-pre-wrap font-sans leading-relaxed line-clamp-5">{priorityList}</pre>
+        </div>
+      )}
+      <a href="/analytics" className="inline-block mt-3 text-xs text-indigo-400 hover:text-indigo-300 underline">→ Full analysis on Analytics page</a>
+    </div>
+  );
+}
+
 
 function CalendarStrip({ events }) {
   if (!events || events.length === 0) {
@@ -190,6 +236,7 @@ export default function Dashboard() {
   const [openCount, setOpenCount] = useState(null);
   const [calendar, setCalendar] = useState([]);
   const [rateStats, setRateStats] = useState(null);
+  const [latestRec, setLatestRec] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [halting, setHalting] = useState(false);
@@ -212,6 +259,7 @@ export default function Dashboard() {
       try { const aRes = await base44.entities.DrawdownAutopsy.filter({ status: 'AWAITING_REVIEW' }); setAutopsy(aRes?.length > 0 ? aRes[0] : null); } catch { setAutopsy(null); }
       try { const sigRes = await base44.functions.invoke('getSignals', { status: 'EXECUTED', limit: 200 }); const sigs = sigRes?.data; const arr = Array.isArray(sigs) ? sigs : Array.isArray(sigs?.signals) ? sigs.signals : []; setOpenCount(arr.length); } catch { setOpenCount(null); }
       setLastUpdated(new Date());
+      try { const recRes = await AnalyticsRecommendation.list({ sort: "-created_date", limit: 1 }); setLatestRec(recRes?.length > 0 ? recRes[0] : null); } catch { setLatestRec(null); }
     } catch (e) { console.error('fetchAll error', e); } finally { setLoading(false); }
   }, []);
 
@@ -305,8 +353,10 @@ export default function Dashboard() {
         </div>
         <ApiRateMonitor data={rateStats} />
       </div>
+      <AiRecommendationsWidget rec={latestRec} />
       <CalendarStrip events={calendar} />
       <p className="text-center text-xs text-slate-700 mt-6">Auto-refreshes every 30s - To change risk settings go to Trading Settings</p>
     </div>
   );
 }
+
