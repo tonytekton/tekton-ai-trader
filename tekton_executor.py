@@ -272,7 +272,7 @@ def get_live_pip_value(symbol, account_currency):
     if not two_leg:
         conversion_rate = (1.0 / avg_price) if invert else avg_price
         pip_val = pip_size * conversion_rate
-        if not (1e-7 < pip_val < 0.1):
+        if not (1e-7 < pip_val < 10.0):
             raise ValueError(f"pip_value sanity fail for {symbol}: {pip_val:.8f} (rate={conversion_rate:.5f}, pip_size={pip_size}) — price subscription may not be warm")
         return pip_val
 
@@ -303,7 +303,7 @@ def get_live_pip_value(symbol, account_currency):
     rate1 = (1.0 / avg_price) if invert else avg_price
     rate2 = (1.0 / avg_price2) if invert2 else avg_price2
     pip_val = pip_size * rate1 * rate2
-    if not (1e-7 < pip_val < 0.1):
+    if not (1e-7 < pip_val < 10.0):
         raise ValueError(f"pip_value sanity fail for {symbol}: {pip_val:.8f} (rate1={rate1:.5f}, rate2={rate2:.5f}) — price subscription may not be warm")
     return pip_val
 
@@ -340,16 +340,30 @@ def calculate_professional_lot_size(symbol, sl_pips):
     # required_units = how many raw units to risk exactly risk_cash over sl_pips
     # 1 standard lot = 100,000 raw units
     # cTrader volume is in centilots where lotSize_centilots centilots = 1 lot
-    required_units  = total_risk_cash / (sl_pips * pip_value_per_unit)
-
     spec          = get_contract_specs(symbol)   # cached — no extra API call
     lot_size_cl   = spec.get("lotSize_centilots", 10_000_000)   # centilots per 1 standard lot
     step          = spec.get("stepVolume_centilots", 100_000)
     min_v         = spec.get("minVolume_centilots", 100_000)
     max_v         = spec.get("maxVolume_centilots", 10_000_000_000)
 
-    # Convert raw units → centilots  (100,000 raw units = 1 lot = lot_size_cl centilots)
-    protocol_volume = int(required_units * lot_size_cl / 100_000)
+    # Volume calculation:
+    # For standard forex: lot_size_cl=10,000,000 → 1 lot = 100,000 raw units
+    #   pip_value_per_unit is per raw unit → pip_value_per_lot = pip_value * 100,000
+    #   required_lots = risk_cash / (sl_pips * pip_value_per_unit * 100,000)
+    # For CFDs/indices: lot_size_cl is small (e.g. F40=100) → 1 lot = 1 contract
+    #   pip_value_per_unit IS pip_value_per_lot (bridge returns per-contract pip value)
+    #   required_lots = risk_cash / (sl_pips * pip_value_per_unit)
+    # Unified formula: use pip_value_per_lot derived from lot_size_cl scaling
+    FOREX_LOT_SIZE_CL = 10_000_000  # standard forex lot in centilots
+    if lot_size_cl >= FOREX_LOT_SIZE_CL:
+        # Standard forex: scale pip_value up to per-lot
+        pip_value_per_lot = pip_value_per_unit * (lot_size_cl / FOREX_LOT_SIZE_CL) * 100_000
+    else:
+        # CFD/index: pip_value_per_unit is already effectively per-lot (1 contract = 1 unit)
+        pip_value_per_lot = pip_value_per_unit
+
+    required_lots   = total_risk_cash / (sl_pips * pip_value_per_lot)
+    protocol_volume = int(required_lots * lot_size_cl)
 
     final_vol = max((protocol_volume // step) * step, min_v)
     final_vol = min(final_vol, max_v)
