@@ -1009,6 +1009,88 @@ def get_executions():
         except Exception as enrich_err2:
             print(f"WARNING Closed trade enrichment failed (non-fatal): {enrich_err2}")
 
+        # ── PASS 2: Enrich by UUID (comment field) for trades still missing signal_uuid ──
+        # Covers trades where position_id was never written to signals table
+        # (pre-fix executor used status=EXECUTED and never stored position_id).
+        # The cTrader deal comment field = signal_uuid written at order time.
+        try:
+            uuids_from_comment = [
+                t["signal_uuid"] for t in closed_trades
+                if t.get("signal_uuid") and not t.get("strategy")
+            ]
+            # Also collect trades that got uuid from comment but still lack enrichment
+            # Build uuid→trade map for all closed trades that have a uuid but no strategy
+            uuid_needs_enrich = {
+                t["signal_uuid"]: t for t in closed_trades
+                if t.get("signal_uuid") and not t.get("strategy")
+            }
+            if uuid_needs_enrich:
+                enrich_conn3 = psycopg2.connect(
+                    host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
+                    database=os.getenv("CLOUD_SQL_DB_NAME", "tekton-trader"),
+                    user=os.getenv("CLOUD_SQL_DB_USER", "postgres"),
+                    password=os.getenv("CLOUD_SQL_DB_PASSWORD")
+                )
+                enrich_cur3 = enrich_conn3.cursor()
+                uuid_list = list(uuid_needs_enrich.keys())
+                placeholders3 = ",".join(["%s"] * len(uuid_list))
+                enrich_cur3.execute(
+                    f"""SELECT signal_uuid::text, sl_pips, tp_pips, strategy,
+                               sl_price, tp_price, avg_fill_price, position_id
+                        FROM signals
+                        WHERE signal_uuid::text IN ({placeholders3})""",
+                    uuid_list
+                )
+                uuid_signal_map = {
+                    row[0]: {
+                        "sl_pips": row[1], "tp_pips": row[2], "strategy": row[3],
+                        "sl_price": row[4], "tp_price": row[5],
+                        "avg_fill_price": row[6], "position_id": row[7]
+                    } for row in enrich_cur3.fetchall()
+                }
+                enrich_cur3.close()
+                enrich_conn3.close()
+                enriched_count = 0
+                for t in closed_trades:
+                    uuid_key = t.get("signal_uuid")
+                    if not uuid_key or t.get("strategy"):
+                        continue
+                    sig = uuid_signal_map.get(uuid_key)
+                    if sig:
+                        t["sl_pips"]    = float(sig["sl_pips"])    if sig["sl_pips"]    else None
+                        t["tp_pips"]    = float(sig["tp_pips"])    if sig["tp_pips"]    else None
+                        t["strategy"]   = sig["strategy"]
+                        if sig.get("sl_price") and not t.get("stop_loss"):
+                            t["stop_loss"]   = float(sig["sl_price"])
+                        if sig.get("tp_price") and not t.get("take_profit"):
+                            t["take_profit"] = float(sig["tp_price"])
+                        if sig.get("avg_fill_price") and not t.get("entry_price"):
+                            t["entry_price"] = float(sig["avg_fill_price"])
+                        # Backfill position_id into signals table so Pass 1 works next time
+                        if sig["position_id"] is None and t.get("id"):
+                            try:
+                                bp_conn = psycopg2.connect(
+                                    host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
+                                    database=os.getenv("CLOUD_SQL_DB_NAME", "tekton-trader"),
+                                    user=os.getenv("CLOUD_SQL_DB_USER", "postgres"),
+                                    password=os.getenv("CLOUD_SQL_DB_PASSWORD")
+                                )
+                                bp_cur = bp_conn.cursor()
+                                bp_cur.execute(
+                                    "UPDATE signals SET position_id = %s WHERE signal_uuid::text = %s AND position_id IS NULL",
+                                    (t["id"], uuid_key)
+                                )
+                                bp_conn.commit()
+                                bp_cur.close()
+                                bp_conn.close()
+                                enriched_count += 1
+                            except Exception as bp_err:
+                                print(f"WARNING position_id backfill failed for {uuid_key}: {bp_err}")
+                if enriched_count:
+                    print(f"INFO Pass2 enrichment: backfilled position_id for {enriched_count} signals")
+        except Exception as enrich_err3:
+            print(f"WARNING Pass2 UUID enrichment failed (non-fatal): {enrich_err3}")
+
         closed_trades.sort(key=lambda x: x.get('closed_at') or '', reverse=True)
 
         # --- Deduplication ---
