@@ -100,7 +100,7 @@ def get_symbol_specs():
             digits      = s.get("digits") or 5
             pip_pos     = s.get("pipPosition")
             specs[sym] = {
-                "pip_size":    10 ** (-pip_pos) if pip_pos else 10 ** -(digits - 1),
+                "pip_size":    (1.0 if pip_pos == 1 else 10 ** (-pip_pos)) if pip_pos else 10 ** -(digits - 1),  # pip_pos=1 → indices, 1 pip = 1.0 price unit
                 "price_scale": 10 ** digits,
             }
         _symbol_specs_cache = specs
