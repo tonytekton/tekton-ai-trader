@@ -8,13 +8,14 @@
  *  - Daily budget calculations
  *
  * The Base44 SDK exposes usage via base44.usage.getStats()
- * Daily budget: 75,000 ÷ 260 working days = 288 credits/day
+ * Daily budget: 900,000 ÷ 260 working days = 3,461 credits/day
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 const AI_MONTHLY_BUDGET  = 75000;
-const AI_DAILY_BUDGET    = Math.round(AI_MONTHLY_BUDGET / 260); // 288
+const AI_YEARLY_BUDGET   = 900000;
+const AI_DAILY_BUDGET    = Math.round(AI_YEARLY_BUDGET / 260); // 3461
 const MSG_MONTHLY_BUDGET = 1925;
 
 Deno.serve(async (req) => {
