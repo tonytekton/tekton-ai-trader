@@ -1304,9 +1304,11 @@ def execute_trade():
             return jsonify({"success": False, "error": str(result.description)}), 400
 
         if not hasattr(result, 'order') or result.order is None:
-            error_desc = getattr(result, 'description', 'Order not created by broker')
-            print(f"❌ Broker Rejected Order: {error_desc}")
-            return jsonify({"success": False, "error": error_desc}), 400
+            error_code = getattr(result, 'errorCode', None)
+            error_desc = getattr(result, 'description', None) or 'Order not created by broker'
+            full_error = f"cTrader {error_code}: {error_desc}" if error_code else error_desc
+            print(f"❌ Broker Rejected Order: {full_error} | result type: {type(result).__name__} | result: {result}")
+            return jsonify({"success": False, "error": full_error}), 400
 
         digits        = spec.get("digits", 5) if spec else 5
         pos_id        = result.position.positionId if hasattr(result, 'position') else 0
