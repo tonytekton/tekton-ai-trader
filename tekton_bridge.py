@@ -1286,12 +1286,27 @@ def execute_trade():
         rel_sl = data.get("rel_sl")
         rel_tp = data.get("rel_tp")
         # relativeStopLoss/TP is a protobuf int32 field — must be an integer.
-        # cTrader expects integer POINTS (1 pip = 10 points for 5-digit pairs).
-        # Convert: points = round(pips * 10) → always an int.
+        # cTrader stores prices as integer / 10^digits (e.g. digits=5 → store in 0.00001 units).
+        # Formula: relativeStopLoss = pips * 10^(digits - pipPosition)
+        #   Forex (digits=5, pipPosition=4): pips * 10^1 = pips * 10  ✓
+        #   JPY   (digits=3, pipPosition=2): pips * 10^1 = pips * 10  ✓
+        #   Index (digits=2, pipPosition=1): pips * 10^1 = pips * 10  BUT
+        #     indices treat 1 pip = 1.0 price unit (not 0.1), so pip is already
+        #     expressed as whole points — multiply by 10^(digits) not 10^(digits-pipPosition)
+        #     Index: pips * 10^2 = pips * 100
+        # Rule: if pipPosition == 1 (indices), multiplier = 10^digits
+        #       else multiplier = 10^(digits - pipPosition) = always 10 for forex/metals
+        pip_position = spec.get("pipPosition", 4) if spec else 4
+        digits_val   = spec.get("digits", 5) if spec else 5
+        if pip_position == 1:
+            sl_tp_multiplier = 10 ** digits_val          # indices: pips are whole points
+        else:
+            sl_tp_multiplier = 10 ** (digits_val - pip_position)  # forex/metals: = 10
         if rel_sl:
-            req.relativeStopLoss = int(round(float(rel_sl) * 10))
+            req.relativeStopLoss = int(round(float(rel_sl) * sl_tp_multiplier))
         if rel_tp:
-            req.relativeTakeProfit = int(round(float(rel_tp) * 10))
+            req.relativeTakeProfit = int(round(float(rel_tp) * sl_tp_multiplier))
+        print(f"📐 SL/TP precision: {symbol} pipPos={pip_position} digits={digits_val} multiplier={sl_tp_multiplier} → relSL={req.relativeStopLoss if rel_sl else 'n/a'} relTP={req.relativeTakeProfit if rel_tp else 'n/a'}")
 
         d_exec, client_msg_id = defer.Deferred(), str(uuid.uuid4())
         pending_requests[client_msg_id] = d_exec
