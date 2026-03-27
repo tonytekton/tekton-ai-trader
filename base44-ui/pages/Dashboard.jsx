@@ -234,7 +234,7 @@ export default function Dashboard() {
 
   const drawdownPct = status?.drawdown_pct ?? 0;
   const drawdownLimit = settings?.daily_drawdown_limit != null ? settings.daily_drawdown_limit * 100 : 5.0;
-  const sessionExp = openCount != null && settings?.risk_pct != null ? openCount * (settings.risk_pct * 100) : null;
+  const sessionExp = metrics?.margin_used != null && metrics?.balance != null && metrics.balance > 0 ? (metrics.margin_used / metrics.balance) * 100 : null;
   const sessionLimit = settings?.max_session_exposure_pct ?? 4.0;
   const drawdownColor = drawdownPct >= drawdownLimit * 0.8 ? 'red' : drawdownPct >= drawdownLimit * 0.5 ? 'amber' : 'emerald';
   const sessionColor = sessionExp != null && sessionExp >= sessionLimit * 0.8 ? 'red' : sessionExp != null && sessionExp >= sessionLimit * 0.5 ? 'amber' : 'blue';
