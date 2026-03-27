@@ -28,7 +28,7 @@ DB_PARAMS = {
 
 # Known quote currencies for index/commodity symbols (can't derive from last 3 chars).
 INDEX_QUOTE_MAP = {
-    "UK100":  "GBP", "DE40":   "EUR", "FR40":   "EUR", "EU50":   "EUR",
+    "UK100":  "GBP", "DE40":   "EUR", "FR40":   "EUR", "F40":    "EUR", "EU50":   "EUR", "STOXX50": "EUR",
     "JP225":  "JPY", "US30":   "USD", "US500":  "USD", "USTEC":  "USD",
     "AUS200": "AUD", "HK50":   "HKD",
     "XAUUSD": "USD", "XAGUSD": "USD", "XTIUSD": "USD", "XBRUSD": "USD",
