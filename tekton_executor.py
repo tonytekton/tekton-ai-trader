@@ -271,7 +271,10 @@ def get_live_pip_value(symbol, account_currency):
 
     if not two_leg:
         conversion_rate = (1.0 / avg_price) if invert else avg_price
-        return pip_size * conversion_rate
+        pip_val = pip_size * conversion_rate
+        if not (1e-7 < pip_val < 0.1):
+            raise ValueError(f"pip_value sanity fail for {symbol}: {pip_val:.8f} (rate={conversion_rate:.5f}, pip_size={pip_size}) — price subscription may not be warm")
+        return pip_val
 
     # Two-leg: fetch second price leg (5-min cache TTL)
     price_data2 = {}
@@ -299,7 +302,10 @@ def get_live_pip_value(symbol, account_currency):
         raise ValueError(f"Conversion failed for {symbol}: no price for {conv_symbol2} (leg 2)")
     rate1 = (1.0 / avg_price) if invert else avg_price
     rate2 = (1.0 / avg_price2) if invert2 else avg_price2
-    return pip_size * rate1 * rate2
+    pip_val = pip_size * rate1 * rate2
+    if not (1e-7 < pip_val < 0.1):
+        raise ValueError(f"pip_value sanity fail for {symbol}: {pip_val:.8f} (rate1={rate1:.5f}, rate2={rate2:.5f}) — price subscription may not be warm")
+    return pip_val
 
 # ---------------------------------------------------------------------------
 # LOT SIZE CALCULATION
@@ -357,6 +363,9 @@ def calculate_professional_lot_size(symbol, sl_pips):
         final_vol = max_vol_cl
 
     actual_lots = final_vol / lot_size_cl
+    # Sanity: if risk_cash > 100 EUR but result < 0.05 lots, pip_value was likely corrupted
+    if total_risk_cash > 100 and actual_lots < 0.05:
+        raise ValueError(f"Volume sanity fail for {symbol}: {actual_lots:.4f} lots from risk {total_risk_cash:.0f} {acc_currency} — pip_value {pip_value_per_unit:.8f} looks wrong")
     print(f"📊 Risk: {acc_currency} {total_risk_cash:,.2f} | PipVal/Unit: {pip_value_per_unit:.8f} | Lots: {actual_lots:.4f} | Vol: {final_vol}")
     return final_vol
 
