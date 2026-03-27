@@ -28,15 +28,17 @@ export default function Signals() {
   const [selected, setSelected]   = useState(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [symbolFilter, setSymbolFilter] = useState('');
+  const [strategyFilter, setStrategyFilter] = useState('');
+  const [directionFilter, setDirectionFilter] = useState('');
 
   useEffect(() => {
     base44.functions.invoke('getSignalStats').then(res => setStatsData(res.data)).catch(() => setStatsData(null));
   }, []);
 
-  const fetchSignals = useCallback(async (status = statusFilter, symbol = symbolFilter) => {
+  const fetchSignals = useCallback(async (status = statusFilter, symbol = symbolFilter, strategy = strategyFilter, direction = directionFilter) => {
     setLoading(true);
     try {
-      const res = await base44.functions.invoke('getSignals', { status, symbol });
+      const res = await base44.functions.invoke('getSignals', { status, symbol, strategy, direction });
       const payload = res.data;
       const arr = Array.isArray(payload) ? payload : Array.isArray(payload?.signals) ? payload.signals : Array.isArray(payload?.data) ? payload.data : [];
       setSignals(arr);
@@ -45,9 +47,11 @@ export default function Signals() {
 
   useEffect(() => { fetchSignals('', ''); }, []);
 
-  const handleStatusChange = (e) => { const val = e.target.value; setStatusFilter(val); fetchSignals(val, symbolFilter); };
-  const handleSymbolChange = (e) => { const val = e.target.value; setSymbolFilter(val); fetchSignals(statusFilter, val); };
-  const handleRefresh = () => { base44.functions.invoke('getSignalStats').then(res => setStatsData(res.data)).catch(() => setStatsData(null)); fetchSignals(statusFilter, symbolFilter); };
+  const handleStatusChange = (e) => { const val = e.target.value; setStatusFilter(val); fetchSignals(val, symbolFilter, strategyFilter, directionFilter); };
+  const handleSymbolChange = (e) => { const val = e.target.value; setSymbolFilter(val); fetchSignals(statusFilter, val, strategyFilter, directionFilter); };
+  const handleStrategyChange = (e) => { const val = e.target.value; setStrategyFilter(val); fetchSignals(statusFilter, symbolFilter, val, directionFilter); };
+  const handleDirectionChange = (e) => { const val = e.target.value; setDirectionFilter(val); fetchSignals(statusFilter, symbolFilter, strategyFilter, val); };
+  const handleRefresh = () => { base44.functions.invoke('getSignalStats').then(res => setStatsData(res.data)).catch(() => setStatsData(null)); fetchSignals(statusFilter, symbolFilter, strategyFilter, directionFilter); };
 
   const directionBadge = (d) => {
     const isLong = d === 'BUY' || d === 'LONG';
@@ -93,6 +97,15 @@ export default function Signals() {
         <select value={symbolFilter} onChange={handleSymbolChange} className={selectClass}>
           <option value="">All Symbols</option>
           {(statsData?.symbols || []).map(sym => (<option key={sym} value={sym}>{sym}</option>))}
+        </select>
+        <select value={strategyFilter} onChange={handleStrategyChange} className={selectClass}>
+          <option value="">All Strategies</option>
+          {(statsData?.strategies || []).map(s => (<option key={s} value={s}>{s}</option>))}
+        </select>
+        <select value={directionFilter} onChange={handleDirectionChange} className={selectClass}>
+          <option value="">All Directions</option>
+          <option value="BUY">BUY</option>
+          <option value="SELL">SELL</option>
         </select>
       </div>
       <div className="card-dark overflow-hidden">
