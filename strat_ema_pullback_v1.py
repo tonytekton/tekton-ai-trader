@@ -86,7 +86,7 @@ def get_symbol_specs() -> dict:
             sym_name    = s.get("name", "")
             pip_pos     = s.get("pipPosition") or 4
             # pip_size = 10^-pipPosition (real pip units)
-            pip_size    = 10 ** (-pip_pos)
+            pip_size    = 1.0 if pip_pos == 1 else 10 ** (-pip_pos)  # pip_pos=1 → indices, 1 pip = 1.0
             # price_scale = 100000 ALWAYS — bridge historical raw / 100000 = real price
             price_scale = 100000
             specs[sym_name] = {"pip_size": pip_size, "price_scale": price_scale}
