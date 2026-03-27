@@ -66,7 +66,7 @@ def get_symbol_specs():
             sym_name = s.get("name") or s.get("symbolName", "")
             pip_pos  = s.get("pipPosition", 4)
             # pip_size = 10^-pipPosition (real pip value, e.g. EURUSD=0.0001, XBRUSD=0.01)
-            pip_size     = 10 ** (-pip_pos)
+            pip_size     = 1.0 if pip_pos == 1 else 10 ** (-pip_pos)  # pip_pos=1 → indices, 1 pip = 1.0
             # price_scale = 100000 ALWAYS — the bridge historical API returns raw integers
             # where raw / 100000 = real price for ALL symbols (FX, JPY, indices, commodities)
             # e.g. EURUSD raw=116411 → 116411/100000 = 1.16411 ✅
