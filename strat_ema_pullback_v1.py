@@ -84,10 +84,11 @@ def get_symbol_specs() -> dict:
         specs = {}
         for s in symbols:
             sym_name    = s.get("name", "")
-            digits      = s.get("digits") or 5
-            pip_pos     = s.get("pipPosition")
-            pip_size    = 10 ** (-pip_pos) if pip_pos else 10 ** -(digits - 1)
-            price_scale = 10 ** digits
+            pip_pos     = s.get("pipPosition") or 4
+            # pip_size = 10^-pipPosition (real pip units)
+            pip_size    = 10 ** (-pip_pos)
+            # price_scale = 100000 ALWAYS — bridge historical raw / 100000 = real price
+            price_scale = 100000
             specs[sym_name] = {"pip_size": pip_size, "price_scale": price_scale}
         _symbol_specs_cache = specs
         _specs_cache_ts     = now
@@ -106,12 +107,14 @@ def get_pip_info(symbol: str) -> tuple:
     if symbol.endswith("JPY"):
         return 0.01, 1000
     FALLBACK = {
-        "XAUUSD": (0.1,  100000), "XAGUSD": (0.01, 100000),
-        "XTIUSD": (0.01, 100000), "XBRUSD": (0.01, 100000),
-        "US30":   (1.0,  100000), "US500":  (0.1,  100000),
-        "USTEC":  (0.1,  100000), "UK100":  (1.0,  100000),
-        "DE40":   (1.0,  100000), "JP225":  (1.0,  100000),
-        "AUS200": (1.0,  100000), "HK50":   (1.0,  100000),
+        # price_scale=100000 for all; pip_size=10^-pipPosition
+        "XAUUSD": (0.01, 100000), "XAGUSD": (0.01, 100000),  # pipPos=2
+        "XTIUSD": (0.01, 100000), "XBRUSD": (0.01, 100000),  # pipPos=2
+        "US30":   (0.1,  100000), "US500":  (0.1,  100000),  # pipPos=1
+        "USTEC":  (0.1,  100000), "UK100":  (0.1,  100000),  # pipPos=1
+        "DE40":   (0.1,  100000), "JP225":  (0.1,  100000),  # pipPos=1
+        "F40":    (0.1,  100000), "AUS200": (0.1,  100000),  # pipPos=1
+        "STOXX50":(0.1,  100000), "HK50":   (0.1,  100000),  # pipPos=1
     }
     return FALLBACK.get(symbol, (0.0001, 100000))
 
