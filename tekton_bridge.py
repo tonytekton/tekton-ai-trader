@@ -760,6 +760,78 @@ def get_calendar_events():
         print(f"⚠️ get_calendar_events error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route("/calendar/gating", methods=["GET"])
+@require_auth
+def get_calendar_gating():
+    """
+    Phase 9 — Per-pair news gating check.
+    Query param: ?symbol=GBPUSD
+    Returns:
+      { blocked: bool, reason: str|null, events: [...] }
+    Uses news_blackout_mins from settings (default 60).
+    Checks only HIGH impact events. Blocked if event currency is in symbol name.
+    """
+    try:
+        import datetime
+        symbol = request.args.get("symbol", "").upper()
+        conn = get_db_conn()
+        cur  = conn.cursor()
+
+        # Get settings for blackout window
+        cur.execute("SELECT news_blackout_mins, news_filter_enabled FROM settings WHERE id = 1")
+        row = cur.fetchone()
+        blackout_mins       = int(row[0]) if row and row[0] else 60
+        news_filter_enabled = bool(row[1]) if row and row[1] is not None else True
+
+        if not news_filter_enabled:
+            cur.close(); conn.close()
+            return jsonify({"blocked": False, "reason": None, "events": [], "filter_disabled": True})
+
+        cur.execute("""
+            SELECT id, indicator_name, event_date, currency, impact_level
+            FROM economic_events
+            WHERE impact_level = 'HIGH'
+            AND event_date BETWEEN NOW() - INTERVAL '%s minutes'
+                              AND NOW() + INTERVAL '%s minutes'
+            ORDER BY event_date ASC
+        """, (blackout_mins, blackout_mins))
+        rows = cur.fetchall()
+        cur.close(); conn.close()
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        events_in_window = []
+        for r in rows:
+            ev_id, ev_name, ev_date, ev_ccy, ev_impact = r
+            if ev_date.tzinfo is None:
+                ev_date = ev_date.replace(tzinfo=datetime.timezone.utc)
+            minutes_until = int((ev_date - now).total_seconds() / 60)
+            events_in_window.append({
+                "id": ev_id,
+                "indicator_name": ev_name,
+                "event_date": ev_date.isoformat(),
+                "currency": ev_ccy,
+                "impact_level": ev_impact,
+                "minutes_until": minutes_until,
+            })
+
+        # Per-pair check: block only if event currency appears in the symbol name
+        blocking = None
+        if symbol:
+            for ev in events_in_window:
+                if ev["currency"].upper() in symbol:
+                    blocking = ev
+                    break
+
+        if blocking:
+            reason = f"News blackout: {blocking['indicator_name']} ({blocking['currency']}) in {blocking['minutes_until']:+d}min — {blackout_mins}min window"
+            return jsonify({"blocked": True, "reason": reason, "events": events_in_window, "blocking_event": blocking})
+
+        return jsonify({"blocked": False, "reason": None, "events": events_in_window})
+
+    except Exception as e:
+        print(f"⚠️ get_calendar_gating error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
         
 def fetch_all_deals(from_ts: int, to_ts: int, max_rows_per_page: int = 500) -> list:
     """
@@ -1009,88 +1081,6 @@ def get_executions():
         except Exception as enrich_err2:
             print(f"WARNING Closed trade enrichment failed (non-fatal): {enrich_err2}")
 
-        # ── PASS 2: Enrich by UUID (comment field) for trades still missing signal_uuid ──
-        # Covers trades where position_id was never written to signals table
-        # (pre-fix executor used status=EXECUTED and never stored position_id).
-        # The cTrader deal comment field = signal_uuid written at order time.
-        try:
-            uuids_from_comment = [
-                t["signal_uuid"] for t in closed_trades
-                if t.get("signal_uuid") and not t.get("strategy")
-            ]
-            # Also collect trades that got uuid from comment but still lack enrichment
-            # Build uuid→trade map for all closed trades that have a uuid but no strategy
-            uuid_needs_enrich = {
-                t["signal_uuid"]: t for t in closed_trades
-                if t.get("signal_uuid") and not t.get("strategy")
-            }
-            if uuid_needs_enrich:
-                enrich_conn3 = psycopg2.connect(
-                    host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
-                    database=os.getenv("CLOUD_SQL_DB_NAME", "tekton-trader"),
-                    user=os.getenv("CLOUD_SQL_DB_USER", "postgres"),
-                    password=os.getenv("CLOUD_SQL_DB_PASSWORD")
-                )
-                enrich_cur3 = enrich_conn3.cursor()
-                uuid_list = list(uuid_needs_enrich.keys())
-                placeholders3 = ",".join(["%s"] * len(uuid_list))
-                enrich_cur3.execute(
-                    f"""SELECT signal_uuid::text, sl_pips, tp_pips, strategy,
-                               sl_price, tp_price, avg_fill_price, position_id
-                        FROM signals
-                        WHERE signal_uuid::text IN ({placeholders3})""",
-                    uuid_list
-                )
-                uuid_signal_map = {
-                    row[0]: {
-                        "sl_pips": row[1], "tp_pips": row[2], "strategy": row[3],
-                        "sl_price": row[4], "tp_price": row[5],
-                        "avg_fill_price": row[6], "position_id": row[7]
-                    } for row in enrich_cur3.fetchall()
-                }
-                enrich_cur3.close()
-                enrich_conn3.close()
-                enriched_count = 0
-                for t in closed_trades:
-                    uuid_key = t.get("signal_uuid")
-                    if not uuid_key or t.get("strategy"):
-                        continue
-                    sig = uuid_signal_map.get(uuid_key)
-                    if sig:
-                        t["sl_pips"]    = float(sig["sl_pips"])    if sig["sl_pips"]    else None
-                        t["tp_pips"]    = float(sig["tp_pips"])    if sig["tp_pips"]    else None
-                        t["strategy"]   = sig["strategy"]
-                        if sig.get("sl_price") and not t.get("stop_loss"):
-                            t["stop_loss"]   = float(sig["sl_price"])
-                        if sig.get("tp_price") and not t.get("take_profit"):
-                            t["take_profit"] = float(sig["tp_price"])
-                        if sig.get("avg_fill_price") and not t.get("entry_price"):
-                            t["entry_price"] = float(sig["avg_fill_price"])
-                        # Backfill position_id into signals table so Pass 1 works next time
-                        if sig["position_id"] is None and t.get("id"):
-                            try:
-                                bp_conn = psycopg2.connect(
-                                    host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
-                                    database=os.getenv("CLOUD_SQL_DB_NAME", "tekton-trader"),
-                                    user=os.getenv("CLOUD_SQL_DB_USER", "postgres"),
-                                    password=os.getenv("CLOUD_SQL_DB_PASSWORD")
-                                )
-                                bp_cur = bp_conn.cursor()
-                                bp_cur.execute(
-                                    "UPDATE signals SET position_id = %s WHERE signal_uuid::text = %s AND position_id IS NULL",
-                                    (t["id"], uuid_key)
-                                )
-                                bp_conn.commit()
-                                bp_cur.close()
-                                bp_conn.close()
-                                enriched_count += 1
-                            except Exception as bp_err:
-                                print(f"WARNING position_id backfill failed for {uuid_key}: {bp_err}")
-                if enriched_count:
-                    print(f"INFO Pass2 enrichment: backfilled position_id for {enriched_count} signals")
-        except Exception as enrich_err3:
-            print(f"WARNING Pass2 UUID enrichment failed (non-fatal): {enrich_err3}")
-
         closed_trades.sort(key=lambda x: x.get('closed_at') or '', reverse=True)
 
         # --- Deduplication ---
@@ -1286,27 +1276,12 @@ def execute_trade():
         rel_sl = data.get("rel_sl")
         rel_tp = data.get("rel_tp")
         # relativeStopLoss/TP is a protobuf int32 field — must be an integer.
-        # cTrader stores prices as integer / 10^digits (e.g. digits=5 → store in 0.00001 units).
-        # Formula: relativeStopLoss = pips * 10^(digits - pipPosition)
-        #   Forex (digits=5, pipPosition=4): pips * 10^1 = pips * 10  ✓
-        #   JPY   (digits=3, pipPosition=2): pips * 10^1 = pips * 10  ✓
-        #   Index (digits=2, pipPosition=1): pips * 10^1 = pips * 10  BUT
-        #     indices treat 1 pip = 1.0 price unit (not 0.1), so pip is already
-        #     expressed as whole points — multiply by 10^(digits) not 10^(digits-pipPosition)
-        #     Index: pips * 10^2 = pips * 100
-        # Rule: if pipPosition == 1 (indices), multiplier = 10^digits
-        #       else multiplier = 10^(digits - pipPosition) = always 10 for forex/metals
-        pip_position = spec.get("pipPosition", 4) if spec else 4
-        digits_val   = spec.get("digits", 5) if spec else 5
-        if pip_position == 1:
-            sl_tp_multiplier = 10 ** digits_val          # indices: pips are whole points
-        else:
-            sl_tp_multiplier = 10 ** (digits_val - pip_position)  # forex/metals: = 10
+        # cTrader expects integer POINTS (1 pip = 10 points for 5-digit pairs).
+        # Convert: points = round(pips * 10) → always an int.
         if rel_sl:
-            req.relativeStopLoss = int(round(float(rel_sl) * sl_tp_multiplier))
+            req.relativeStopLoss = int(round(float(rel_sl) * 10))
         if rel_tp:
-            req.relativeTakeProfit = int(round(float(rel_tp) * sl_tp_multiplier))
-        print(f"📐 SL/TP precision: {symbol} pipPos={pip_position} digits={digits_val} multiplier={sl_tp_multiplier} → relSL={req.relativeStopLoss if rel_sl else 'n/a'} relTP={req.relativeTakeProfit if rel_tp else 'n/a'}")
+            req.relativeTakeProfit = int(round(float(rel_tp) * 10))
 
         d_exec, client_msg_id = defer.Deferred(), str(uuid.uuid4())
         pending_requests[client_msg_id] = d_exec
@@ -1319,11 +1294,9 @@ def execute_trade():
             return jsonify({"success": False, "error": str(result.description)}), 400
 
         if not hasattr(result, 'order') or result.order is None:
-            error_code = getattr(result, 'errorCode', None)
-            error_desc = getattr(result, 'description', None) or 'Order not created by broker'
-            full_error = f"cTrader {error_code}: {error_desc}" if error_code else error_desc
-            print(f"❌ Broker Rejected Order: {full_error} | result type: {type(result).__name__} | result: {result}")
-            return jsonify({"success": False, "error": full_error}), 400
+            error_desc = getattr(result, 'description', 'Order not created by broker')
+            print(f"❌ Broker Rejected Order: {error_desc}")
+            return jsonify({"success": False, "error": error_desc}), 400
 
         digits        = spec.get("digits", 5) if spec else 5
         pos_id        = result.position.positionId if hasattr(result, 'position') else 0
@@ -1903,38 +1876,7 @@ def periodic_cleanup():
     print(f"🧹 Cleanup complete: {len(api_call_log)} cTrader calls in memory")
     reactor.callLater(3600, periodic_cleanup)
 
-
-def ensure_signals_columns():
-    """
-    Startup migration: ensure sl_price and tp_price columns exist in signals table.
-    Safe to run on every startup — uses ADD COLUMN IF NOT EXISTS.
-    Also ensures position_id column exists (added in v4.7).
-    """
-    try:
-        conn = psycopg2.connect(
-            host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
-            database=os.getenv("CLOUD_SQL_DB_NAME", "tekton-trader"),
-            user=os.getenv("CLOUD_SQL_DB_USER", "postgres"),
-            password=os.getenv("CLOUD_SQL_DB_PASSWORD")
-        )
-        cur = conn.cursor()
-        migrations = [
-            "ALTER TABLE signals ADD COLUMN IF NOT EXISTS sl_price DOUBLE PRECISION",
-            "ALTER TABLE signals ADD COLUMN IF NOT EXISTS tp_price DOUBLE PRECISION",
-            "ALTER TABLE signals ADD COLUMN IF NOT EXISTS position_id BIGINT",
-            "ALTER TABLE signals ADD COLUMN IF NOT EXISTS avg_fill_price DOUBLE PRECISION",
-        ]
-        for sql in migrations:
-            cur.execute(sql)
-        conn.commit()
-        cur.close()
-        conn.close()
-        print("✅ ensure_signals_columns: migrations applied (sl_price, tp_price, position_id, avg_fill_price)")
-    except Exception as e:
-        print(f"⚠️ ensure_signals_columns error (non-fatal): {e}")
-
 if __name__ == "__main__":
-    ensure_signals_columns()  # Safe column migrations on every startup
     reactor.callWhenRunning(bridge.start)
     reactor.callLater(3600, periodic_cleanup)
     resource = WSGIResource(reactor, reactor.getThreadPool(), app)
