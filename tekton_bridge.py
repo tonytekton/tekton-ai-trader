@@ -591,26 +591,62 @@ def list_symbols():
 @app.route("/account/status", methods=["GET"])
 @require_auth
 def get_account_status():
-    """Endpoint for Executor and Monitor to check account health."""
-    equity = state.get("equity_cents", 0) / 100
-    margin_used = state.get("margin_used_cents", 0) / 100
+    """Endpoint for Executor, Monitor, and Base44 UI to check live account health.
+
+    Equity is computed as: balance + sum of unrealized net P&L across all open positions
+    in position_state{}. This gives true floating equity rather than ProtoOATraderRes.moneyBalance
+    which is static and does not reflect open position P&L.
+
+    Fields returned:
+      balance       - account balance in account currency (cents / 100)
+      equity        - balance + floating P&L (live)
+      free_margin   - equity - margin_used
+      margin_used   - sum of usedMargin across all open positions (cents / 100)
+      drawdown_pct  - (starting_equity - equity) / starting_equity * 100
+      daily_pnl     - equity - starting_equity (today's P&L)
+      open_count    - number of open positions in position_state{}
+      currency      - account deposit currency
+    """
+    balance = state.get("balance_cents", 0) / 100
+
+    # --- Live equity: balance + sum of unrealized net P&L from position_state{} ---
+    pos_state = state.get("position_state", {})
+    open_count = len(pos_state)
+    floating_pnl_cents = sum(
+        ps.get("unrealizedNetPnL_cents", 0)
+        for ps in pos_state.values()
+    )
+    # margin_used: prefer summing from position_state for accuracy;
+    # fall back to state["margin_used_cents"] if position_state is empty
+    if open_count > 0:
+        margin_used_cents = sum(
+            ps.get("margin_used_cents", 0)
+            for ps in pos_state.values()
+        )
+    else:
+        margin_used_cents = state.get("margin_used_cents", 0)
+
+    equity = balance + (floating_pnl_cents / 100)
+    margin_used = margin_used_cents / 100
     free_margin = equity - margin_used
 
     start_equity = state.get("starting_equity_cents", 0) / 100
     drawdown_pct = 0.0
+    daily_pnl = None
     if start_equity > 0:
         drawdown_pct = ((start_equity - equity) / start_equity) * 100
+        daily_pnl = round(equity - start_equity, 2)
 
-    balance = state.get("balance_cents", 0) / 100
     return jsonify({
-        "success": True,
-        "balance": round(balance, 2),
-        "equity": round(equity, 2),
-        "free_margin": round(free_margin, 2),
-        "margin_used": round(margin_used, 2),
+        "success":      True,
+        "balance":      round(balance, 2),
+        "equity":       round(equity, 2),
+        "free_margin":  round(free_margin, 2),
+        "margin_used":  round(margin_used, 2),
         "drawdown_pct": round(max(drawdown_pct, 0.0), 2),
-        "currency": state.get("account_currency", "EUR"),
-        "depositAssetId": state.get("deposit_asset_id"),
+        "daily_pnl":    daily_pnl,
+        "open_count":   open_count,
+        "currency":     state.get("account_currency", "EUR"),
     })
 
 @app.route("/proxy/account-summary", methods=["GET"])
@@ -758,78 +794,6 @@ def get_calendar_events():
         return jsonify({"success": True, "events": events, "count": len(events)})
     except Exception as e:
         print(f"⚠️ get_calendar_events error: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route("/calendar/gating", methods=["GET"])
-@require_auth
-def get_calendar_gating():
-    """
-    Phase 9 — Per-pair news gating check.
-    Query param: ?symbol=GBPUSD
-    Returns:
-      { blocked: bool, reason: str|null, events: [...] }
-    Uses news_blackout_mins from settings (default 60).
-    Checks only HIGH impact events. Blocked if event currency is in symbol name.
-    """
-    try:
-        import datetime
-        symbol = request.args.get("symbol", "").upper()
-        conn = get_db_conn()
-        cur  = conn.cursor()
-
-        # Get settings for blackout window
-        cur.execute("SELECT news_blackout_mins, news_filter_enabled FROM settings WHERE id = 1")
-        row = cur.fetchone()
-        blackout_mins       = int(row[0]) if row and row[0] else 60
-        news_filter_enabled = bool(row[1]) if row and row[1] is not None else True
-
-        if not news_filter_enabled:
-            cur.close(); conn.close()
-            return jsonify({"blocked": False, "reason": None, "events": [], "filter_disabled": True})
-
-        cur.execute("""
-            SELECT id, indicator_name, event_date, currency, impact_level
-            FROM economic_events
-            WHERE impact_level = 'HIGH'
-            AND event_date BETWEEN NOW() - INTERVAL '%s minutes'
-                              AND NOW() + INTERVAL '%s minutes'
-            ORDER BY event_date ASC
-        """, (blackout_mins, blackout_mins))
-        rows = cur.fetchall()
-        cur.close(); conn.close()
-
-        now = datetime.datetime.now(datetime.timezone.utc)
-        events_in_window = []
-        for r in rows:
-            ev_id, ev_name, ev_date, ev_ccy, ev_impact = r
-            if ev_date.tzinfo is None:
-                ev_date = ev_date.replace(tzinfo=datetime.timezone.utc)
-            minutes_until = int((ev_date - now).total_seconds() / 60)
-            events_in_window.append({
-                "id": ev_id,
-                "indicator_name": ev_name,
-                "event_date": ev_date.isoformat(),
-                "currency": ev_ccy,
-                "impact_level": ev_impact,
-                "minutes_until": minutes_until,
-            })
-
-        # Per-pair check: block only if event currency appears in the symbol name
-        blocking = None
-        if symbol:
-            for ev in events_in_window:
-                if ev["currency"].upper() in symbol:
-                    blocking = ev
-                    break
-
-        if blocking:
-            reason = f"News blackout: {blocking['indicator_name']} ({blocking['currency']}) in {blocking['minutes_until']:+d}min — {blackout_mins}min window"
-            return jsonify({"blocked": True, "reason": reason, "events": events_in_window, "blocking_event": blocking})
-
-        return jsonify({"blocked": False, "reason": None, "events": events_in_window})
-
-    except Exception as e:
-        print(f"⚠️ get_calendar_gating error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
         
