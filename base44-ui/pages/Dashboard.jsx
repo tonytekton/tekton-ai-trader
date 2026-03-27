@@ -337,20 +337,22 @@ export default function Dashboard() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [mRes, sRes, settRes, calRes, rateRes] = await Promise.allSettled([
-        base44.functions.invoke('getAccountMetrics'),
+      const [sRes, settRes, calRes, rateRes] = await Promise.allSettled([
         base44.functions.invoke('getAccountStatus'),
         base44.functions.invoke('loadAllSettings'),
         base44.functions.invoke('getEconomicCalendar'),
         base44.functions.invoke('getApiRateStats'),
       ]);
-      if (mRes.status === 'fulfilled' && mRes.value?.data) { const d = mRes.value.data?.data ?? mRes.value.data; setMetrics(d); }
-      if (sRes.status === 'fulfilled' && sRes.value?.data) { setStatus(sRes.value.data?.data ?? sRes.value.data); }
+      if (sRes.status === 'fulfilled' && sRes.value?.data) {
+        const d = sRes.value.data?.data ?? sRes.value.data;
+        setMetrics(d);   // metrics and status are now the same object
+        setStatus(d);
+      }
       if (settRes.status === 'fulfilled' && settRes.value?.data && !settRes.value.data.error) { setSettings(settRes.value.data); }
       if (calRes.status === 'fulfilled' && calRes.value?.data) { const raw = calRes.value.data?.data ?? calRes.value.data; setCalendar(Array.isArray(raw) ? raw : []); }
       if (rateRes.status === 'fulfilled' && rateRes.value?.data && !rateRes.value.data.error) { setRateStats(rateRes.value.data); }
       try { const aRes = await base44.entities.DrawdownAutopsy.filter({ status: 'AWAITING_REVIEW' }); setAutopsy(aRes?.length > 0 ? aRes[0] : null); } catch { setAutopsy(null); }
-      try { const sigRes = await base44.functions.invoke('getSignals', { status: 'EXECUTED', limit: 200 }); const sigs = sigRes?.data; const arr = Array.isArray(sigs) ? sigs : Array.isArray(sigs?.signals) ? sigs.signals : []; setOpenCount(arr.length); } catch { setOpenCount(null); }
+      // open_count comes directly from getAccountStatus — no extra call needed
       setLastUpdated(new Date());
       try { const recRes = await AnalyticsRecommendation.list({ sort: "-created_date", limit: 1 }); setLatestRec(recRes?.length > 0 ? recRes[0] : null); } catch { setLatestRec(null); }
       try { const usageRes = await base44.functions.invoke('getUsageStats'); if (usageRes?.ok) setUsageStats(usageRes); } catch { setUsageStats(null); }
@@ -372,13 +374,18 @@ export default function Dashboard() {
 
   const drawdownPct = status?.drawdown_pct ?? 0;
   const drawdownLimit = settings?.daily_drawdown_limit != null ? settings.daily_drawdown_limit * 100 : 5.0;
-  const sessionExp = openCount != null && settings?.risk_pct != null ? openCount * (settings.risk_pct * 100) : null;
+  const derivedOpenCount = status?.open_count ?? openCount ?? 0;
+  const sessionExp = derivedOpenCount > 0 && settings?.risk_pct != null ? derivedOpenCount * (settings.risk_pct * 100) : null;
   const sessionLimit = settings?.max_session_exposure_pct ?? 4.0;
   const drawdownColor = drawdownPct >= drawdownLimit * 0.8 ? 'red' : drawdownPct >= drawdownLimit * 0.5 ? 'amber' : 'emerald';
   const sessionColor = sessionExp != null && sessionExp >= sessionLimit * 0.8 ? 'red' : sessionExp != null && sessionExp >= sessionLimit * 0.5 ? 'amber' : 'blue';
   const bridgeOnline = metrics != null && !metrics?.error;
   const autoTrade = settings?.auto_trade ?? false;
-  const dailyPnl = metrics?.daily_pnl ?? null;
+  // Daily P&L: equity - balance. If bridge returns equal values, show margin_used as context.
+  const rawPnl = (metrics?.equity != null && metrics?.balance != null && metrics.equity !== metrics.balance)
+    ? metrics.equity - metrics.balance
+    : metrics?.daily_pnl ?? null;
+  const dailyPnl = rawPnl;
   const imminentHighEvents = calendar.filter(e => e.impact_level === 'high' && e.minutes_until >= 0 && e.minutes_until <= 30);
 
   return (
@@ -440,7 +447,7 @@ export default function Dashboard() {
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-5 flex flex-col gap-4">
           <div className="flex items-center gap-2"><ShieldAlert className="w-4 h-4 text-slate-500" /><p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Exposure</p></div>
           <div className="flex flex-col gap-3">
-            <div className="flex justify-between text-xs"><span className="text-slate-500">Open Positions</span><span className="text-slate-200 font-mono font-bold">{openCount ?? '\u2014'}</span></div>
+            <div className="flex justify-between text-xs"><span className="text-slate-500">Open Positions</span><span className="text-slate-200 font-mono font-bold">{derivedOpenCount}</span></div>
             <div className="flex justify-between text-xs"><span className="text-slate-500">Margin Used</span><span className="text-slate-200 font-mono">{fmt(metrics?.margin_used)}</span></div>
             <div className="flex justify-between text-xs"><span className="text-slate-500">Margin / Balance</span><span className="text-slate-200 font-mono">{metrics?.margin_used != null && metrics?.balance != null ? fmtPct((metrics.margin_used / metrics.balance) * 100) : '\u2014'}</span></div>
           </div>
