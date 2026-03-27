@@ -65,6 +65,97 @@ function StatusBadge({ online }) {
   );
 }
 
+// AI_BUDGET constants
+const AI_MONTHLY_BUDGET  = 75000;
+const AI_DAILY_BUDGET    = Math.round(AI_MONTHLY_BUDGET / 260); // 288
+const MSG_MONTHLY_BUDGET = 1925;
+
+function AiCreditsMonitor({ data }) {
+  // data comes from getUsageStats backend fn
+  // fallback: use hardcoded values from last known state if fn not yet built
+  const aiUsed   = data?.ai_credits_used   ?? null;
+  const aiTotal  = data?.ai_credits_total  ?? AI_MONTHLY_BUDGET;
+  const msgUsed  = data?.msg_credits_used  ?? null;
+  const msgTotal = data?.msg_credits_total ?? MSG_MONTHLY_BUDGET;
+
+  const aiPct  = aiUsed  != null ? +((aiUsed  / aiTotal)  * 100).toFixed(1) : null;
+  const msgPct = msgUsed != null ? +((msgUsed / msgTotal) * 100).toFixed(1) : null;
+
+  // Daily burn estimate: if we know used and days elapsed this month
+  const now = new Date();
+  const dayOfMonth = now.getDate();
+  const aiDailyBurn = aiUsed != null && dayOfMonth > 0 ? Math.round(aiUsed / dayOfMonth) : null;
+  const aiDailyPct  = aiDailyBurn != null ? +((aiDailyBurn / AI_DAILY_BUDGET) * 100).toFixed(1) : null;
+
+  const aiColor  = aiPct  != null && aiPct  >= 80 ? 'red' : aiPct  >= 50 ? 'amber' : 'emerald';
+  const msgColor = msgPct != null && msgPct >= 80 ? 'red' : msgPct >= 50 ? 'amber' : 'emerald';
+  const aiTextColor  = aiPct  >= 80 ? 'text-red-400' : aiPct  >= 50 ? 'text-amber-400' : 'text-emerald-400';
+  const msgTextColor = msgPct >= 80 ? 'text-red-400' : msgPct >= 50 ? 'text-amber-400' : 'text-purple-400';
+
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-5 flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-slate-500 text-sm">🤖</span>
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">AI Credits</p>
+        </div>
+        {aiPct != null && <span className={`text-xs font-bold ${aiTextColor}`}>{aiPct}% used</span>}
+      </div>
+
+      {/* AI integration credits */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex justify-between text-xs">
+          <span className="text-slate-500">Integration (monthly)</span>
+          <span className="text-slate-300 font-mono">{aiUsed != null ? aiUsed.toLocaleString() : '—'} / {aiTotal.toLocaleString()}</span>
+        </div>
+        <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all duration-500 ${aiColor === 'red' ? 'bg-red-500' : aiColor === 'amber' ? 'bg-amber-500' : 'bg-emerald-500'}`}
+            style={{ width: `${Math.min(aiPct ?? 0, 100)}%` }} />
+        </div>
+      </div>
+
+      {/* Daily budget gauge */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex justify-between text-xs">
+          <span className="text-slate-500">Daily budget</span>
+          <span className="text-slate-300 font-mono">{aiDailyBurn != null ? aiDailyBurn : '—'} / {AI_DAILY_BUDGET} avg</span>
+        </div>
+        <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all duration-500 ${aiDailyPct >= 100 ? 'bg-red-500' : aiDailyPct >= 80 ? 'bg-amber-500' : 'bg-cyan-500'}`}
+            style={{ width: `${Math.min(aiDailyPct ?? 0, 100)}%` }} />
+        </div>
+      </div>
+
+      {/* Message credits */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex justify-between text-xs">
+          <span className="text-slate-500">Messages (monthly)</span>
+          <span className={`font-mono text-xs ${msgTextColor}`}>{msgUsed != null ? msgUsed.toLocaleString() : '—'} / {msgTotal.toLocaleString()}</span>
+        </div>
+        <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all duration-500 ${msgColor === 'red' ? 'bg-red-500' : msgColor === 'amber' ? 'bg-amber-500' : 'bg-purple-500'}`}
+            style={{ width: `${Math.min(msgPct ?? 0, 100)}%` }} />
+        </div>
+      </div>
+
+      {/* Summary stats */}
+      <div className="grid grid-cols-2 gap-2 text-center">
+        <div className="bg-slate-800/40 rounded-lg py-2 px-1">
+          <div className="text-sm font-bold font-mono text-slate-200">{AI_DAILY_BUDGET}</div>
+          <div className="text-[10px] text-slate-600 mt-0.5">daily budget</div>
+        </div>
+        <div className="bg-slate-800/40 rounded-lg py-2 px-1">
+          <div className={`text-sm font-bold font-mono ${aiDailyPct != null && aiDailyPct > 100 ? 'text-red-400' : 'text-slate-200'}`}>
+            {aiUsed != null ? (aiTotal - aiUsed).toLocaleString() : '—'}
+          </div>
+          <div className="text-[10px] text-slate-600 mt-0.5">remaining</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function AiRecommendationsWidget({ rec }) {
   if (!rec) return null;
   // Extract just the executive summary and priority actions from the full text
@@ -237,6 +328,7 @@ export default function Dashboard() {
   const [calendar, setCalendar] = useState([]);
   const [rateStats, setRateStats] = useState(null);
   const [latestRec, setLatestRec] = useState(null);
+  const [usageStats, setUsageStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [halting, setHalting] = useState(false);
@@ -260,6 +352,7 @@ export default function Dashboard() {
       try { const sigRes = await base44.functions.invoke('getSignals', { status: 'EXECUTED', limit: 200 }); const sigs = sigRes?.data; const arr = Array.isArray(sigs) ? sigs : Array.isArray(sigs?.signals) ? sigs.signals : []; setOpenCount(arr.length); } catch { setOpenCount(null); }
       setLastUpdated(new Date());
       try { const recRes = await AnalyticsRecommendation.list({ sort: "-created_date", limit: 1 }); setLatestRec(recRes?.length > 0 ? recRes[0] : null); } catch { setLatestRec(null); }
+      try { const usageRes = await base44.functions.invoke('getUsageStats'); if (usageRes?.ok) setUsageStats(usageRes); } catch { setUsageStats(null); }
     } catch (e) { console.error('fetchAll error', e); } finally { setLoading(false); }
   }, []);
 
@@ -332,7 +425,7 @@ export default function Dashboard() {
         <MetricCard label="Free Margin" value={fmt(metrics?.free_margin)} sub="Available capital" icon={Zap} color="cyan" />
         <MetricCard label="Daily P&L" value={fmt(dailyPnl)} sub="Today's performance" icon={DollarSign} color={dailyPnl == null ? 'slate' : dailyPnl >= 0 ? 'green' : 'red'} />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-5 flex flex-col gap-4">
           <div className="flex items-center gap-2"><TrendingDown className="w-4 h-4 text-slate-500" /><p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Drawdown</p></div>
           <GaugeBar label="Daily Drawdown" value={drawdownPct} max={drawdownLimit} color={drawdownColor} />
@@ -352,6 +445,7 @@ export default function Dashboard() {
           </div>
         </div>
         <ApiRateMonitor data={rateStats} />
+        <AiCreditsMonitor data={usageStats} />
       </div>
       <AiRecommendationsWidget rec={latestRec} />
       <CalendarStrip events={calendar} />
