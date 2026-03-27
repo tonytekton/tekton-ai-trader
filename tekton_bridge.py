@@ -1886,7 +1886,38 @@ def periodic_cleanup():
     print(f"🧹 Cleanup complete: {len(api_call_log)} cTrader calls in memory")
     reactor.callLater(3600, periodic_cleanup)
 
+
+def ensure_signals_columns():
+    """
+    Startup migration: ensure sl_price and tp_price columns exist in signals table.
+    Safe to run on every startup — uses ADD COLUMN IF NOT EXISTS.
+    Also ensures position_id column exists (added in v4.7).
+    """
+    try:
+        conn = psycopg2.connect(
+            host=os.getenv("CLOUD_SQL_HOST", "172.16.64.3"),
+            database=os.getenv("CLOUD_SQL_DB_NAME", "tekton-trader"),
+            user=os.getenv("CLOUD_SQL_DB_USER", "postgres"),
+            password=os.getenv("CLOUD_SQL_DB_PASSWORD")
+        )
+        cur = conn.cursor()
+        migrations = [
+            "ALTER TABLE signals ADD COLUMN IF NOT EXISTS sl_price DOUBLE PRECISION",
+            "ALTER TABLE signals ADD COLUMN IF NOT EXISTS tp_price DOUBLE PRECISION",
+            "ALTER TABLE signals ADD COLUMN IF NOT EXISTS position_id BIGINT",
+            "ALTER TABLE signals ADD COLUMN IF NOT EXISTS avg_fill_price DOUBLE PRECISION",
+        ]
+        for sql in migrations:
+            cur.execute(sql)
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("✅ ensure_signals_columns: migrations applied (sl_price, tp_price, position_id, avg_fill_price)")
+    except Exception as e:
+        print(f"⚠️ ensure_signals_columns error (non-fatal): {e}")
+
 if __name__ == "__main__":
+    ensure_signals_columns()  # Safe column migrations on every startup
     reactor.callWhenRunning(bridge.start)
     reactor.callLater(3600, periodic_cleanup)
     resource = WSGIResource(reactor, reactor.getThreadPool(), app)
