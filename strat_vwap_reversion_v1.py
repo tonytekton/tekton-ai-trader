@@ -6,7 +6,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=UserWarning)
 import sys
 
-sys.stdout = open('/home/tony/tekton-ai-trader/strat_vwap.log', 'a', buffering=1)
+sys.stdout = open('/home/tony/tekton-ai-trader/combined_trades.log', 'a', buffering=1)
 sys.stderr = sys.stdout
 
 from datetime import datetime
