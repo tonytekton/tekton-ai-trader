@@ -100,7 +100,7 @@ export default function Signals() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800">
-                {['Created At', 'Symbol', 'Direction', 'Timeframe', 'Confidence', 'SL Pips', 'TP Pips', 'Status', ''].map(h => (
+                {['Created At', 'Symbol', 'Direction', 'Timeframe', 'Strategy', 'Confidence', 'SL Pips', 'TP Pips', 'Status', ''].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold tracking-widest uppercase text-slate-600">{h}</th>
                 ))}
               </tr>
@@ -108,10 +108,10 @@ export default function Signals() {
             <tbody>
               {loading && signals.length === 0 ? (
                 Array(6).fill(0).map((_, i) => (
-                  <tr key={i} className="border-b border-slate-800/50 shimmer">{Array(8).fill(0).map((_, j) => (<td key={j} className="px-4 py-4"><div className="h-3 bg-slate-800 rounded w-full" /></td>))}</tr>
+                  <tr key={i} className="border-b border-slate-800/50 shimmer">{Array(10).fill(0).map((_, j) => (<td key={j} className="px-4 py-4"><div className="h-3 bg-slate-800 rounded w-full" /></td>))}</tr>
                 ))
               ) : signals.length === 0 ? (
-                <tr><td colSpan={9} className="px-4 py-12 text-center text-slate-600">No signals found</td></tr>
+                <tr><td colSpan={10} className="px-4 py-12 text-center text-slate-600">No signals found</td></tr>
               ) : (
                 signals.map((sig) => {
                   const s = sig.status || 'UNKNOWN';
@@ -121,6 +121,7 @@ export default function Signals() {
                       <td className="px-4 py-3.5 font-semibold text-slate-200">{sig.symbol || '\u2014'}</td>
                       <td className="px-4 py-3.5">{directionBadge(sig.direction)}</td>
                       <td className="px-4 py-3.5 text-slate-500 font-mono text-xs">{sig.timeframe || '\u2014'}</td>
+                      <td className="px-4 py-3.5 text-xs text-violet-400 font-semibold whitespace-nowrap">{sig.strategy || '\u2014'}</td>
                       <td className="px-4 py-3.5 min-w-[160px]"><ConfidenceBar score={sig.confidence ?? sig.confidence_score ?? 0} /></td>
                       <td className="px-4 py-3.5 font-mono text-xs text-slate-400">{sig.sl_pips != null ? sig.sl_pips : '\u2014'}</td>
                       <td className="px-4 py-3.5 font-mono text-xs text-slate-400">{sig.tp_pips != null ? sig.tp_pips : '\u2014'}</td>
