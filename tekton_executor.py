@@ -644,11 +644,41 @@ def poll_signals():
                     if result:
                         # FIX 2: unpack (pos_id, fill_price) tuple and store avg_fill_price
                         pos_id, fill_price = result
+
+                        # Calculate absolute SL/TP prices from fill price + pips
+                        # These are stored so the bridge can show exact prices in the UI
+                        # and the AI can analyse exact entry/SL/TP per trade
+                        sl_abs = None
+                        tp_abs = None
+                        if fill_price:
+                            try:
+                                pip_size = get_pip_size(sym)
+                                # Get digits from bridge spec for correct rounding
+                                try:
+                                    _spec_r = requests.get(f"{BRIDGE_URL}/symbols/{sym}/spec", headers=HEADERS, timeout=5)
+                                    digits = _spec_r.json().get("digits", 5) if _spec_r.ok else 5
+                                except Exception:
+                                    digits = 5
+                                is_buy = s_type.upper() in ("BUY", "LONG")
+                                sl_abs = round(float(fill_price) - float(sl_pips) * pip_size, digits) if is_buy \
+                                    else round(float(fill_price) + float(sl_pips) * pip_size, digits)
+                                tp_abs = round(float(fill_price) + float(tp_pips) * pip_size, digits) if is_buy \
+                                    else round(float(fill_price) - float(tp_pips) * pip_size, digits)
+                            except Exception as price_err:
+                                print(f"⚠️ Could not calculate abs SL/TP for {sym}: {price_err}")
+
                         cur.execute(
-                            "UPDATE signals SET status = 'COMPLETED', position_id = %s, avg_fill_price = %s WHERE signal_uuid = %s",
-                            (pos_id, fill_price if fill_price else None, str(s_uuid))
+                            """UPDATE signals
+                               SET status = 'COMPLETED',
+                                   position_id   = %s,
+                                   avg_fill_price = %s,
+                                   sl_price      = %s,
+                                   tp_price      = %s
+                               WHERE signal_uuid = %s""",
+                            (pos_id, fill_price if fill_price else None,
+                             sl_abs, tp_abs, str(s_uuid))
                         )
-                        print(f"✅ signals updated: pos_id={pos_id} fill={fill_price}")
+                        print(f"✅ signals updated: pos_id={pos_id} fill={fill_price} sl_abs={sl_abs} tp_abs={tp_abs}")
                     else:
                         reason = "Bridge execution failed — check bridge logs"
                         cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
