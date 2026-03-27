@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
-import { AnalyticsRecommendation } from '@/api/entities';
 import { DollarSign, Activity, Zap, RefreshCw, ShieldAlert, TrendingDown, Layers, AlertTriangle, PowerOff, Calendar, Radio } from 'lucide-react';
 
 const fmt = (n, prefix = '$') =>
@@ -64,143 +63,6 @@ function StatusBadge({ online }) {
     </span>
   );
 }
-
-// AI_BUDGET constants
-const AI_MONTHLY_BUDGET  = 75000;
-const AI_YEARLY_BUDGET   = 900000;
-const AI_DAILY_BUDGET    = Math.round(AI_YEARLY_BUDGET / 260); // 3461
-const MSG_MONTHLY_BUDGET = 1925;
-
-function AiCreditsMonitor({ data }) {
-  // data comes from getUsageStats backend fn
-  // fallback: use hardcoded values from last known state if fn not yet built
-  const aiUsed   = data?.ai_credits_used   ?? null;
-  const aiTotal  = data?.ai_credits_total  ?? AI_MONTHLY_BUDGET;
-  const msgUsed  = data?.msg_credits_used  ?? null;
-  const msgTotal = data?.msg_credits_total ?? MSG_MONTHLY_BUDGET;
-
-  const aiPct  = aiUsed  != null ? +((aiUsed  / aiTotal)  * 100).toFixed(1) : null;
-  const msgPct = msgUsed != null ? +((msgUsed / msgTotal) * 100).toFixed(1) : null;
-
-  // Daily burn estimate: if we know used and days elapsed this month
-  const now = new Date();
-  const dayOfMonth = now.getDate();
-  const aiDailyBurn = aiUsed != null && dayOfMonth > 0 ? Math.round(aiUsed / dayOfMonth) : null;
-  const aiDailyPct  = aiDailyBurn != null ? +((aiDailyBurn / AI_DAILY_BUDGET) * 100).toFixed(1) : null;
-
-  const aiColor  = aiPct  != null && aiPct  >= 80 ? 'red' : aiPct  >= 50 ? 'amber' : 'emerald';
-  const msgColor = msgPct != null && msgPct >= 80 ? 'red' : msgPct >= 50 ? 'amber' : 'emerald';
-  const aiTextColor  = aiPct  >= 80 ? 'text-red-400' : aiPct  >= 50 ? 'text-amber-400' : 'text-emerald-400';
-  const msgTextColor = msgPct >= 80 ? 'text-red-400' : msgPct >= 50 ? 'text-amber-400' : 'text-purple-400';
-
-  return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-5 flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-slate-500 text-sm">🤖</span>
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">AI Credits</p>
-        </div>
-        {aiPct != null && <span className={`text-xs font-bold ${aiTextColor}`}>{aiPct}% used</span>}
-      </div>
-
-      {/* AI integration credits */}
-      <div className="flex flex-col gap-1.5">
-        <div className="flex justify-between text-xs">
-          <span className="text-slate-500">Integration (monthly)</span>
-          <span className="text-slate-300 font-mono">{aiUsed != null ? aiUsed.toLocaleString() : '—'} / {aiTotal.toLocaleString()}</span>
-        </div>
-        <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full transition-all duration-500 ${aiColor === 'red' ? 'bg-red-500' : aiColor === 'amber' ? 'bg-amber-500' : 'bg-emerald-500'}`}
-            style={{ width: `${Math.min(aiPct ?? 0, 100)}%` }} />
-        </div>
-      </div>
-
-      {/* Daily budget gauge */}
-      <div className="flex flex-col gap-1.5">
-        <div className="flex justify-between text-xs">
-          <span className="text-slate-500">Daily budget</span>
-          <span className="text-slate-300 font-mono">{aiDailyBurn != null ? aiDailyBurn : '—'} / {AI_DAILY_BUDGET} avg</span>
-        </div>
-        <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full transition-all duration-500 ${aiDailyPct >= 100 ? 'bg-red-500' : aiDailyPct >= 80 ? 'bg-amber-500' : 'bg-cyan-500'}`}
-            style={{ width: `${Math.min(aiDailyPct ?? 0, 100)}%` }} />
-        </div>
-      </div>
-
-      {/* Message credits */}
-      <div className="flex flex-col gap-1.5">
-        <div className="flex justify-between text-xs">
-          <span className="text-slate-500">Messages (monthly)</span>
-          <span className={`font-mono text-xs ${msgTextColor}`}>{msgUsed != null ? msgUsed.toLocaleString() : '—'} / {msgTotal.toLocaleString()}</span>
-        </div>
-        <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full transition-all duration-500 ${msgColor === 'red' ? 'bg-red-500' : msgColor === 'amber' ? 'bg-amber-500' : 'bg-purple-500'}`}
-            style={{ width: `${Math.min(msgPct ?? 0, 100)}%` }} />
-        </div>
-      </div>
-
-      {/* Summary stats */}
-      <div className="grid grid-cols-2 gap-2 text-center">
-        <div className="bg-slate-800/40 rounded-lg py-2 px-1">
-          <div className="text-sm font-bold font-mono text-slate-200">{AI_DAILY_BUDGET}</div>
-          <div className="text-[10px] text-slate-600 mt-0.5">daily budget</div>
-        </div>
-        <div className="bg-slate-800/40 rounded-lg py-2 px-1">
-          <div className={`text-sm font-bold font-mono ${aiDailyPct != null && aiDailyPct > 100 ? 'text-red-400' : 'text-slate-200'}`}>
-            {aiUsed != null ? (aiTotal - aiUsed).toLocaleString() : '—'}
-          </div>
-          <div className="text-[10px] text-slate-600 mt-0.5">remaining</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-function AiRecommendationsWidget({ rec }) {
-  if (!rec) return null;
-  // Extract just the executive summary and priority actions from the full text
-  const text = rec.recommendations || '';
-  const execMatch = text.match(/###?\s*1\.\s*Executive Summary[\s\S]*?(?=###?\s*2\.|$)/i);
-  const priorityMatch = text.match(/###?\s*7\.\s*Priority Action List[\s\S]*?(?=###?\s*\d+\.|$)/i);
-  const execSummary = execMatch ? execMatch[0].replace(/###?\s*1\.\s*Executive Summary\s*/i,'').trim() : '';
-  const priorityList = priorityMatch ? priorityMatch[0].replace(/###?\s*7\.\s*Priority Action List\s*/i,'').trim() : '';
-  const flagged = rec.flagged_strategies || [];
-  const genDate = rec.generated_at ? new Date(rec.generated_at).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
-
-  return (
-    <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-5 mb-6">
-      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-indigo-400 text-lg">🤖</span>
-          <p className="text-xs font-semibold uppercase tracking-widest text-indigo-400">AI Strategy Insights</p>
-          {flagged.length > 0 && (
-            <span className="px-2 py-0.5 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-full">⚠️ {flagged.length} flagged</span>
-          )}
-        </div>
-        <span className="text-xs text-slate-600">{genDate}</span>
-      </div>
-      {flagged.length > 0 && (
-        <div className="flex gap-1 flex-wrap mb-3">
-          {flagged.map(s => (
-            <span key={s} className="px-2 py-0.5 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded">{s}</span>
-          ))}
-        </div>
-      )}
-      {execSummary && (
-        <p className="text-xs text-slate-400 leading-relaxed mb-3 line-clamp-3">{execSummary}</p>
-      )}
-      {priorityList && (
-        <div>
-          <p className="text-xs font-semibold text-indigo-400/70 uppercase mb-1">Priority Actions</p>
-          <pre className="text-xs text-slate-400 whitespace-pre-wrap font-sans leading-relaxed line-clamp-5">{priorityList}</pre>
-        </div>
-      )}
-      <a href="/analytics" className="inline-block mt-3 text-xs text-indigo-400 hover:text-indigo-300 underline">→ Full analysis on Analytics page</a>
-    </div>
-  );
-}
-
 
 function CalendarStrip({ events }) {
   if (!events || events.length === 0) {
@@ -328,8 +190,6 @@ export default function Dashboard() {
   const [openCount, setOpenCount] = useState(null);
   const [calendar, setCalendar] = useState([]);
   const [rateStats, setRateStats] = useState(null);
-  const [latestRec, setLatestRec] = useState(null);
-  const [usageStats, setUsageStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [halting, setHalting] = useState(false);
@@ -337,25 +197,25 @@ export default function Dashboard() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [sRes, settRes, calRes, rateRes] = await Promise.allSettled([
+      // getAccountStatus is the single source of truth for all account metrics:
+      // balance, equity, free_margin, margin_used, drawdown_pct, daily_pnl, open_count
+      const [acctRes, settRes, calRes, rateRes] = await Promise.allSettled([
         base44.functions.invoke('getAccountStatus'),
         base44.functions.invoke('loadAllSettings'),
         base44.functions.invoke('getEconomicCalendar'),
         base44.functions.invoke('getApiRateStats'),
       ]);
-      if (sRes.status === 'fulfilled' && sRes.value?.data) {
-        const d = sRes.value.data?.data ?? sRes.value.data;
-        setMetrics(d);   // metrics and status are now the same object
-        setStatus(d);
+      if (acctRes.status === 'fulfilled' && acctRes.value?.data) {
+        const d = acctRes.value.data?.data ?? acctRes.value.data;
+        setMetrics(d);   // balance, equity, free_margin, margin_used, daily_pnl, open_count
+        setStatus(d);    // drawdown_pct, currency
+        if (d?.open_count != null) setOpenCount(d.open_count);
       }
       if (settRes.status === 'fulfilled' && settRes.value?.data && !settRes.value.data.error) { setSettings(settRes.value.data); }
       if (calRes.status === 'fulfilled' && calRes.value?.data) { const raw = calRes.value.data?.data ?? calRes.value.data; setCalendar(Array.isArray(raw) ? raw : []); }
       if (rateRes.status === 'fulfilled' && rateRes.value?.data && !rateRes.value.data.error) { setRateStats(rateRes.value.data); }
       try { const aRes = await base44.entities.DrawdownAutopsy.filter({ status: 'AWAITING_REVIEW' }); setAutopsy(aRes?.length > 0 ? aRes[0] : null); } catch { setAutopsy(null); }
-      // open_count comes directly from getAccountStatus — no extra call needed
       setLastUpdated(new Date());
-      try { const recRes = await AnalyticsRecommendation.list({ sort: "-created_date", limit: 1 }); setLatestRec(recRes?.length > 0 ? recRes[0] : null); } catch { setLatestRec(null); }
-      try { const usageRes = await base44.functions.invoke('getUsageStats'); if (usageRes?.ok) setUsageStats(usageRes); } catch { setUsageStats(null); }
     } catch (e) { console.error('fetchAll error', e); } finally { setLoading(false); }
   }, []);
 
@@ -374,18 +234,13 @@ export default function Dashboard() {
 
   const drawdownPct = status?.drawdown_pct ?? 0;
   const drawdownLimit = settings?.daily_drawdown_limit != null ? settings.daily_drawdown_limit * 100 : 5.0;
-  const derivedOpenCount = status?.open_count ?? openCount ?? 0;
-  const sessionExp = derivedOpenCount > 0 && settings?.risk_pct != null ? derivedOpenCount * (settings.risk_pct * 100) : null;
+  const sessionExp = openCount != null && settings?.risk_pct != null ? openCount * (settings.risk_pct * 100) : null;
   const sessionLimit = settings?.max_session_exposure_pct ?? 4.0;
   const drawdownColor = drawdownPct >= drawdownLimit * 0.8 ? 'red' : drawdownPct >= drawdownLimit * 0.5 ? 'amber' : 'emerald';
   const sessionColor = sessionExp != null && sessionExp >= sessionLimit * 0.8 ? 'red' : sessionExp != null && sessionExp >= sessionLimit * 0.5 ? 'amber' : 'blue';
   const bridgeOnline = metrics != null && !metrics?.error;
   const autoTrade = settings?.auto_trade ?? false;
-  // Daily P&L: equity - balance. If bridge returns equal values, show margin_used as context.
-  const rawPnl = (metrics?.equity != null && metrics?.balance != null && metrics.equity !== metrics.balance)
-    ? metrics.equity - metrics.balance
-    : metrics?.daily_pnl ?? null;
-  const dailyPnl = rawPnl;
+  const dailyPnl = metrics?.daily_pnl ?? null;
   const imminentHighEvents = calendar.filter(e => e.impact_level === 'high' && e.minutes_until >= 0 && e.minutes_until <= 30);
 
   return (
@@ -433,7 +288,7 @@ export default function Dashboard() {
         <MetricCard label="Free Margin" value={fmt(metrics?.free_margin)} sub="Available capital" icon={Zap} color="cyan" />
         <MetricCard label="Daily P&L" value={fmt(dailyPnl)} sub="Today's performance" icon={DollarSign} color={dailyPnl == null ? 'slate' : dailyPnl >= 0 ? 'green' : 'red'} />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-5 flex flex-col gap-4">
           <div className="flex items-center gap-2"><TrendingDown className="w-4 h-4 text-slate-500" /><p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Drawdown</p></div>
           <GaugeBar label="Daily Drawdown" value={drawdownPct} max={drawdownLimit} color={drawdownColor} />
@@ -447,18 +302,15 @@ export default function Dashboard() {
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-5 flex flex-col gap-4">
           <div className="flex items-center gap-2"><ShieldAlert className="w-4 h-4 text-slate-500" /><p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Exposure</p></div>
           <div className="flex flex-col gap-3">
-            <div className="flex justify-between text-xs"><span className="text-slate-500">Open Positions</span><span className="text-slate-200 font-mono font-bold">{derivedOpenCount}</span></div>
+            <div className="flex justify-between text-xs"><span className="text-slate-500">Open Positions</span><span className="text-slate-200 font-mono font-bold">{openCount ?? '\u2014'}</span></div>
             <div className="flex justify-between text-xs"><span className="text-slate-500">Margin Used</span><span className="text-slate-200 font-mono">{fmt(metrics?.margin_used)}</span></div>
             <div className="flex justify-between text-xs"><span className="text-slate-500">Margin / Balance</span><span className="text-slate-200 font-mono">{metrics?.margin_used != null && metrics?.balance != null ? fmtPct((metrics.margin_used / metrics.balance) * 100) : '\u2014'}</span></div>
           </div>
         </div>
         <ApiRateMonitor data={rateStats} />
-        <AiCreditsMonitor data={usageStats} />
       </div>
-      <AiRecommendationsWidget rec={latestRec} />
       <CalendarStrip events={calendar} />
       <p className="text-center text-xs text-slate-700 mt-6">Auto-refreshes every 30s - To change risk settings go to Trading Settings</p>
     </div>
   );
 }
-
