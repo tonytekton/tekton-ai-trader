@@ -65,10 +65,14 @@ def get_symbol_specs():
         for s in symbols:
             sym_name = s.get("name") or s.get("symbolName", "")
             pip_pos  = s.get("pipPosition", 4)
-            # pip_size  = 10^-pipPosition  (e.g. pipPosition=5 → 0.00001)
+            # pip_size = 10^-pipPosition (real pip value, e.g. EURUSD=0.0001, XBRUSD=0.01)
             pip_size     = 10 ** (-pip_pos)
-            # price_scale  = 10^pipPosition  (raw integer → real price)
-            price_scale  = 10 ** pip_pos
+            # price_scale = 100000 ALWAYS — the bridge historical API returns raw integers
+            # where raw / 100000 = real price for ALL symbols (FX, JPY, indices, commodities)
+            # e.g. EURUSD raw=116411 → 116411/100000 = 1.16411 ✅
+            # e.g. XBRUSD raw=6130000 → 6130000/100000 = 61.30 ✅
+            # e.g. F40 raw=813440000 → 813440000/100000 = 8134.4 ✅
+            price_scale  = 100000
             specs[sym_name] = {
                 "pip_size":    pip_size,
                 "price_scale": price_scale,
@@ -94,21 +98,26 @@ def get_pip_size_and_scale(symbol):
         return specs[symbol]["pip_size"], specs[symbol]["price_scale"]
 
     # Hardcoded fallback (last resort)
+    # Fallback: price_scale is ALWAYS 100000 for all symbols
+    # pip_size = 10^-pipPosition
     fallback = {
-        "XAUUSD": (0.1,    100000),
-        "XAGUSD": (0.01,   100000),
-        "XTIUSD": (0.01,   100000),
-        "XBRUSD": (0.01,   100000),
-        "US30":   (1.0,    100000),
-        "US500":  (0.1,    100000),
-        "USTEC":  (0.1,    100000),
-        "UK100":  (0.1,    100000),
-        "DE40":   (0.1,    100000),
-        "JP225":  (1.0,    100000),
+        "XAUUSD": (0.01,   100000),  # pipPos=2
+        "XAGUSD": (0.01,   100000),  # pipPos=2
+        "XTIUSD": (0.01,   100000),  # pipPos=2
+        "XBRUSD": (0.01,   100000),  # pipPos=2
+        "US30":   (0.1,    100000),  # pipPos=1
+        "US500":  (0.1,    100000),  # pipPos=1
+        "USTEC":  (0.1,    100000),  # pipPos=1
+        "UK100":  (0.1,    100000),  # pipPos=1
+        "DE40":   (0.1,    100000),  # pipPos=1
+        "JP225":  (0.1,    100000),  # pipPos=1
+        "F40":    (0.1,    100000),  # pipPos=1
+        "AUS200": (0.1,    100000),  # pipPos=1
+        "STOXX50":(0.1,    100000),  # pipPos=1
     }
     if symbol.endswith("JPY"):
-        return (0.01, 1000)
-    return fallback.get(symbol, (0.0001, 100000))
+        return (0.01, 100000)  # JPY pairs: pipPos=2, price_scale=100000
+    return fallback.get(symbol, (0.0001, 100000))  # FX default: pipPos=4, price_scale=100000
 
 
 # ---------------------------------------------------------------------------
