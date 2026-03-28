@@ -1,5 +1,6 @@
 import time
 import sys
+from datetime import datetime
 import requests
 import os
 import psycopg2
@@ -289,6 +290,11 @@ def manage_risk(config):
 if __name__ == "__main__":
     print(f"🛡️ Tekton Monitor Engine Active. [{time.strftime('%Y-%m-%d %H:%M:%S')}]")
     while True:
+        # Weekend gate — markets closed, reduce poll rate dramatically
+        if datetime.utcnow().weekday() >= 5:
+            print(f"💤 WEEKEND: Monitor idle — sleeping 5 min.")
+            time.sleep(300)
+            continue
         print(f"⏱️ Heartbeat: {time.strftime('%Y-%m-%d %H:%M:%S')}")
         try:
             config = fetch_config()
