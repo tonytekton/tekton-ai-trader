@@ -6,7 +6,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=UserWarning)
 import sys
 
-sys.stdout = open('/home/tony/tekton-ai-trader/combined_trades.log', 'a', buffering=1)
+sys.stdout = open('/home/tony/tekton-ai-trader/strat_vwap.log', 'a', buffering=1)
 sys.stderr = sys.stdout
 
 from datetime import datetime
@@ -105,7 +105,7 @@ def get_symbol_specs():
             digits      = s.get("digits") or 5
             pip_pos     = s.get("pipPosition")
             specs[sym] = {
-                "pip_size":    (1.0 if pip_pos == 1 else 10 ** (-pip_pos)) if pip_pos else 10 ** -(digits - 1),  # pip_pos=1 → indices, 1 pip = 1.0 price unit
+                "pip_size":    10 ** (-pip_pos) if pip_pos else 10 ** -(digits - 1),
                 "price_scale": 10 ** digits,
             }
         _symbol_specs_cache = specs
@@ -113,8 +113,8 @@ def get_symbol_specs():
         print(f"[{_ts()}] 📋 Bridge specs loaded: {len(specs)} symbols")
         return specs
     except Exception as e:
-        print(f"[{_ts()}] ❌ Bridge specs UNAVAILABLE — skipping scan cycle: {e}")
-        raise
+        print(f"[{_ts()}] ⚠️ Bridge specs error: {e}")
+        return {}
 
 def get_pip_info(symbol):
     specs = get_symbol_specs()
@@ -193,6 +193,7 @@ def get_active_symbols():
         cur  = conn.cursor()
         cur.execute("""
             SELECT symbol FROM market_data WHERE timeframe=%s
+            GROUP BY symbol HAVING COUNT(*) > 20
             GROUP BY symbol HAVING COUNT(*) >= 30 ORDER BY symbol;
         """, (LTF_TIMEFRAME,))
         syms = [r[0] for r in cur.fetchall()]
@@ -320,14 +321,13 @@ def scan_symbol(symbol):
 def main():
     print(f"[{_ts()}] 🧠 VWAP Reversion Strategy Active. [{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]")
     while True:
+        # Weekend gate — no trading Sat/Sun
+        if datetime.utcnow().weekday() >= 5:
+            print(f"[{datetime.utcnow().strftime('%H:%M:%S')}] 💤 WEEKEND: Markets closed — sleeping 5 min.")
+            time.sleep(300)
+            continue
         print(f"[{_ts()}] 🧠 VR scan started")
         try:
-            try:
-                get_symbol_specs()  # pre-check — raises if bridge specs unavailable
-            except Exception as spec_err:
-                print(f"[{_ts()}] ❌ BRIDGE SPECS FAILED — skipping scan cycle. Check /symbols/list endpoint. Error: {spec_err}")
-                time.sleep(SCAN_INTERVAL_SEC)
-                continue
             symbols = get_active_symbols()
             print(f"[{_ts()}] 📊 {len(symbols)} preferred symbols")
             for sym in symbols:
@@ -343,3 +343,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
