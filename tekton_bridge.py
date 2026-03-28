@@ -1145,9 +1145,22 @@ def get_executions():
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
+def _is_market_open():
+    # Returns True if markets are open: Mon 00:00 - Fri 16:00 UTC, reopens Sun 22:00 UTC
+    now  = datetime.utcnow()
+    wd   = now.weekday()          # 0=Mon ... 4=Fri, 5=Sat, 6=Sun
+    hhmm = now.hour * 60 + now.minute
+    if wd == 4 and hhmm >= 16 * 60: return False
+    if wd == 5:                     return False
+    if wd == 6 and hhmm < 22 * 60: return False
+    return True
+
 def sync_latest_candles():
     while True:
         time.sleep(900)
+        if not _is_market_open():
+            print(f"MARKET CLOSED -- skipping candle sync.")
+            continue
         # ... candle sync logic ...
 
 @app.route("/proxy/signals", methods=["GET"])
