@@ -290,9 +290,17 @@ def manage_risk(config):
 if __name__ == "__main__":
     print(f"🛡️ Tekton Monitor Engine Active. [{time.strftime('%Y-%m-%d %H:%M:%S')}]")
     while True:
-        # Weekend gate — markets closed, reduce poll rate dramatically
-        if datetime.utcnow().weekday() >= 5:
-            print(f"💤 WEEKEND: Monitor idle — sleeping 5 min.")
+        # Market hours gate — Fri 16:00 UTC → Sun 22:00 UTC
+        now_utc = datetime.utcnow()
+        wd = now_utc.weekday()
+        hhmm = now_utc.hour * 60 + now_utc.minute
+        market_closed = (
+            (wd == 4 and hhmm >= 16 * 60) or  # Fri after 16:00
+            (wd == 5) or                        # All Saturday
+            (wd == 6 and hhmm < 22 * 60)        # Sun before 22:00
+        )
+        if market_closed:
+            print(f"💤 MARKET CLOSED (Fri 16:00–Sun 22:00 UTC) — Monitor idle, sleeping 5 min.")
             time.sleep(300)
             continue
         print(f"⏱️ Heartbeat: {time.strftime('%Y-%m-%d %H:%M:%S')}")
