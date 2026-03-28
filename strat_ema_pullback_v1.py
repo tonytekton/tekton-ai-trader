@@ -6,7 +6,7 @@ warnings.simplefilter(action='ignore', category=UserWarning)
 import sys
 
 # Redirect all output to dedicated log
-sys.stdout = open('/home/tony/tekton-ai-trader/combined_trades.log', 'a', buffering=1)
+sys.stdout = open('/home/tony/tekton-ai-trader/strat_eps.log', 'a', buffering=1)
 sys.stderr = sys.stdout
 
 from datetime import datetime
@@ -84,19 +84,17 @@ def get_symbol_specs() -> dict:
         specs = {}
         for s in symbols:
             sym_name    = s.get("name", "")
-            pip_pos     = s.get("pipPosition") or 4
-            # pip_size = 10^-pipPosition (real pip units)
-            pip_size    = 1.0 if pip_pos == 1 else 10 ** (-pip_pos)  # pip_pos=1 → indices, 1 pip = 1.0
-            # price_scale = 100000 ALWAYS — bridge historical raw / 100000 = real price
-            price_scale = 100000
+            digits      = s.get("digits") or 5
+            pip_pos     = s.get("pipPosition")
+            pip_size    = 10 ** (-pip_pos) if pip_pos else 10 ** -(digits - 1)
+            price_scale = 10 ** digits
             specs[sym_name] = {"pip_size": pip_size, "price_scale": price_scale}
         _symbol_specs_cache = specs
         _specs_cache_ts     = now
         print(f"[{_ts()}] 📋 Bridge specs: {len(specs)} symbols")
         return specs
     except Exception as e:
-        print(f"[{_ts()}] ❌ Bridge specs UNAVAILABLE — skipping scan cycle: {e}")
-        raise
+        print(f"[{_ts()}] ⚠️  Bridge specs error: {e}")
         return {}
 
 
@@ -107,14 +105,12 @@ def get_pip_info(symbol: str) -> tuple:
     if symbol.endswith("JPY"):
         return 0.01, 1000
     FALLBACK = {
-        # price_scale=100000 for all; pip_size=10^-pipPosition
-        "XAUUSD": (0.01, 100000), "XAGUSD": (0.01, 100000),  # pipPos=2
-        "XTIUSD": (0.01, 100000), "XBRUSD": (0.01, 100000),  # pipPos=2
-        "US30":   (0.1,  100000), "US500":  (0.1,  100000),  # pipPos=1
-        "USTEC":  (0.1,  100000), "UK100":  (0.1,  100000),  # pipPos=1
-        "DE40":   (0.1,  100000), "JP225":  (0.1,  100000),  # pipPos=1
-        "F40":    (0.1,  100000), "AUS200": (0.1,  100000),  # pipPos=1
-        "STOXX50":(0.1,  100000), "HK50":   (0.1,  100000),  # pipPos=1
+        "XAUUSD": (0.1,  100000), "XAGUSD": (0.01, 100000),
+        "XTIUSD": (0.01, 100000), "XBRUSD": (0.01, 100000),
+        "US30":   (1.0,  100000), "US500":  (0.1,  100000),
+        "USTEC":  (0.1,  100000), "UK100":  (1.0,  100000),
+        "DE40":   (1.0,  100000), "JP225":  (1.0,  100000),
+        "AUS200": (1.0,  100000), "HK50":   (1.0,  100000),
     }
     return FALLBACK.get(symbol, (0.0001, 100000))
 
@@ -489,11 +485,6 @@ def save_signal(symbol: str, direction: str, reason: str,
 
 def run_scan():
     print(f"[{_ts()}] 🧠 EPS scan started")
-    try:
-        get_symbol_specs()  # pre-check — raises if bridge specs unavailable
-    except Exception as spec_err:
-        print(f"[{_ts()}] ❌ BRIDGE SPECS FAILED — skipping scan cycle. Check /symbols/list endpoint. Error: {spec_err}")
-        return
     symbols = get_active_symbols()
     print(f"[{_ts()}] 📊 {len(symbols)} symbols with 4H+15min data")
 
@@ -550,8 +541,14 @@ if __name__ == "__main__":
           f"scan={SCAN_INTERVAL_SEC}s cooldown={SIGNAL_COOLDOWN_HR}h "
           f"EMA={EMA_FAST}/{EMA_SLOW} HTF={HTF_TIMEFRAME} MIN_RR={MIN_RR}")
     while True:
+        # Weekend gate — no trading Sat/Sun
+        if datetime.utcnow().weekday() >= 5:
+            print(f"[{datetime.utcnow().strftime('%H:%M:%S')}] 💤 WEEKEND: Markets closed — sleeping 5 min.")
+            time.sleep(300)
+            continue
         try:
             run_scan()
         except Exception as e:
             print(f"[{_ts()}] 💥 Unhandled error: {e}")
         time.sleep(SCAN_INTERVAL_SEC)
+
