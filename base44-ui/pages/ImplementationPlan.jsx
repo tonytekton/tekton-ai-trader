@@ -19,15 +19,19 @@ export default function ImplementationPlan() {
     { id: 16, title: "AI Strategy Recommendations + Audit Trail",                  status: "complete",     date: "2026-03-27", notes: "GPT-4o insights fn. AnalyticsRecommendation entity. Daily 09:00 KL. Dashboard widget + AI Insights tab." },
     { id: "13.5", title: "Friday Flush — Time-Based Gating",                      status: "in_progress",  date: "2026-03-27", notes: "friday_flush toggle + time gate (16:00 UTC cutoff, close-all). Deployed. Awaiting next Friday verification." },
     { id: 17, title: "Market Hours Gate — All Services",                           status: "complete",     date: "2026-03-28", notes: "All services idle Fri 16:00–Sun 22:00 UTC. is_market_open() gating throughout. Automations weekdays only." },
-    { id: 18, title: "Strategy Toggle — Enable/Disable Without Restart",           status: "planned",      date: null,         notes: "strategies table in DB with enabled flag. UI toggle per strategy. No restart needed." },
-    { id: 19, title: "Partial Exits — TP1/TP2 + Break-Even Protection",           status: "planned",      date: null,         notes: "tp2_pips in signal schema (null = single-TP legacy). Close 50% at 1:1 R, SL to BE, runner to TP2. Bridge /trade/partial_close endpoint." },
-    { id: 20, title: "AI Monitor Wiring — Live Position Review Loop",              status: "planned",      date: null,         notes: "Wire aiPositionReview into monitor per position. Unlocks: AI early close on thesis invalidation, Smart TP at 70-80% (RSI extremes, TF flips), PARTIAL_CLOSE via bridge." },
-    { id: 21, title: "Trailing Stops — Post Break-Even SL Trail",                 status: "planned",      date: null,         notes: "After BE: SL trails by trail_pips distance. Locks profit, allows runners. trail_pips added to settings." },
+    { id: 18, title: "Strategy Toggle — Enable/Disable Without Restart",           status: "planned",      date: null,         notes: "strategies table in DB with enabled flag. UI toggle per strategy. No service restart required." },
+    { id: 19, title: "Partial Exits — TP1/TP2 + Break-Even Protection",           status: "planned",      date: null,         notes: "tp2_pips in signal schema (null = single-TP legacy). Close partial_exit_pct% at partial_exit_r R. SL to BE. Runner to TP2. Bridge /trade/partial_close endpoint. Both values AI-learnable." },
+    { id: 20, title: "AI Monitor Wiring — Phase-Aware Position Review",           status: "planned",      date: null,         notes: "Wire aiPositionReview into monitor per position. AI receives position_phase in context. Authority depends on state: full ADJUST_SL in OPEN, locked in TRAILING (OVERRIDE keyword only). AI logs suggested parameter refinements (partial_exit_r, trail_pips) for learning loop." },
+    { id: 21, title: "Trailing Stops — Post Break-Even SL Trail",                 status: "planned",      date: null,         notes: "After BE: SL trails by trail_pips distance. Dynamic — AI sets per position. Locks profit, allows runners. Phase transitions: PARTIAL_DONE/BE_APPLIED → TRAILING." },
     { id: 22, title: "AI Credits Monitor — Dashboard Widget",                      status: "planned",      date: null,         notes: "AI credits widget. 75k/month budget. Monthly/daily/per-automation burn. Gauge like cTrader Rate." },
     { id: 23, title: "True P&L Win Rate — Execution Outcome Data",                status: "planned",      date: null,         notes: "Needs outcome enrichment (TP/SL hit or manual close). completion_rate = trade placed. Deferred until outcome data available." },
     { id: 24, title: "WhatsApp Trade Alerts — Per-Execution Notifications",        status: "planned",      date: null,         notes: "WhatsApp alert per execution: symbol, direction, entry, SL, TP, lots, strategy." },
-    { id: 25, title: "Dynamic Risk Adjustment — Performance-Based Sizing",         status: "future",       date: null,         notes: "Reduce risk_pct after losing streaks, increase after winners. Needs streak tracking in executor + new DB fields." },
+    { id: 27, title: "Signal Staleness Gate — Max Age Filter",                    status: "planned",      date: null,         notes: "Executor rejects PENDING signals older than max_signal_age_mins (configurable, default 5 min). IF signal age > threshold THEN mark FAILED with reason 'STALE'. Prevents executing setups that have passed. Quick win — ~10 lines in executor." },
+    { id: 28, title: "Market Regime Filter — System-Level Chop Detection",        status: "planned",      date: null,         notes: "System-level (not per-strategy) gate in executor. Before accepting any signal, checks HTF structure for that symbol. If ranging/choppy: reject or require higher confidence_score threshold. Uses existing market_data. Targets >65% win rate by filtering low-probability environments." },
+    { id: 29, title: "Strategy Performance Circuit Breaker",                      status: "planned",      date: null,         notes: "If a strategy's recent quality_score drops below threshold OR it hits N consecutive losses, automatically flag it for review and suspend new signals. Uses analytics data already computed. Prevents a degraded strategy from continuing to fire. Separate from account-level drawdown circuit breaker." },
+    { id: 25, title: "Dynamic Risk Adjustment — Performance-Based Sizing",         status: "future",       date: null,         notes: "Reduce risk_pct after losing streaks, increase after winners. Needs streak tracking in executor + new DB fields. AI-learnable sizing. Builds on Phase 29 circuit breaker data." },
     { id: 26, title: "Multi-User SaaS — Tenant Isolation",                        status: "future",       date: null,         notes: "Per-user strategies + settings. Stripe subscriptions. Tenant isolation." },
+    { id: 30, title: "AI Parameter Tuning Loop — Autonomous Optimisation",        status: "future",       date: null,         notes: "Phase 25 of state machine learning. AI suggestions with consistent positive outcome_r get auto-applied to signal schema. Per-strategy learned defaults stored in strategies table. Full audit trail: before/after + AI reasoning. Requires Phase 20 + 23 outcome data." },
   ];
 
   const statusConfig = {
@@ -44,12 +48,50 @@ export default function ImplementationPlan() {
     future:      phases.filter(p => p.status === 'future').length,
   };
 
+  const successTarget = (
+    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-2">
+      <h3 className="font-bold text-indigo-800 mb-2">🎯 Success Definition</h3>
+      <p className="text-xs text-indigo-700 leading-relaxed">
+        Tekton is not a strategy runner — it is a <strong>trading system</strong>. A system answers IF/THEN/WHEN, not just buy/sell.
+        The market is 90% algorithmic. To compete, Tekton must think and adapt like an algorithm.
+      </p>
+      <div className="grid grid-cols-3 gap-3 mt-3">
+        {[
+          ["🎯 Min RR", "1.5–2.0 R", "Every signal must clear this before execution"],
+          ["📈 Win Rate", "> 65%", "High-confidence entries only. Regime + staleness filters."],
+          ["🧠 Learns", "Continuously", "AI tunes partial_exit_r, trail_pips, regime thresholds over time"],
+        ].map(([icon, val, desc]) => (
+          <div key={val} className="bg-white rounded border border-indigo-100 p-2 text-center">
+            <div className="text-lg">{icon}</div>
+            <div className="font-bold text-indigo-700 text-sm">{val}</div>
+            <div className="text-xs text-slate-500 mt-0.5">{desc}</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 text-xs text-indigo-600 font-semibold">Three pillars of a system (not a strategy):</div>
+      <div className="grid grid-cols-3 gap-2 mt-1">
+        {[
+          ["1. Momentum Detection", "Is the market trending or chopping? Regime filter gates all entries."],
+          ["2. Conditional Entry", "IF setup valid THEN enter — multiple valid branches, not one fixed trigger."],
+          ["3. Trade Management", "Partial exits → BE → trailing runner. AI owns parameters. State machine enforces authority."],
+        ].map(([title, desc]) => (
+          <div key={title} className="bg-indigo-100 rounded p-2">
+            <div className="font-bold text-indigo-800 text-xs">{title}</div>
+            <div className="text-xs text-indigo-600 mt-0.5">{desc}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-800">🗺️ Implementation Plan</h1>
         <p className="text-slate-500 text-sm mt-1">Tekton AI Trader v4.9 — 2026-03-28</p>
       </div>
+
+      {successTarget}
 
       <div className="grid grid-cols-4 gap-3">
         {Object.entries(counts).map(([status, count]) => {
@@ -108,6 +150,7 @@ export default function ImplementationPlan() {
           ))}
         </ul>
       </div>
+
     </div>
   );
 }
