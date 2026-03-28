@@ -10,13 +10,29 @@ export default function SystemContext() {
         </div>
       </div>
 
+      {/* MISSION */}
+      <Section title="🎯 Mission & Success Definition">
+        <p className="text-xs text-slate-600 mb-3">Tekton is not a strategy runner. It is a <strong>trading system</strong> — the distinction matters. A strategy says buy here, sell here. A system answers IF/THEN/WHEN across every market condition and adapts over time. The market is ~90% algorithmic. To compete, Tekton must think like an algorithm.</p>
+        <Table headers={["Metric","Target","How Tekton achieves it"]} rows={[
+          ["Min Risk/Reward","1.5–2.0 R","Executor hard gate: target_reward in settings. Signals below threshold rejected."],
+          ["Win Rate","> 65%","Market regime filter (Phase 28) + signal staleness gate (Phase 27) + high-confidence entries only."],
+          ["Continuous improvement","AI learns","All trade management parameters (partial_exit_r, trail_pips, regime thresholds) are AI-learnable. Phase 30 enables autonomous tuning."],
+        ]} />
+        <div className="mt-3 text-xs font-bold text-slate-700 mb-1">Three pillars of a system (not a strategy):</div>
+        <Table headers={["Pillar","What it answers","Tekton implementation"]} rows={[
+          ["1. Momentum Detection","Is the market trending or chopping?","Per-strategy HTF bias filter (live). System-level Market Regime Filter (Phase 28)."],
+          ["2. Conditional Entry","IF setup valid THEN enter — multiple valid branches","Executor gates: news, time, drawdown, session exposure, staleness (Phase 27), regime (Phase 28)."],
+          ["3. Trade Management","When/how to exit — partial, trail, runner","Position State Machine (Phases 19/20/21). AI owns parameters and learns optimal values over time."],
+        ]} />
+      </Section>
+
       {/* ARCHITECTURE */}
       <Section title="🏗️ System Architecture">
         <p className="text-slate-600 mb-3">Three-tier Python architecture on Google Cloud VM. Base44 UI is a <strong>read-only reporting skin</strong> — never contains trading logic.</p>
         <Table headers={["Service","File","Description","Restart"]} rows={[
           ["Bridge","tekton_bridge.py","REST-to-Protobuf gateway. Port 8080 / cTrader 5035. Event-driven position_state{}.","systemctl restart tekton-ai-trader-bridge.service"],
-          ["Executor","tekton_executor.py","Risk orchestration. Polls PENDING signals. News gating. Time gating. Volume calc.","systemctl restart tekton-executor.service"],
-          ["Monitor","tekton_monitor.py","Position management. Circuit breaker. Phase state machine. aiPositionReview wiring (Phase 20).","nohup python3 tekton_monitor.py >> monitor.log 2>&1 &"],
+          ["Executor","tekton_executor.py","Risk orchestration. Polls PENDING signals. All system-level gates. Volume calc.","systemctl restart tekton-executor.service"],
+          ["Monitor","tekton_monitor.py","Position state machine. Circuit breaker. Phase-aware AI review (Phase 20).","nohup python3 tekton_monitor.py >> monitor.log 2>&1 &"],
           ["Strategies","strat_*.py × 7","Independent signal generators. Each runs as its own systemd service.","systemctl restart tekton-strat-<name>.service"],
           ["Backfill","tekton_backfill.py","Fills market_data gaps. Cron every 15min.","cron: */15 * * * *"],
         ]} />
@@ -46,7 +62,11 @@ bash /home/tony/tekton-ai-trader/start_tekton.sh`}</Code>
         <ol className="space-y-2 text-slate-700 text-xs list-none">
           {[
             "Strategy inserts PENDING signal → signals table (symbol, signal_type, sl_pips, tp_pips, confidence_score, strategy, timeframe, tp2_pips optional)",
-            "Executor polls PENDING → checks: AUTO_TRADE, news gate (/calendar/gating), time gate (Friday cutoff), drawdown limit, session exposure, min_sl_pips, max_lots",
+            "Executor gate 1 — AUTO_TRADE enabled?",
+            "Executor gate 2 — Signal staleness: IF age > max_signal_age_mins THEN mark FAILED (Phase 27)",
+            "Executor gate 3 — Market regime: IF symbol is ranging/choppy THEN reject or require higher confidence (Phase 28)",
+            "Executor gate 4 — News gate (/calendar/gating), time gate (Friday cutoff), drawdown limit, session exposure, min_sl_pips, max_lots, strategy enabled flag (Phase 18)",
+            "Executor gate 5 — Strategy performance circuit breaker: IF strategy quality_score degraded THEN suspend (Phase 29)",
             "Executor calls Bridge POST /trade/execute with side, volume, rel_sl, rel_tp (pips float)",
             "Bridge converts rel_sl/rel_tp → integer points (pips × 10), sends ProtoOANewOrderReq to cTrader",
             "Bridge returns { success, position_id, entry_price }. Executor writes back to signals row. position_phase set to OPEN.",
@@ -79,9 +99,9 @@ bash /home/tony/tekton-ai-trader/start_tekton.sh`}</Code>
         <div className="mt-2 text-xs text-red-600 font-bold">⚠️ NULL sl_pips or tp_pips = skipped by executor. confidence_score must be INTEGER. "1H" does not exist — use "60min". tp2_pips = NULL means legacy single-TP mode.</div>
       </Section>
 
-      {/* TRADE MANAGEMENT — NEW SECTION */}
+      {/* TRADE MANAGEMENT */}
       <Section title="🎛️ Trade Management — Position State Machine">
-        <p className="text-xs text-slate-600 mb-3">The monitor enforces a one-way state machine per position. Each state controls which systems have authority to act. All parameters are AI-learnable over time — settings hold defaults, signals hold per-trade overrides.</p>
+        <p className="text-xs text-slate-600 mb-3">The monitor enforces a one-way state machine per position. Each state controls which systems have authority to act. All parameters are AI-learnable — settings hold defaults, signals hold per-trade AI overrides. This is Pillar 3 of the system.</p>
         <Table headers={["State","Trigger","Partial Close","Move SL","Trail SL","AI ADJUST_SL","AI CLOSE"]} rows={[
           ["OPEN","Entry","✅ at partial_exit_r","✅ at 50% TP dist","❌","✅ full authority","✅"],
           ["PARTIAL_DONE","50% closed, SL at BE","❌ done","❌ done","✅ activates","❌ locked","✅ remaining %"],
@@ -98,6 +118,25 @@ bash /home/tony/tekton-ai-trader/start_tekton.sh`}</Code>
           ["partial_enabled","TRUE","Global toggle"],
         ]} />
         <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">⚠️ TRAILING override rule: AI can write ADJUST_SL only if reasoning contains keyword "OVERRIDE". Prevents accidental SL interference while allowing black-swan intervention.</div>
+      </Section>
+
+      {/* SYSTEM GATES */}
+      <Section title="🚦 Executor System Gates — IF/THEN Logic">
+        <p className="text-xs text-slate-600 mb-3">This is Pillar 2. The executor is not a simple order relay — it is a conditional gate stack. Every signal passes through all gates in sequence. Any failure = FAILED status with reason logged.</p>
+        <Table headers={["Gate","Phase","Logic","Configurable"]} rows={[
+          ["Auto-trade kill switch","Live","IF auto_trade = FALSE THEN skip all signals","Yes — UI toggle"],
+          ["News blackout","Phase 9","IF event within news_blackout_mins for signal currency THEN reject","Yes — news_filter_enabled, news_blackout_mins"],
+          ["Market hours","Phase 17","IF Fri 16:00 UTC → Sun 22:00 UTC THEN reject","Fixed"],
+          ["Friday flush cutoff","Phase 13.5","IF Friday after cutoff time THEN no new entries","Yes — friday_flush toggle"],
+          ["Min SL","Live","IF sl_pips < min_sl_pips THEN reject","Yes — min_sl_pips"],
+          ["Min RR","Live","IF tp/sl < target_reward THEN reject","Yes — target_reward"],
+          ["Session exposure","Live","IF live drawdown > max_session_exposure_pct THEN reject","Yes — max_session_exposure_pct"],
+          ["Max lots","Live","IF calculated lots > max_lots THEN cap","Yes — max_lots"],
+          ["Strategy enabled","Phase 18","IF strategy.enabled = FALSE THEN reject","Yes — strategies table"],
+          ["Signal staleness","Phase 27","IF signal age > max_signal_age_mins THEN mark FAILED","Yes — max_signal_age_mins (default 5 min)"],
+          ["Market regime","Phase 28","IF symbol is ranging/choppy THEN reject or require higher confidence_score","Yes — regime_min_confidence, regime_lookback"],
+          ["Strategy circuit breaker","Phase 29","IF strategy quality_score < threshold OR consecutive_losses > N THEN suspend","Yes — cb_quality_threshold, cb_max_losses"],
+        ]} />
       </Section>
 
       {/* PRICE FORMATS */}
@@ -121,19 +160,23 @@ bash /home/tony/tekton-ai-trader/start_tekton.sh`}</Code>
         <Table headers={["Field","Current Value","Notes"]} rows={[
           ["auto_trade","FALSE","Master kill switch"],
           ["friday_flush","TRUE","Closes all at 16:00 UTC Friday"],
-          ["risk_pct","0.01","1% per trade — fixed until Phase 25 Dynamic Risk"],
-          ["target_reward","1.8","Min RR before executor approves"],
+          ["risk_pct","0.01","1% per trade — fixed until Phase 25"],
+          ["target_reward","1.8","Min RR gate — rejects signals below this"],
           ["daily_drawdown_limit","0.05","5% — circuit breaker threshold"],
-          ["max_session_exposure_pct","4.0","Blocks new trades when reached"],
+          ["max_session_exposure_pct","4.0","Blocks new trades when live drawdown exceeds this"],
           ["max_lots","6","Testing cap (default 5000 for live)"],
           ["min_sl_pips","8","Rejects signals below this SL"],
           ["news_blackout_mins","60","Window around high-impact events"],
-          ["news_filter_enabled","TRUE","Enables Phase 9 news gating"],
+          ["news_filter_enabled","TRUE","Phase 9 news gating toggle"],
           ["partial_exit_r","1.0","R trigger for partial close (Phase 19+)"],
           ["partial_exit_pct","50.0","% to close at TP1 (Phase 19+)"],
           ["trail_pips","10.0","Trail distance after BE (Phase 21+)"],
           ["trail_enabled","TRUE","Global trailing stop toggle (Phase 21+)"],
           ["partial_enabled","TRUE","Global partial exit toggle (Phase 19+)"],
+          ["max_signal_age_mins","5","Max signal age before executor marks FAILED (Phase 27)"],
+          ["regime_min_confidence","70","Min confidence_score required in choppy regime (Phase 28)"],
+          ["cb_quality_threshold","0.3","Strategy quality_score below this triggers circuit breaker (Phase 29)"],
+          ["cb_max_losses","5","Consecutive losses before strategy suspended (Phase 29)"],
         ]} />
         <p className="text-xs text-slate-500 mt-2">Write path: UI → POST bridge /data/settings → SQL. Read path: bridge /data/settings (GET).</p>
       </Section>
@@ -141,14 +184,14 @@ bash /home/tony/tekton-ai-trader/start_tekton.sh`}</Code>
       {/* ANALYTICS & AI */}
       <Section title="📊 Analytics & AI Systems">
         <Table headers={["Component","Description"]} rows={[
-          ["getAnalytics","Backend fn — strategy league, day/session/symbol/confidence breakdowns. quality_score = completion_rate × avg_rr"],
+          ["getAnalytics","Backend fn — strategy league (quality_score = completion_rate × avg_rr), day/session/symbol/confidence breakdowns"],
           ["generateAnalyticsInsights","Backend fn — GPT-4o analysis. Saves to AnalyticsRecommendation entity. Runs daily 09:00 KL (weekdays)."],
-          ["AnalyticsRecommendation","Base44 entity — AI strategy audit trail with status (new/reviewed/applied/dismissed) + outcome_notes"],
-          ["aiPositionReview","Backend fn — per-position AI review. Actions: HOLD/CLOSE/ADJUST_SL/ADJUST_TP/PARTIAL_CLOSE. Phase-aware (Phase 20)."],
-          ["AiIntervention","Base44 entity — logs every AI position decision with reasoning, outcome, outcome_r"],
-          ["drawdownAutopsy","Backend fn — forensic circuit breaker analysis. Saves to DrawdownAutopsy entity"],
+          ["AnalyticsRecommendation","Base44 entity — AI strategy audit trail. Status: new/reviewed/applied/dismissed. outcome_notes for learning loop."],
+          ["aiPositionReview","Backend fn — per-position AI review. Phase-aware: full authority in OPEN, ADJUST_SL locked in TRAILING. Logs parameter suggestions."],
+          ["AiIntervention","Base44 entity — logs every AI position decision with reasoning, suggested params, outcome, outcome_r"],
+          ["drawdownAutopsy","Backend fn — forensic circuit breaker analysis. Saves to DrawdownAutopsy entity."],
         ]} />
-        <div className="mt-2 text-xs text-slate-500">AI learning loop: all parameters (partial_exit_r, partial_exit_pct, trail_pips) are logged per decision. AI suggests refinements in reasoning field. Phase 25 enables auto-application of consistent winners.</div>
+        <div className="mt-2 text-xs text-slate-500">AI learning loop: parameters (partial_exit_r, partial_exit_pct, trail_pips, regime thresholds) logged per decision. Phase 30 enables auto-application of consistent winners per strategy.</div>
       </Section>
 
       {/* STRATEGIES */}
@@ -162,7 +205,7 @@ bash /home/tony/tekton-ai-trader/start_tekton.sh`}</Code>
           ["Tekton-SORB-v1","strat_session_orb_v1.py","15min HTF: Daily","Session opening range"],
           ["Tekton-RSID-v1","strat_rsi_divergence_v1.py","15min HTF: 60min","RSI divergence"],
         ]} />
-        <p className="text-xs text-slate-500 mt-2">Strategy enable/disable: <strong>Phase 18 — strategies table in DB with enabled flag. No service restart required.</strong></p>
+        <p className="text-xs text-slate-500 mt-2">Strategy enable/disable: <strong>Phase 18 — strategies table in DB. No service restart required.</strong> Strategy circuit breaker (Phase 29) can auto-suspend underperforming strategies.</p>
       </Section>
 
       {/* GATE PROTOCOL */}
@@ -178,14 +221,15 @@ bash /home/tony/tekton-ai-trader/start_tekton.sh`}</Code>
       <Section title="📝 Change Log">
         <div className="space-y-2 text-xs">
           {[
-            ["2026-03-28","v4.9","Position State Machine designed (Phases 19/20/21). All 6 trade management features mapped to roadmap. Phase 17 (Market Hours Gate) complete — all services idle Fri 16:00–Sun 22:00 UTC. ICT FVG renamed Tekton-FVG-v1. Automations weekdays only."],
+            ["2026-03-28","v4.9","Mission & Success Definition added. Position State Machine designed (Phases 19/20/21). Three new phases: 27 (Signal Staleness Gate), 28 (Market Regime Filter), 29 (Strategy Circuit Breaker). Phase 30 (AI Parameter Tuning Loop) added as future. System Gates reference table added. All settings for new phases documented."],
+            ["2026-03-28","v4.9","Phase 17 complete — Market Hours Gate. All services idle Fri 16:00–Sun 22:00 UTC. Automations weekdays only."],
             ["2026-03-27","v4.9","Phase 8/9: Economic Calendar gating. Phase 10/16: Analytics + AI insights. generateAnalyticsInsights fn. Dashboard AI recommendations widget."],
             ["2026-03-26","v4.8.1","Phase 11d smoke tests. Friday Flush logic. loadAllSettings/saveAllSettings fns. TradingSettings persistence fixed."],
             ["2026-03-25","v4.8","Phase 11 complete (11a-11d). Multi-timeframe signals (all 7 strategies). Phase 15 complete."],
             ["2026-03-20","v4.7","Execution journal deduplication. SL/TP display fix. 6-lot cap. relativeStopLoss int32 fix."],
             ["2026-03-17","v4.6","AI Position Management (AiIntervention + aiPositionReview). Drawdown Autopsy. EPS strategy."],
           ].map(([date, ver, note]) => (
-            <div key={date} className="border-l-2 border-indigo-200 pl-3">
+            <div key={date+ver} className="border-l-2 border-indigo-200 pl-3">
               <span className="font-bold text-slate-700">{date}</span>
               <span className="ml-2 px-1 bg-indigo-100 text-indigo-600 rounded text-xs">{ver}</span>
               <p className="text-slate-500 mt-0.5">{note}</p>
