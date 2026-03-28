@@ -535,15 +535,35 @@ def run_scan():
 
 # ─── ENTRY POINT ───────────────────────────────────────────────────────────────
 
+
+def is_market_open():
+    """
+    Returns True if strategies should be running.
+    Blackout: Friday 16:00 UTC → Sunday 22:00 UTC (matches Friday Flush window).
+    """
+    now = datetime.utcnow()
+    wd  = now.weekday()   # 0=Mon … 4=Fri, 5=Sat, 6=Sun
+    hhmm = now.hour * 60 + now.minute
+
+    # Friday after 16:00 UTC — stop
+    if wd == 4 and hhmm >= 16 * 60:
+        return False
+    # All of Saturday
+    if wd == 5:
+        return False
+    # Sunday before 22:00 UTC — still closed
+    if wd == 6 and hhmm < 22 * 60:
+        return False
+    return True
+
 if __name__ == "__main__":
     notify("📈 Tekton EPS Strategy v1.0 started.")
     print(f"[{_ts()}] 🚀 EPS v1.0 started — "
           f"scan={SCAN_INTERVAL_SEC}s cooldown={SIGNAL_COOLDOWN_HR}h "
           f"EMA={EMA_FAST}/{EMA_SLOW} HTF={HTF_TIMEFRAME} MIN_RR={MIN_RR}")
     while True:
-        # Weekend gate — no trading Sat/Sun
-        if datetime.utcnow().weekday() >= 5:
-            print(f"[{datetime.utcnow().strftime('%H:%M:%S')}] 💤 WEEKEND: Markets closed — sleeping 5 min.")
+        if not is_market_open():
+            print(f"[{datetime.utcnow().strftime('%H:%M:%S')}] 💤 MARKET CLOSED (Fri 16:00–Sun 22:00 UTC) — sleeping 5 min.")
             time.sleep(300)
             continue
         try:
