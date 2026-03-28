@@ -93,8 +93,7 @@ def fetch_settings():
             "max_session_exposure_pct": float(data.get("max_session_exposure_pct", 4.0)),
             "max_lots":                 float(data.get("max_lots", 50.0)),
             "min_sl_pips":              float(data.get("min_sl_pips", 8.0)),
-            "news_blackout_mins":        int(data.get("news_blackout_mins", 60)),
-            "news_filter_enabled":       bool(data.get("news_filter_enabled", True))
+            "news_blackout_mins":        int(data.get("news_blackout_mins", 30))
         }
     except Exception as bridge_err:
         print(f"⚠️ Settings bridge unavailable: {bridge_err} — falling back to direct SQL")
@@ -115,8 +114,7 @@ def fetch_settings():
                     "max_session_exposure_pct": float(row[5]),
                     "max_lots":                 float(row[6]),
                     "min_sl_pips":              8.0,
-                    "news_blackout_mins":        int(row[7]) if row[7] is not None else 60,
-                    "news_filter_enabled":       True
+                    "news_blackout_mins":        int(row[7]) if row[7] is not None else 30
                 }
         except Exception as sql_err:
             print(f"⚠️ Settings SQL fallback failed: {sql_err} — using safe hardcoded defaults")
@@ -125,8 +123,7 @@ def fetch_settings():
             "auto_trade": False, "friday_flush": False,
             "risk_pct": 0.01, "target_reward": 1.8,
             "daily_drawdown_limit": 0.05, "max_session_exposure_pct": 4.0,
-            "max_lots": 50.0, "min_sl_pips": 8.0, "news_blackout_mins": 60,
-            "news_filter_enabled": True
+            "max_lots": 50.0, "min_sl_pips": 8.0, "news_blackout_mins": 30
         }
 
 # ---------------------------------------------------------------------------
@@ -515,11 +512,11 @@ def poll_signals():
                 time.sleep(300)
                 continue
 
-            # ⚠️ TEST OVERRIDE: weekday==3 (Thursday) at 05:00 UTC acts as flush day
-            _flush_day     = 3        # TODO revert to 4 (Friday) after test
-            _cutoff_hhmm   = 4 * 60 + 45   # TODO revert to 15*60+45 (15:45 UTC) after test
-            _flush_hhmm    = 5 * 60 + 0    # TODO revert to 16*60+0  (16:00 UTC) after test
-            _flush_window  = 5 * 60 + 15   # TODO revert to 16*60+15 (16:15 UTC) after test
+            # Friday Flush production schedule — 16:00 UTC every Friday
+            _flush_day     = 4        # Friday
+            _cutoff_hhmm   = 15 * 60 + 45  # 15:45 UTC — no new entries after this
+            _flush_hhmm    = 16 * 60 + 0   # 16:00 UTC — close all positions
+            _flush_window  = 16 * 60 + 15  # 16:15 UTC — end of flush window
 
             if settings.get("friday_flush") and weekday == _flush_day:
                 hhmm         = now_utc.hour * 60 + now_utc.minute
@@ -580,81 +577,31 @@ def poll_signals():
                 time.sleep(30)
                 continue
 
-            # --- ECONOMIC CALENDAR GATE (Phase 9) ---
+            # --- ECONOMIC CALENDAR GATE ---
             # Block new executions within news_blackout_mins of any HIGH impact event
-            # that involves a currency in the signal's pair.
-            # e.g. GBPUSD is blocked for GBP or USD high-impact events.
-            # news_filter_enabled toggle must be ON in settings.
-            # Blocked signals are marked FAILED (not silently held as PENDING).
-            news_filter_on = settings.get("news_filter_enabled", True)
-            blackout_mins  = settings.get("news_blackout_mins", 60)
-            if news_filter_on:
-                try:
-                    cal_conn = psycopg2.connect(**DB_PARAMS)
-                    cal_cur  = cal_conn.cursor()
-                    cal_cur.execute("""
-                        SELECT indicator_name, event_date, currency
-                        FROM economic_events
-                        WHERE impact_level = 'HIGH'
-                        AND event_date BETWEEN NOW() - INTERVAL '%s minutes'
-                                          AND NOW() + INTERVAL '%s minutes'
-                        ORDER BY event_date ASC
-                    """, (blackout_mins, blackout_mins))
-                    news_events = cal_cur.fetchall()
-                    cal_cur.close()
-                    cal_conn.close()
-                except Exception as cal_err:
-                    print(f"⚠️ Calendar gate check failed: {cal_err} — proceeding without news filter.")
-                    news_events = []
-
-                # We need the symbol of the PENDING signal to do per-pair filtering.
-                # Peek at the next PENDING signal first.
-                if news_events:
-                    try:
-                        peek_conn = psycopg2.connect(**DB_PARAMS)
-                        peek_cur  = peek_conn.cursor()
-                        peek_cur.execute("""
-                            SELECT signal_uuid, symbol
-                            FROM signals
-                            WHERE status = 'PENDING'
-                            AND sl_pips IS NOT NULL AND tp_pips IS NOT NULL
-                            LIMIT 1
-                        """)
-                        peek_row = peek_cur.fetchone()
-                        peek_cur.close()
-                        peek_conn.close()
-                    except Exception as peek_err:
-                        print(f"⚠️ Calendar peek failed: {peek_err}")
-                        peek_row = None
-
-                    if peek_row:
-                        peek_uuid, peek_sym = peek_row
-                        sym_upper = peek_sym.upper()
-                        # Check if any high-impact event currency is in the symbol name
-                        blocking_event = None
-                        for ev_name, ev_date, ev_ccy in news_events:
-                            if ev_ccy.upper() in sym_upper:
-                                blocking_event = (ev_name, ev_date, ev_ccy)
-                                break
-                        if blocking_event:
-                            ev_name, ev_date, ev_ccy = blocking_event
-                            mins_to = int((ev_date - __import__('datetime').datetime.now(__import__('datetime').timezone.utc)).total_seconds() / 60)
-                            reason = f"News blackout: {ev_name} ({ev_ccy}) in {mins_to:+d}min — {blackout_mins}min window"
-                            print(f"📰 {reason} — marking {peek_sym} FAILED")
-                            try:
-                                blk_conn = psycopg2.connect(**DB_PARAMS)
-                                blk_cur  = blk_conn.cursor()
-                                blk_cur.execute(
-                                    "UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s",
-                                    (reason, str(peek_uuid))
-                                )
-                                blk_conn.commit()
-                                blk_cur.close()
-                                blk_conn.close()
-                            except Exception as blk_err:
-                                print(f"⚠️ Failed to mark signal FAILED: {blk_err}")
-                            time.sleep(5)
-                            continue
+            blackout_mins = settings.get("news_blackout_mins", 30)
+            try:
+                cal_conn = psycopg2.connect(**DB_PARAMS)
+                cal_cur  = cal_conn.cursor()
+                cal_cur.execute("""
+                    SELECT indicator_name, event_date, currency
+                    FROM economic_events
+                    WHERE impact_level = 'HIGH'
+                    AND event_date BETWEEN NOW() - INTERVAL '%s minutes'
+                                      AND NOW() + INTERVAL '%s minutes'
+                    ORDER BY event_date ASC
+                    LIMIT 1
+                """, (blackout_mins, blackout_mins))
+                news_event = cal_cur.fetchone()
+                cal_cur.close()
+                cal_conn.close()
+                if news_event:
+                    ev_name, ev_date, ev_ccy = news_event
+                    print(f"📰 NEWS BLACKOUT: {ev_name} ({ev_ccy}) at {ev_date.strftime('%H:%M')} UTC — no new trades within {blackout_mins}min window.")
+                    time.sleep(30)
+                    continue
+            except Exception as cal_err:
+                print(f"⚠️ Calendar gate check failed: {cal_err} — proceeding without news filter.")
 
             conn = psycopg2.connect(**DB_PARAMS)
             cur  = conn.cursor()
