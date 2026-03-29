@@ -117,18 +117,6 @@ export default function Analytics() {
   const loadStrategies = async () => {
     setStratLoading(true);
     try {
-      const res = await fetch('/api/proxy?url=' + encodeURIComponent(
-        (window.__BRIDGE_URL__ || '') + '/strategies'
-      ), { headers: { 'X-Bridge-Key': window.__BRIDGE_KEY__ || '' } });
-      // Direct bridge call via base44 backend proxy pattern
-      const r = await base44.functions.invoke('loadAllSettings');
-      // We call the bridge directly for strategies
-      const resp = await fetch('/strategies', {
-        headers: { 'X-Bridge-Key': '' }
-      });
-    } catch(e) {}
-    // Use the backend function approach — strategies endpoint proxied via bridge
-    try {
       const res = await base44.functions.invoke('getStrategies');
       if (res?.success) setStrategies(res.strategies || []);
     } catch(e) {
