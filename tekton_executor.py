@@ -478,6 +478,42 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
     finally:
         _executing_symbols.discard(symbol)  # FIX 4: always release lock, even on exception
 
+
+# ---------------------------------------------------------------------------
+# Phase 18: Strategy enabled gate
+# ---------------------------------------------------------------------------
+def is_strategy_enabled(strategy_name: str) -> bool:
+    """Check strategies table — returns True if enabled, True if not found (safe default)."""
+    try:
+        conn = psycopg2.connect(**DB_PARAMS)
+        cur  = conn.cursor()
+        cur.execute("SELECT enabled FROM strategies WHERE name = %s", (strategy_name,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        return row[0] if row else True  # default True if strategy not in table yet
+    except Exception as e:
+        print(f"⚠️ is_strategy_enabled error: {e} — defaulting True")
+        return True
+
+
+# ---------------------------------------------------------------------------
+# Phase 27: Signal staleness gate
+# ---------------------------------------------------------------------------
+def is_signal_stale(created_at, max_age_mins: float) -> bool:
+    """Returns True if signal is older than max_age_mins."""
+    from datetime import datetime, timezone
+    try:
+        if created_at is None:
+            return False
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+        age_mins = (datetime.now(timezone.utc) - created_at).total_seconds() / 60
+        return age_mins > max_age_mins
+    except Exception as e:
+        print(f"⚠️ is_signal_stale error: {e} — defaulting False")
+        return False
+
 # ---------------------------------------------------------------------------
 # SIGNAL POLL LOOP
 # ---------------------------------------------------------------------------
@@ -607,17 +643,36 @@ def poll_signals():
             cur  = conn.cursor()
 
             cur.execute("""
-                SELECT signal_uuid, symbol, signal_type, timeframe, sl_pips, tp_pips
+                SELECT signal_uuid, symbol, signal_type, timeframe, sl_pips, tp_pips,
+                       strategy, created_at
                 FROM signals
                 WHERE status = 'PENDING'
                 AND sl_pips IS NOT NULL
                 AND tp_pips IS NOT NULL
+                ORDER BY created_at ASC
                 LIMIT 1;
             """)
             signal = cur.fetchone()
 
             if signal:
-                s_uuid, sym, s_type, tf, sl_pips, tp_pips = signal
+                s_uuid, sym, s_type, tf, sl_pips, tp_pips, strategy_name, created_at = signal
+
+                # ── Phase 27: Signal Staleness Gate ──────────────────────────────────
+                max_age = settings.get("max_signal_age_mins", 5.0)
+                if is_signal_stale(created_at, max_age):
+                    reason = f"STALE_SIGNAL: signal age exceeded {max_age:.0f} min limit"
+                    print(f"⏰ {reason} for {sym} [{strategy_name}]. Marking FAILED.")
+                    cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
+                    conn.commit()
+                    continue
+
+                # ── Phase 18: Strategy Enabled Gate ──────────────────────────────────
+                if not is_strategy_enabled(strategy_name or ""):
+                    reason = "STRATEGY_DISABLED"
+                    print(f"🔴 {reason}: {strategy_name} is disabled. Marking FAILED.")
+                    cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
+                    conn.commit()
+                    continue
 
                 min_sl = settings.get("min_sl_pips", 8.0)
                 rr = float(tp_pips) / float(sl_pips) if float(sl_pips) > 0 else 0
