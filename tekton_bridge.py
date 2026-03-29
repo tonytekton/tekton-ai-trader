@@ -821,6 +821,78 @@ def system_settings():
         print(f"⚠️ system_settings error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+
+# ── Phase 18: Strategy Toggle endpoints ────────────────────────────────────
+
+@app.route("/strategies", methods=["GET"])
+@require_auth
+def get_strategies():
+    """Return all strategy rows from the strategies table."""
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT name, display_name, enabled, consecutive_losses,
+                   last_loss_at, quality_score_cached, updated_at
+            FROM strategies ORDER BY name
+        """)
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        strategies = []
+        for row in rows:
+            strategies.append({
+                "name":               row[0],
+                "display_name":       row[1],
+                "enabled":            row[2],
+                "consecutive_losses": row[3],
+                "last_loss_at":       row[4].isoformat() if row[4] else None,
+                "quality_score_cached": float(row[5]) if row[5] is not None else 0.0,
+                "updated_at":         row[6].isoformat() if row[6] else None,
+            })
+        return jsonify({"success": True, "strategies": strategies})
+    except Exception as e:
+        print(f"⚠️ get_strategies error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/strategies/toggle", methods=["POST"])
+@require_auth
+def toggle_strategy():
+    """Enable or disable a strategy by name. Body: { name, enabled }"""
+    try:
+        data = request.get_json()
+        name    = data.get("name")
+        enabled = bool(data.get("enabled", True))
+        if not name:
+            return jsonify({"success": False, "error": "name required"}), 400
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE strategies
+            SET enabled = %s, updated_at = NOW()
+            WHERE name = %s
+            RETURNING name, display_name, enabled, consecutive_losses, updated_at
+        """, (enabled, name))
+        row = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+        if not row:
+            return jsonify({"success": False, "error": f"Strategy '{name}' not found"}), 404
+        print(f"{'✅' if enabled else '🔴'} Strategy {'enabled' if enabled else 'disabled'}: {name}")
+        return jsonify({
+            "success":  True,
+            "name":     row[0],
+            "display_name": row[1],
+            "enabled":  row[2],
+            "consecutive_losses": row[3],
+            "updated_at": row[4].isoformat() if row[4] else None,
+        })
+    except Exception as e:
+        print(f"⚠️ toggle_strategy error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route("/calendar/events", methods=["GET"])
 @require_auth
 def get_calendar_events():
