@@ -4,7 +4,7 @@ export default function SystemContext() {
 
       <div>
         <h1 className="text-2xl font-bold text-slate-800">🧠 System Context & Developer Dossier</h1>
-        <p className="text-slate-500 mt-1">Tekton AI Trader <span className="font-bold text-indigo-600">v4.9</span> — Last updated: 2026-03-28</p>
+        <p className="text-slate-500 mt-1">Tekton AI Trader <span className="font-bold text-indigo-600">v4.9</span> — Last updated: 2026-03-29</p>
         <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded text-red-700 text-xs font-bold">
           ⚠️ Read this entire document before making ANY changes to this system.
         </div>
@@ -221,7 +221,8 @@ bash /home/tony/tekton-ai-trader/start_tekton.sh`}</Code>
       <Section title="📝 Change Log">
         <div className="space-y-2 text-xs">
           {[
-            ["2026-03-28","v4.9","Mission & Success Definition added. Position State Machine designed (Phases 19/20/21). Three new phases: 27 (Signal Staleness Gate), 28 (Market Regime Filter), 29 (Strategy Circuit Breaker). Phase 30 (AI Parameter Tuning Loop) added as future. System Gates reference table added. All settings for new phases documented."],
+            ["2026-03-29","v4.9","Phase 18 COMPLETE: Strategy Toggle — strategies table in DB, GET /strategies + POST /strategies/toggle bridge endpoints, is_strategy_enabled() executor gate, Analytics Strategy Controls tab with live toggles. Phase 27 COMPLETE: Signal Staleness Gate — is_signal_stale() executor gate, marks FAILED with STALE_SIGNAL reason, configurable via max_signal_age_mins (default 5 min)."],
+          ["2026-03-28","v4.9","Mission & Success Definition added. Position State Machine designed (Phases 19/20/21). Three new phases: 27 (Signal Staleness Gate), 28 (Market Regime Filter), 29 (Strategy Circuit Breaker). Phase 30 (AI Parameter Tuning Loop) added as future. System Gates reference table added. All settings for new phases documented."],
             ["2026-03-28","v4.9","Phase 17 complete — Market Hours Gate. All services idle Fri 16:00–Sun 22:00 UTC. Automations weekdays only."],
             ["2026-03-27","v4.9","Phase 8/9: Economic Calendar gating. Phase 10/16: Analytics + AI insights. generateAnalyticsInsights fn. Dashboard AI recommendations widget."],
             ["2026-03-26","v4.8.1","Phase 11d smoke tests. Friday Flush logic. loadAllSettings/saveAllSettings fns. TradingSettings persistence fixed."],
