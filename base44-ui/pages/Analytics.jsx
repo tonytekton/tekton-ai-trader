@@ -65,6 +65,7 @@ const TABS = [
   { id: "bestof",      label: "⭐ Best Of" },
   { id: "confidence",  label: "🎯 Confidence" },
   { id: "insights",    label: "🤖 AI Insights" },
+  { id: "strategies",  label: "⚙️ Strategy Controls" },
 ];
 
 export default function Analytics() {
@@ -76,6 +77,9 @@ export default function Analytics() {
   const [recsLoading, setRecsLoading] = useState(false);
   const [generating, setGenerating]   = useState(false);
   const [genMsg, setGenMsg]           = useState(null);
+  const [strategies, setStrategies]   = useState([]);
+  const [stratLoading, setStratLoading] = useState(false);
+  const [stratMsg, setStratMsg]       = useState(null);
 
   const loadAnalytics = async () => {
     setLoading(true); setError(null);
@@ -110,12 +114,51 @@ export default function Analytics() {
     finally { setGenerating(false); }
   };
 
+  const loadStrategies = async () => {
+    setStratLoading(true);
+    try {
+      const res = await fetch('/api/proxy?url=' + encodeURIComponent(
+        (window.__BRIDGE_URL__ || '') + '/strategies'
+      ), { headers: { 'X-Bridge-Key': window.__BRIDGE_KEY__ || '' } });
+      // Direct bridge call via base44 backend proxy pattern
+      const r = await base44.functions.invoke('loadAllSettings');
+      // We call the bridge directly for strategies
+      const resp = await fetch('/strategies', {
+        headers: { 'X-Bridge-Key': '' }
+      });
+    } catch(e) {}
+    // Use the backend function approach — strategies endpoint proxied via bridge
+    try {
+      const res = await base44.functions.invoke('getStrategies');
+      if (res?.success) setStrategies(res.strategies || []);
+    } catch(e) {
+      console.error('loadStrategies error', e);
+    }
+    setStratLoading(false);
+  };
+
+  const toggleStrategy = async (name, enabled) => {
+    setStratMsg(null);
+    try {
+      const res = await base44.functions.invoke('toggleStrategy', { name, enabled });
+      if (res?.success) {
+        setStrategies(prev => prev.map(s => s.name === name ? { ...s, enabled } : s));
+        setStratMsg(`✅ ${name} ${enabled ? 'enabled' : 'disabled'}`);
+      } else {
+        setStratMsg(`❌ ${res?.error || 'Toggle failed'}`);
+      }
+    } catch(e) {
+      setStratMsg(`❌ ${e.message}`);
+    }
+    setTimeout(() => setStratMsg(null), 3000);
+  };
+
   const markRecStatus = async (id, status) => {
     await AnalyticsRecommendation.update(id, { status, reviewed_at: new Date().toISOString() });
     await loadRecs();
   };
 
-  useEffect(() => { loadAnalytics(); loadRecs(); }, []);
+  useEffect(() => { loadAnalytics(); loadRecs(); loadStrategies(); }, []);
 
   if (loading) return (
     <div className="flex items-center justify-center h-64 text-slate-500">
@@ -528,6 +571,80 @@ export default function Analytics() {
           )}
         </div>
       )}
+
+      {/* ── STRATEGY CONTROLS TAB ── */}
+      {tab === "strategies" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-bold text-slate-800">⚙️ Strategy Controls</h2>
+              <p className="text-slate-500 text-xs mt-0.5">Enable or disable strategies without restarting services. Disabled strategies are marked FAILED in the signals table.</p>
+            </div>
+            <button onClick={loadStrategies} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium">🔄 Refresh</button>
+          </div>
+
+          {stratMsg && (
+            <div className={`px-4 py-2 rounded-lg text-sm font-medium ${stratMsg.startsWith('✅') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+              {stratMsg}
+            </div>
+          )}
+
+          {stratLoading ? (
+            <div className="text-center py-12 text-slate-400">Loading strategies...</div>
+          ) : strategies.length === 0 ? (
+            <div className="text-center py-12 text-slate-400">
+              <div className="text-3xl mb-2">⚙️</div>
+              <div className="font-medium">No strategies found</div>
+              <div className="text-xs mt-1">Strategies table may not be populated yet</div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {strategies.map(strat => {
+                // Find analytics data for this strategy
+                const analytic = (strategy_league || []).find(s => s.strategy === strat.name);
+                return (
+                  <div key={strat.name} className={`bg-white rounded-xl border-2 p-4 transition-all ${strat.enabled ? 'border-green-200' : 'border-slate-200 opacity-60'}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${strat.enabled ? 'bg-green-400' : 'bg-slate-300'}`} />
+                          <span className="font-bold text-slate-800 text-sm">{strat.display_name || strat.name}</span>
+                        </div>
+                        <div className="text-xs text-slate-400 mt-0.5 ml-4">{strat.name}</div>
+                        {analytic && (
+                          <div className="flex gap-3 mt-2 ml-4">
+                            <span className="text-xs text-slate-500">Signals: <span className="font-semibold text-slate-700">{analytic.total}</span></span>
+                            <span className="text-xs text-slate-500">RR: <span className="font-semibold text-slate-700">{analytic.avg_rr ?? '—'}</span></span>
+                            <span className="text-xs text-slate-500">Quality: <span className={`font-semibold ${(analytic.quality_score||0) >= 0.5 ? 'text-green-600' : 'text-amber-600'}`}>{analytic.quality_score ?? '—'}</span></span>
+                          </div>
+                        )}
+                        {strat.consecutive_losses > 0 && (
+                          <div className="mt-1 ml-4 text-xs text-amber-600 font-medium">⚠️ {strat.consecutive_losses} consecutive losses</div>
+                        )}
+                        {strat.updated_at && (
+                          <div className="mt-1 ml-4 text-xs text-slate-400">Updated: {new Date(strat.updated_at).toLocaleString()}</div>
+                        )}
+                      </div>
+                      {/* Toggle switch */}
+                      <button
+                        onClick={() => toggleStrategy(strat.name, !strat.enabled)}
+                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${strat.enabled ? 'bg-green-500' : 'bg-slate-300'}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${strat.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+            <span className="font-bold">Phase 29 note:</span> Consecutive losses and quality scores will be used by the Strategy Circuit Breaker to auto-suspend underperforming strategies. Manual toggles here override the circuit breaker.
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
