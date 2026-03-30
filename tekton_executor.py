@@ -595,6 +595,32 @@ def poll_signals():
                 min_sl = settings.get("min_sl_pips", 8.0)
                 rr = float(tp_pips) / float(sl_pips) if float(sl_pips) > 0 else 0
 
+                # ── DATA FRESHNESS GATE ───────────────────────────────────────
+                # Reject signal if newest candle for this symbol/timeframe
+                # is older than MAX_DATA_AGE_MINS. Prevents trading on stale data.
+                MAX_DATA_AGE_MINS = 45
+                cur.execute("""
+                    SELECT MAX(timestamp) FROM market_data
+                    WHERE symbol=%s AND timeframe=%s
+                """, (sym, tf))
+                latest_candle = cur.fetchone()[0]
+                if latest_candle is None:
+                    reason = f"STALE_DATA: no candles found for {sym}/{tf}"
+                    print(f"🚫 {reason}. Marking FAILED.")
+                    cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
+                    conn.commit()
+                    continue
+                from datetime import timezone as _tz
+                now_utc = datetime.utcnow().replace(tzinfo=_tz.utc) if latest_candle.tzinfo else datetime.utcnow()
+                candle_age_mins = (now_utc - latest_candle).total_seconds() / 60
+                if candle_age_mins > MAX_DATA_AGE_MINS:
+                    reason = f"STALE_DATA: newest {sym}/{tf} candle is {candle_age_mins:.0f} mins old (max {MAX_DATA_AGE_MINS})"
+                    print(f"🚫 {reason}. Marking FAILED.")
+                    cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
+                    conn.commit()
+                    continue
+                # ─────────────────────────────────────────────────────────────
+
                 if sl_pips <= 0 or tp_pips <= 0:
                     reason = f"Invalid SL/TP values (sl={sl_pips}, tp={tp_pips})"
                     print(f"⚠️ {reason} for {sym}. Marking FAILED.")
