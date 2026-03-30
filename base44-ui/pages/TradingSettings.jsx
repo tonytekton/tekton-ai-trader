@@ -53,7 +53,7 @@ export default function TradingSettings() {
 
   const numericFields = [
     { key: 'risk_pct_display',         label: 'Risk %',                   hint: 'e.g. 1.0 = 1% per trade',                                  step: '0.1',  suffix: '%'    },
-    { key: 'target_reward',            label: 'Target Reward',            hint: 'e.g. 1.8 = 1:1.8 R:R',                                     step: '0.1',  suffix: 'R'    },
+    { key: 'target_reward',            label: 'Min Reward Ratio',         hint: 'Floor R:R — signals above this are accepted as-is',         step: '0.1',  suffix: 'R'    },
     { key: 'drawdown_display',         label: 'Daily Drawdown Limit %',   hint: 'e.g. 5.0 = circuit breaker at 5% daily loss',               step: '0.5',  suffix: '%'    },
     { key: 'max_session_exposure_pct', label: 'Max Session Exposure %',   hint: 'e.g. 4.0 = block new trades above 4% total open risk',      step: '0.5',  suffix: '%'    },
     { key: 'max_lots',                 label: 'Max Lot Size',             hint: 'Hard cap on any single trade volume',                       step: '1',    suffix: 'lots' },
