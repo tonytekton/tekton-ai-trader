@@ -124,24 +124,22 @@ def get_symbol_specs():
             digits      = s.get("digits") or 5
             pip_pos     = s.get("pipPosition")
             specs[sym] = {
-                "pip_size":    10 ** (-pip_pos) if pip_pos else 10 ** -(digits - 1),
-                "price_scale": 10 ** digits,
+                "pip_size":    _get_pip_size(sym, pip_pos),
+                "price_scale": 100000,  # cTrader trendbar raw integers are always price × 100,000
             }
         _symbol_specs_cache = specs
         _specs_cache_ts     = now
         print(f"[{_ts()}] 📋 Bridge specs: {len(specs)} symbols")
         return specs
     except Exception as e:
-        print(f"[{_ts()}] ⚠️ Bridge specs error: {e}")
-        return {}
+        raise RuntimeError(f"❌ Failed to load bridge specs: {e}") from e
 
 def get_pip_info(symbol):
+    """Raises if symbol not found — no hardcoded fallbacks."""
     specs = get_symbol_specs()
-    if symbol in specs:
-        return specs[symbol]["pip_size"], specs[symbol]["price_scale"]
-    if symbol.endswith("JPY"):
-        return 0.01, 100
-    return 0.0001, 10000
+    if symbol not in specs:
+        raise ValueError(f"❌ Symbol {symbol} not found in bridge specs — cannot trade")
+    return specs[symbol]["pip_size"], specs[symbol]["price_scale"]
 
 def get_ohlc(symbol, timeframe, limit):
     try:
