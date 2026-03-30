@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Tekton data freshness check every 30 minutes
+After=network.target
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+Unit=tekton-data-check.service
+
+[Install]
+WantedBy=timers.target
