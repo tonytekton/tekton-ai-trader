@@ -700,8 +700,8 @@ def poll_signals():
                     print(f"🚫 {reason} for {sym}. Marking SLREJECTED.")
                     cur.execute("UPDATE signals SET status='SLREJECTED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
                     conn.commit()
-                elif rr < 1.5:
-                    reason = f"RR too low: {rr:.2f}R < 1.5R minimum (sl={float(sl_pips):.1f}, tp={float(tp_pips):.1f})"
+                elif rr < min_rr:
+                    reason = f"RR too low: {rr:.2f}R < {min_rr:.1f}R minimum (sl={float(sl_pips):.1f}, tp={float(tp_pips):.1f})"
                     print(f"🚫 {reason} for {sym}. Marking RRREJECTED.")
                     cur.execute("UPDATE signals SET status='RRREJECTED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
                     conn.commit()
