@@ -646,7 +646,7 @@ def poll_signals():
                     if signal_age_mins > max_age_mins:
                         reason = f"STALE_SIGNAL: {signal_age_mins:.1f} mins old (max {max_age_mins} min)"
                         print(f"⏰ {reason} for {sym} — skipping.")
-                        cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
+                        cur.execute("UPDATE signals SET status='STALE', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
                         conn.commit()
                         continue
                 # ─────────────────────────────────────────────────────────────
@@ -656,7 +656,7 @@ def poll_signals():
                 if sig_strategy and not is_strategy_enabled(sig_strategy):
                     reason = f"STRATEGY_DISABLED: {sig_strategy}"
                     print(f"🚫 {reason} — skipping signal for {sym}.")
-                    cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
+                    cur.execute("UPDATE signals SET status='STDISABLED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
                     conn.commit()
                     continue
                 # ─────────────────────────────────────────────────────────────
@@ -697,13 +697,13 @@ def poll_signals():
                     conn.commit()
                 elif float(sl_pips) < min_sl:
                     reason = f"SL too tight: {float(sl_pips):.1f} pips < {min_sl:.0f} pip minimum"
-                    print(f"🚫 {reason} for {sym}. Marking FAILED.")
-                    cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
+                    print(f"🚫 {reason} for {sym}. Marking SLREJECTED.")
+                    cur.execute("UPDATE signals SET status='SLREJECTED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
                     conn.commit()
                 elif rr < 1.5:
                     reason = f"RR too low: {rr:.2f}R < 1.5R minimum (sl={float(sl_pips):.1f}, tp={float(tp_pips):.1f})"
-                    print(f"🚫 {reason} for {sym}. Marking FAILED.")
-                    cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
+                    print(f"🚫 {reason} for {sym}. Marking RRREJECTED.")
+                    cur.execute("UPDATE signals SET status='RRREJECTED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
                     conn.commit()
                 else:
                     cur.execute("UPDATE signals SET status = 'EXECUTING' WHERE signal_uuid = %s", (str(s_uuid),))
