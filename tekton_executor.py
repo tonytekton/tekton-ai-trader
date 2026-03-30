@@ -662,6 +662,7 @@ def poll_signals():
                 # ─────────────────────────────────────────────────────────────
 
                 min_sl = settings.get("min_sl_pips", 8.0)
+                min_rr = settings.get("target_reward", 1.5)  # floor — signals with RR above this are accepted as-is
                 rr = float(tp_pips) / float(sl_pips) if float(sl_pips) > 0 else 0
 
                 # ── DATA FRESHNESS GATE ───────────────────────────────────────
