@@ -1038,7 +1038,7 @@ def get_executions():
                     "closed_at": None, "digits": digits
                 })
             all_trades = open_trades + executions_cache
-            return jsonify({"success": True, "trades": all_trades, "source": "cache"})
+            return jsonify({"success": True, "executions": all_trades, "source": "cache"})
 
         # --- 1. Build Open Positions from position_state{} (Phase 11c) ---
         # No live ReconcileReq — position_state{} is authoritative (seeded at startup
@@ -1268,6 +1268,10 @@ def get_executions():
                     seen_closed[pid] = t
         closed_trades_final = list(seen_closed.values())
         closed_trades_final.sort(key=lambda x: x.get('closed_at') or '', reverse=True)
+
+        # Cache closed trades for 60s — avoids hitting cTrader DealListReq on every UI poll
+        state["executions_cache"]    = closed_trades_final
+        state["executions_cache_ts"] = time.time()
 
         return jsonify({
             "success": True,
