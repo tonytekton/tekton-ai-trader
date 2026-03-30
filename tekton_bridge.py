@@ -783,7 +783,7 @@ def get_account_summary():
 def get_strategies():
     """Return all strategy rows from the strategies table."""
     try:
-        conn = psycopg2.connect(**DB_PARAMS)
+        conn = get_db_conn()
         cur  = conn.cursor()
         cur.execute("""
             SELECT name, display_name, enabled, consecutive_losses,
@@ -818,7 +818,7 @@ def toggle_strategy():
         enabled = body.get("enabled")
         if not name or enabled is None:
             return jsonify({"success": False, "error": "name and enabled required"}), 400
-        conn = psycopg2.connect(**DB_PARAMS)
+        conn = get_db_conn()
         cur  = conn.cursor()
         cur.execute("""
             UPDATE strategies
