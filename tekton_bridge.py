@@ -1406,7 +1406,9 @@ def execute_trade():
         # Volume: accept either centilots (int) or lots (float).
         # Executor sends centilots already. Direct/manual calls may send lots.
         # Detect: if value is a float OR < 1000, treat as lots and convert.
-        raw_vol = data.get("volume_centilots") or data.get("volume")
+        raw_vol = data.get("volume_centilots") or data.get("volume") or data.get("volume_lots")
+        if raw_vol is None:
+            return jsonify({"success": False, "error": "Missing volume (provide volume_centilots, volume, or volume_lots)"}), 400
         if isinstance(raw_vol, float) or (isinstance(raw_vol, (int, float)) and raw_vol < 1000):
             vol = int(round(float(raw_vol) * 10_000_000))  # lots → centilots
         else:
