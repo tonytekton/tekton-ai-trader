@@ -1423,13 +1423,19 @@ def execute_trade():
 
         rel_sl = data.get("rel_sl")
         rel_tp = data.get("rel_tp")
-        # relativeStopLoss/TP is a protobuf int32 field — must be an integer.
-        # cTrader expects integer POINTS (1 pip = 10 points for 5-digit pairs).
-        # Convert: points = round(pips * 10) → always an int.
+        # relativeStopLoss/TP is a protobuf int32 field — must be an integer of POINTS.
+        # cTrader points: 1 point = smallest price increment (10^-digits).
+        # 1 pip = 10^(digits - pipPosition) points.
+        # e.g. EURUSD: digits=5, pipPosition=4 → 1 pip = 10 points  ✅
+        #      XAUUSD: digits=2, pipPosition=2 → 1 pip =  1 point   (was ×10 — WRONG, caused broker rejection)
+        #      US30:   digits=1, pipPosition=1 → 1 pip =  1 point
+        digits_val      = int(spec.get("digits", 5))
+        pip_position_val = int(spec.get("pipPosition", 4))
+        pips_to_points  = 10 ** (digits_val - pip_position_val)
         if rel_sl:
-            req.relativeStopLoss = int(round(float(rel_sl) * 10))
+            req.relativeStopLoss = int(round(float(rel_sl) * pips_to_points))
         if rel_tp:
-            req.relativeTakeProfit = int(round(float(rel_tp) * 10))
+            req.relativeTakeProfit = int(round(float(rel_tp) * pips_to_points))
 
         d_exec, client_msg_id = defer.Deferred(), str(uuid.uuid4())
         pending_requests[client_msg_id] = d_exec
