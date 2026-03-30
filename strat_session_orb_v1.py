@@ -70,7 +70,7 @@ BRIDGE_URL        = os.getenv("BRIDGE_URL", "http://localhost:8080")
 BRIDGE_KEY        = os.getenv("BRIDGE_KEY", "")
 
 SCAN_INTERVAL_SEC  = 300
-SIGNAL_COOLDOWN_HR = 8         # one trade per session per symbol
+SIGNAL_COOLDOWN_HR = 0.25  # TEMP: reduced for P2 testing (was 8)
 LTF_TIMEFRAME      = "15min"
 LTF_CANDLES        = 60        # 15hr of 15min data
 ATR_PERIOD         = 14
