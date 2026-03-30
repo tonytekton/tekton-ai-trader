@@ -121,7 +121,6 @@ def get_symbol_specs():
         specs = {}
         for s in resp.json().get("symbols", []):
             sym     = s.get("name", "")
-            digits      = s.get("digits") or 5
             pip_pos     = s.get("pipPosition")
             specs[sym] = {
                 "pip_size":    _get_pip_size(sym, pip_pos),
