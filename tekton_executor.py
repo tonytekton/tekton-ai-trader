@@ -396,7 +396,7 @@ def get_current_session_exposure_pct():
                 import psycopg2
                 conn = psycopg2.connect(**DB_PARAMS)
                 cur = conn.cursor()
-                cur.execute("SELECT equity FROM account_metrics ORDER BY created_at DESC LIMIT 1")
+                cur.execute("SELECT equity FROM account_metrics ORDER BY timestamp DESC LIMIT 1")
                 row = cur.fetchone()
                 cur.close(); conn.close()
                 if row and row[0]:
