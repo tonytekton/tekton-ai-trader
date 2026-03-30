@@ -69,50 +69,43 @@ _specs_cache_ts     = 0
 
 
 def get_symbol_specs() -> dict:
+    """Raises on failure — no silent fallbacks."""
     global _symbol_specs_cache, _specs_cache_ts
     now = time.time()
     if _symbol_specs_cache and (now - _specs_cache_ts) < SPECS_CACHE_TTL:
         return _symbol_specs_cache
-    try:
-        resp = requests.get(
-            f"{BRIDGE_URL}/symbols/list",
-            headers={"X-Bridge-Key": BRIDGE_KEY},
-            timeout=10,
-        )
-        resp.raise_for_status()
-        symbols = resp.json().get("symbols", [])
-        specs = {}
-        for s in symbols:
-            sym_name    = s.get("name", "")
-            digits      = s.get("digits") or 5
-            pip_pos     = s.get("pipPosition")
-            pip_size    = 10 ** (-pip_pos) if pip_pos else 10 ** -(digits - 1)
-            price_scale = 10 ** digits
-            specs[sym_name] = {"pip_size": pip_size, "price_scale": price_scale}
-        _symbol_specs_cache = specs
-        _specs_cache_ts     = now
-        print(f"[{_ts()}] 📋 Bridge specs: {len(specs)} symbols")
-        return specs
-    except Exception as e:
-        print(f"[{_ts()}] ⚠️  Bridge specs error: {e}")
-        return {}
+    resp = requests.get(
+        f"{BRIDGE_URL}/symbols/list",
+        headers={"X-Bridge-Key": BRIDGE_KEY},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    symbols = resp.json().get("symbols", [])
+    if not symbols:
+        raise ValueError("❌ Bridge returned 0 symbols from /symbols/list — refusing to trade")
+    specs = {}
+    for s in symbols:
+        sym_name = s.get("name", "")
+        if not sym_name:
+            continue
+        pip_pos = s.get("pipPosition")
+        if pip_pos is None:
+            raise ValueError(f"❌ pipPosition missing for symbol {sym_name} — cannot calculate pip size")
+        pip_size    = 10 ** (-pip_pos)
+        price_scale = 100000  # cTrader trendbar raw integers are always price × 100,000
+        specs[sym_name] = {"pip_size": pip_size, "price_scale": price_scale}
+    _symbol_specs_cache = specs
+    _specs_cache_ts     = now
+    print(f"[{_ts()}] 📋 Bridge specs: {len(specs)} symbols")
+    return specs
 
 
 def get_pip_info(symbol: str) -> tuple:
+    """Raises if symbol not found — no hardcoded fallbacks."""
     specs = get_symbol_specs()
-    if symbol in specs:
-        return specs[symbol]["pip_size"], specs[symbol]["price_scale"]
-    if symbol.endswith("JPY"):
-        return 0.01, 1000
-    FALLBACK = {
-        "XAUUSD": (0.1,  100000), "XAGUSD": (0.01, 100000),
-        "XTIUSD": (0.01, 100000), "XBRUSD": (0.01, 100000),
-        "US30":   (1.0,  100000), "US500":  (0.1,  100000),
-        "USTEC":  (0.1,  100000), "UK100":  (1.0,  100000),
-        "DE40":   (1.0,  100000), "JP225":  (1.0,  100000),
-        "AUS200": (1.0,  100000), "HK50":   (1.0,  100000),
-    }
-    return FALLBACK.get(symbol, (0.0001, 100000))
+    if symbol not in specs:
+        raise ValueError(f"❌ Symbol {symbol} not found in bridge specs — cannot trade")
+    return specs[symbol]["pip_size"], specs[symbol]["price_scale"]
 
 
 # ─── HELPERS ───────────────────────────────────────────────────────────────────
