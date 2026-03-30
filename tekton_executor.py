@@ -220,7 +220,8 @@ def get_live_pip_value(symbol, account_currency):
     if cached_price is not None:
         price_data = cached_price
     else:
-        for attempt in range(15):
+        MAX_PRICE_ATTEMPTS = 5
+        for attempt in range(MAX_PRICE_ATTEMPTS):
             price_res   = requests.post(f"{BRIDGE_BASE_URL}/prices/current", json={"symbols": [conv_symbol]}, headers=HEADERS)
             if not price_res.text.strip(): raise ValueError(f"Empty response from /prices/current for {conv_symbol}")
             price_json  = price_res.json()
@@ -232,7 +233,7 @@ def get_live_pip_value(symbol, account_currency):
                 break
             warming = (price_json.get("missing_symbols") or []) + (price_json.get("warming_up_symbols") or [])
             if conv_symbol in warming:
-                print(f"⏳ Waiting for price subscription: {conv_symbol} (attempt {attempt+1}/5)")
+                print(f"⏳ Waiting for price subscription: {conv_symbol} (attempt {attempt+1}/{MAX_PRICE_ATTEMPTS})")
                 time.sleep(2)
             else:
                 break
