@@ -215,7 +215,6 @@ def get_active_symbols():
         cur  = conn.cursor()
         cur.execute("""
             SELECT symbol FROM market_data WHERE timeframe=%s
-            GROUP BY symbol HAVING COUNT(*) > 20
             GROUP BY symbol HAVING COUNT(*) >= 30 ORDER BY symbol;
         """, (LTF_TIMEFRAME,))
         syms = [r[0] for r in cur.fetchall()]
