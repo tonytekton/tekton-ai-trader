@@ -8,7 +8,33 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Redirect stdout/stderr to log file
-sys.stdout = open('/home/tony/tekton-ai-trader/combined_trades.log', 'a', buffering=1)
+_log_file = open('/home/tony/tekton-ai-trader/combined_trades.log', 'a', buffering=1)
+sys.stdout = _log_file
+sys.stderr = _log_file
+class _PrefixedLogger:
+    """Wraps a file stream and prepends [EXECUTOR] to every line written."""
+    def __init__(self, stream):
+        self._stream = stream
+    def write(self, msg):
+        if msg and msg != '\n':
+            lines = msg.split('\n')
+            prefixed = []
+            for i, line in enumerate(lines):
+                if line:
+                    prefixed.append(f"[EXECUTOR] {line}")
+                else:
+                    prefixed.append(line)
+            self._stream.write('\n'.join(prefixed))
+        else:
+            self._stream.write(msg)
+    def flush(self):
+        self._stream.flush()
+    def fileno(self):
+        return self._stream.fileno()
+
+sys.stdout = _PrefixedLogger(sys.stdout)
+sys.stderr = _PrefixedLogger(sys.stderr)
+
 sys.stderr = sys.stdout
 
 # ---------------------------------------------------------------------------
