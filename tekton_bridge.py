@@ -1446,13 +1446,30 @@ def execute_trade():
         result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_exec, 30)
         log_ctrader_call("/trade/execute", int((time.time() - start_time) * 1000), True)
 
+        # ProtoOAExecutionEvent carries errorCode inside the event for rejections
+        exec_error_code = None
+        exec_error_desc = None
         if hasattr(result, 'errorCode') and result.errorCode:
-            return jsonify({"success": False, "error": str(result.description)}), 400
+            exec_error_code = str(result.errorCode)
+            exec_error_desc = getattr(result, 'description', str(result.errorCode))
+            print(f"❌ Broker Rejected Order: errorCode={exec_error_code} desc={exec_error_desc} symbol={symbol} side={side} vol={vol} rel_sl={rel_sl} rel_tp={rel_tp}")
+            return jsonify({"success": False, "error": exec_error_desc, "error_code": exec_error_code}), 400
+
+        # Also check executionType for ORDER_REJECTED (no errorCode set on some brokers)
+        exec_type = getattr(result, 'executionType', None)
+        if exec_type is not None:
+            try:
+                exec_type_str = str(exec_type)
+            except Exception:
+                exec_type_str = repr(exec_type)
+        else:
+            exec_type_str = "UNKNOWN"
 
         if not hasattr(result, 'order') or result.order is None:
-            error_desc = getattr(result, 'description', 'Order not created by broker')
-            print(f"❌ Broker Rejected Order: {error_desc}")
-            return jsonify({"success": False, "error": error_desc}), 400
+            error_desc = getattr(result, 'description', None) or 'Order not created by broker'
+            error_code = getattr(result, 'errorCode', None)
+            print(f"❌ Broker Rejected Order: errorCode={error_code} desc={error_desc} execType={exec_type_str} symbol={symbol} side={side} vol={vol} rel_sl={rel_sl} rel_tp={rel_tp} pips_to_points={pips_to_points}")
+            return jsonify({"success": False, "error": error_desc, "error_code": str(error_code) if error_code else None, "exec_type": exec_type_str}), 400
 
         digits        = spec.get("digits", 5) if spec else 5
         pos_id        = result.position.positionId if hasattr(result, 'position') else 0
