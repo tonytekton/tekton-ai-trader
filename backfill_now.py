@@ -26,7 +26,7 @@ def get_db():
     )
 
 def get_symbols():
-    resp = requests.get(f"{BRIDGE_URL}/symbols", headers=HEADERS, timeout=10)
+    resp = requests.get(f"{BRIDGE_URL}/symbols/list", headers=HEADERS, timeout=10)
     data = resp.json()
     syms = data.get("symbols", [])
     return [s["name"] if isinstance(s, dict) else s for s in syms]
