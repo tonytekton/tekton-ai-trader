@@ -53,7 +53,7 @@ def run_backfill():
                 payload = {
                     "symbol":         symbol,
                     "timeframe":      tf,
-                    "from_timestamp": int(last_time.timestamp() * 1000)
+                    "from_timestamp": int(last_time.timestamp() * 1000) + 1  # +1ms excludes the candle we already have
                 }
 
                 res = requests.post(
