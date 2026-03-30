@@ -483,7 +483,7 @@ def list_positions():
         # while executions / other blocking calls are in flight.
         pnl_map = {}
         now_ts = time.time()
-        if state.get("pnl_cache") is not None and (now_ts - state.get("pnl_cache_ts", 0)) < 10:
+        if state.get("pnl_cache") is not None and (now_ts - state.get("pnl_cache_ts", 0)) < 30:  # 30s TTL — monitor polls every 30s, no need to hit cTrader more often
             pnl_map = state["pnl_cache"]
         else:
             start_time_pnl = time.time()
@@ -492,7 +492,7 @@ def list_positions():
             d_pnl, mid_pnl = defer.Deferred(), str(uuid.uuid4())
             pending_requests[mid_pnl] = d_pnl
             reactor.callFromThread(lambda: bridge.client.send(pnl_msg, clientMsgId=mid_pnl))
-            pnl_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_pnl, 10)
+            pnl_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_pnl, 15)
             log_ctrader_call("/positions/list_pnl", int((time.time() - start_time_pnl) * 1000), True)
 
             if hasattr(pnl_result, "positionUnrealizedPnL"):
