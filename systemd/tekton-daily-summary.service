@@ -1,0 +1,12 @@
+[Unit]
+Description=Tekton Daily Trading Summary
+After=network.target
+
+[Service]
+Type=oneshot
+User=tony
+WorkingDirectory=/home/tony/tekton-ai-trader
+EnvironmentFile=/home/tony/tekton-ai-trader/.env
+ExecStart=/home/tony/tekton-ai-trader/venv/bin/python tekton_daily_summary.py
+StandardOutput=journal
+StandardError=journal
