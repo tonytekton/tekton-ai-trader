@@ -1,0 +1,12 @@
+[Unit]
+Description=Tekton Daily Summary Timer — fires at 17:00 UTC (01:00 KL next day)
+Requires=tekton-daily-summary.service
+
+[Timer]
+# 17:00 UTC = 01:00 KL (UTC+8)
+OnCalendar=*-*-* 17:00:00
+AccuracySec=60
+Persistent=true
+
+[Install]
+WantedBy=timers.target
