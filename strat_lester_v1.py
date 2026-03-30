@@ -281,7 +281,6 @@ def get_active_symbols():
         cur.execute("""
             SELECT a.symbol FROM
               (SELECT symbol FROM market_data WHERE timeframe=%s
-            GROUP BY symbol HAVING COUNT(*) > 20
                GROUP BY symbol HAVING COUNT(*) >= 40) a
             INNER JOIN
               (SELECT symbol FROM market_data WHERE timeframe=%s
