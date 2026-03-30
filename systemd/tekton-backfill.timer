@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Tekton backfill every 30 minutes
+After=network.target
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=30min
+Unit=tekton-backfill.service
+
+[Install]
+WantedBy=timers.target
