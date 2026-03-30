@@ -134,6 +134,12 @@ def notify(msg):
     except Exception:
         pass
 
+def _get_pip_size(symbol: str, pip_pos) -> float:
+    """Derive pip size from cTrader pipPosition. Fails loudly — no silent fallbacks."""
+    if pip_pos is None:
+        raise ValueError(f"❌ pipPosition missing for {symbol} — cannot calculate pip size")
+    return 10 ** (-pip_pos)
+
 def get_symbol_specs():
     global _symbol_specs_cache, _specs_cache_ts
     now = time.time()
