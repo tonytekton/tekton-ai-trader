@@ -4,6 +4,13 @@ tekton_data_check.py
 Tekton AI Trader — Market Data Freshness Monitor
 Runs as a VM cron job every 30 mins during market hours.
 Checks market_data table for stale candles and sends Telegram alert if any found.
+
+Thresholds are set to candle period + generous buffer to avoid false alarms:
+  5min  → 45 min   (3 missed candles)
+  15min → 90 min   (3 missed candles)
+  60min → 240 min  (3 missed candles + buffer)
+  4H    → 480 min  (1 full candle period + buffer)
+  Daily → 2880 min (2 full days — covers weekends + holiday gaps)
 """
 
 import os
@@ -29,13 +36,13 @@ DB_PARAMS = {
 TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# Staleness thresholds in minutes per timeframe
+# Thresholds: candle period + buffer to avoid false alarms
 THRESHOLDS = {
-    "5min":  30,
-    "15min": 60,
-    "60min": 180,
-    "4H":    360,
-    "Daily": 1560,
+    "5min":  45,    # 3 missed candles
+    "15min": 90,    # 3 missed candles
+    "60min": 240,   # 3 missed candles + buffer
+    "4H":    480,   # 1 full candle period + buffer
+    "Daily": 2880,  # 2 full days — covers weekend gaps
 }
 
 # Market hours: Mon 06:00 UTC — Fri 21:00 UTC
@@ -82,8 +89,6 @@ def check_freshness():
     try:
         conn = psycopg2.connect(**DB_PARAMS)
         cur  = conn.cursor()
-
-        # Get latest candle timestamp per timeframe
         cur.execute("""
             SELECT timeframe, MAX(timestamp) AS latest
             FROM market_data
@@ -107,7 +112,6 @@ def check_freshness():
             stale.append(f"  {tf}: NO DATA at all")
             continue
 
-        # Make timezone-aware if naive
         if latest.tzinfo is None:
             latest = latest.replace(tzinfo=timezone.utc)
 
