@@ -541,7 +541,7 @@ def internal_sync_account():
         except Exception as e:
             print(f"❌ Internal Sync Error: {e}")
 
-        reactor.callLater(30, internal_sync_account)
+        reactor.callLater(60, internal_sync_account)  # 60s — balance/equity changes slowly, 30s was excessive
 
     reactor.callInThread(run_sync)
 
@@ -669,29 +669,14 @@ def get_account_status():
         pos_state = state.get("position_state", {})
         open_count = len(pos_state)
 
-        # --- Fire live ProtoOAGetPositionUnrealizedPnLReq for true floating equity ---
-        floating_pnl_cents = 0
-        if open_count > 0:
-            try:
-                pnl_msg = openapi.ProtoOAGetPositionUnrealizedPnLReq()
-                pnl_msg.ctidTraderAccountId = ACCOUNT_ID
-                d_pnl, mid_pnl = defer.Deferred(), str(uuid.uuid4())
-                pending_requests[mid_pnl] = d_pnl
-                reactor.callFromThread(lambda: bridge.client.send(pnl_msg, clientMsgId=mid_pnl))
-                pnl_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_pnl, 10)
-                log_ctrader_call("/account/status_pnl", int(0), True)
-                if hasattr(pnl_result, "positionUnrealizedPnL"):
-                    for pnl_entry in pnl_result.positionUnrealizedPnL:
-                        floating_pnl_cents += safe_get_field(pnl_entry, "netUnrealizedPnL", 0)
-                        # Also update position_state{} cache so /positions/list is fast
-                        pid = str(pnl_entry.positionId)
-                        if pid in pos_state:
-                            pos_state[pid]["unrealizedNetPnL_cents"] = safe_get_field(pnl_entry, "netUnrealizedPnL", 0)
-            except Exception as pnl_err:
-                print(f"⚠️  /account/status PnL fetch failed: {pnl_err} — using cached values")
-                floating_pnl_cents = sum(
-                    ps.get("unrealizedNetPnL_cents", 0) for ps in pos_state.values()
-                )
+        # Serve floating PnL from position_state{} cache — NO live cTrader call.
+        # position_state{} is kept live by _handle_unsolicited_execution_event().
+        # A live ProtoOAGetPositionUnrealizedPnLReq was fired here previously, causing
+        # 4+ cTrader API calls/min from the monitor alone (every 15s) and contributing
+        # heavily to the 61/min rate. Removed 2026-03-30.
+        floating_pnl_cents = sum(
+            ps.get("unrealizedNetPnL_cents", 0) for ps in pos_state.values()
+        )
 
         # margin_used: sum from position_state for accuracy
         if open_count > 0:
