@@ -5,20 +5,42 @@ import ConfidenceBar from '../components/signals/ConfidenceBar';
 import SignalDetailModal from '../components/signals/SignalDetailModal';
 
 const STATUS_STYLES = {
-  PENDING:   'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-  EXECUTED:  'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  FAILED:    'bg-red-500/10 text-red-400 border-red-500/20',
-  EXPIRED:   'bg-slate-700/30 text-slate-500 border-slate-700/50',
-  CANCELLED: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+  PENDING:    'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+  EXECUTING:  'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  COMPLETED:  'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  EXECUTED:   'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',  // legacy alias
+  FAILED:     'bg-red-500/10 text-red-400 border-red-500/20',
+  SLREJECTED: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+  RRREJECTED: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+  STALE:      'bg-slate-500/10 text-slate-400 border-slate-500/20',
+  STDISABLED: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+  EXPIRED:    'bg-slate-700/30 text-slate-500 border-slate-700/50',
+  CANCELLED:  'bg-slate-700/30 text-slate-500 border-slate-700/50',
+};
+
+const STATUS_LABELS = {
+  PENDING:    'Pending',
+  EXECUTING:  'Executing',
+  COMPLETED:  'Completed',
+  EXECUTED:   'Executed',
+  FAILED:     'Failed',
+  SLREJECTED: 'SL Rejected',
+  RRREJECTED: 'RR Rejected',
+  STALE:      'Stale',
+  STDISABLED: 'Strat Disabled',
+  EXPIRED:    'Expired',
+  CANCELLED:  'Cancelled',
 };
 
 const STAT_CARDS = [
-  { key: 'TOTAL',     label: 'Total',     style: 'text-slate-100 border-slate-700/50 bg-slate-800/30' },
-  { key: 'PENDING',   label: 'Pending',   style: 'text-yellow-400 border-yellow-500/20 bg-yellow-500/5' },
-  { key: 'EXECUTED',  label: 'Executed',  style: 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' },
-  { key: 'FAILED',    label: 'Failed',    style: 'text-red-400 border-red-500/20 bg-red-500/5' },
-  { key: 'EXPIRED',   label: 'Expired',   style: 'text-slate-500 border-slate-700/50 bg-slate-800/20' },
-  { key: 'CANCELLED', label: 'Cancelled', style: 'text-orange-400 border-orange-500/20 bg-orange-500/5' },
+  { key: 'TOTAL',      label: 'Total',         style: 'text-slate-100 border-slate-700/50 bg-slate-800/30' },
+  { key: 'PENDING',    label: 'Pending',        style: 'text-yellow-400 border-yellow-500/20 bg-yellow-500/5' },
+  { key: 'COMPLETED',  label: 'Completed',      style: 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' },
+  { key: 'FAILED',     label: 'Failed',         style: 'text-red-400 border-red-500/20 bg-red-500/5' },
+  { key: 'SLREJECTED', label: 'SL Rejected',    style: 'text-orange-400 border-orange-500/20 bg-orange-500/5' },
+  { key: 'RRREJECTED', label: 'RR Rejected',    style: 'text-orange-400 border-orange-500/20 bg-orange-500/5' },
+  { key: 'STALE',      label: 'Stale',          style: 'text-slate-400 border-slate-500/20 bg-slate-500/5' },
+  { key: 'STDISABLED', label: 'Strat Disabled', style: 'text-slate-400 border-slate-500/20 bg-slate-500/5' },
 ];
 
 export default function Signals() {
@@ -89,10 +111,13 @@ export default function Signals() {
         <select value={statusFilter} onChange={handleStatusChange} className={selectClass}>
           <option value="">All Statuses</option>
           <option value="PENDING">Pending</option>
-          <option value="EXECUTED">Executed</option>
+          <option value="EXECUTING">Executing</option>
+          <option value="COMPLETED">Completed</option>
           <option value="FAILED">Failed</option>
-          <option value="EXPIRED">Expired</option>
-          <option value="CANCELLED">Cancelled</option>
+          <option value="SLREJECTED">SL Rejected</option>
+          <option value="RRREJECTED">RR Rejected</option>
+          <option value="STALE">Stale</option>
+          <option value="STDISABLED">Strat Disabled</option>
         </select>
         <select value={symbolFilter} onChange={handleSymbolChange} className={selectClass}>
           <option value="">All Symbols</option>
@@ -138,7 +163,7 @@ export default function Signals() {
                       <td className="px-4 py-3.5 min-w-[160px]"><ConfidenceBar score={sig.confidence ?? sig.confidence_score ?? 0} /></td>
                       <td className="px-4 py-3.5 font-mono text-xs text-slate-400">{sig.sl_pips != null ? sig.sl_pips : '\u2014'}</td>
                       <td className="px-4 py-3.5 font-mono text-xs text-slate-400">{sig.tp_pips != null ? sig.tp_pips : '\u2014'}</td>
-                      <td className="px-4 py-3.5"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${STATUS_STYLES[s] || STATUS_STYLES.EXPIRED}`}>{s}</span></td>
+                      <td className="px-4 py-3.5"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${STATUS_STYLES[s] || STATUS_STYLES.EXPIRED}`}>{STATUS_LABELS[s] || s}</span></td>
                       <td className="px-4 py-3.5"><ChevronRight className="w-4 h-4 text-slate-700 group-hover:text-slate-400 transition-colors" /></td>
                     </tr>
                   );
