@@ -390,12 +390,19 @@ def get_current_session_exposure_pct():
         positions = pos_res.json().get("positions", [])
         account_balance = acc_res.json().get("equity", 0)
         if account_balance <= 0:
-            # Bridge may still be warming up (balance_cents not yet populated).
-            # Fall back to last known balance from SQL settings heartbeat.
+            # Bridge may still be warming up (balance_cents not yet populated at startup).
+            # Fall back to last known balance from account_metrics table (written by bridge heartbeat).
             try:
-                settings = get_settings()
-                account_balance = float(settings.get("last_known_balance", 0) or 0)
-            except Exception:
+                import psycopg2
+                conn = psycopg2.connect(**DB_PARAMS)
+                cur = conn.cursor()
+                cur.execute("SELECT equity FROM account_metrics ORDER BY created_at DESC LIMIT 1")
+                row = cur.fetchone()
+                cur.close(); conn.close()
+                if row and row[0]:
+                    account_balance = float(row[0])
+            except Exception as e:
+                print(f"⚠️ account_metrics fallback failed: {e}")
                 account_balance = 0
         if account_balance <= 0:
             print("⚠️ Could not fetch account balance for exposure calc — assuming 0%")
