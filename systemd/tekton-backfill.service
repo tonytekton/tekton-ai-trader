@@ -1,0 +1,15 @@
+[Unit]
+Description=Tekton Market Data Backfill
+After=network.target
+After=tekton-ai-trader-bridge.service
+
+[Service]
+Type=oneshot
+User=tony
+WorkingDirectory=/home/tony/tekton-ai-trader
+EnvironmentFile=/home/tony/tekton-ai-trader/.env
+ExecStart=/home/tony/tekton-ai-trader/venv/bin/python /home/tony/tekton-ai-trader/tekton_backfill.py
+StandardOutput=journal
+StandardError=journal
+# Alert Lester if this fails
+OnFailure=tekton-backfill-alert.service
