@@ -1414,19 +1414,20 @@ def execute_trade():
         else:
             vol = int(raw_vol)  # already centilots
 
-        # Clamp volume to broker min/max for this instrument — prevents hard rejections
-        min_vol = spec.get("minVolume_centilots") or spec.get("minVolume") or 100
-        max_vol = spec.get("maxVolume_centilots") or spec.get("maxVolume") or None
-        step_vol = spec.get("stepVolume_centilots") or spec.get("stepVolume") or 100
-        if vol < int(min_vol):
-            vol = int(min_vol)
-        if max_vol and vol > int(max_vol):
-            print(f"⚠️ Volume clamped for {symbol}: {vol} → {int(max_vol)} (broker max)")
-            vol = int(max_vol)
+        # Clamp volume to broker min/max for this instrument — prevents hard rejections.
+        # symbols_cache stores raw cTrader keys: minVolume, maxVolume, stepVolume, lotSize (all centilots).
+        min_vol  = int(spec.get("minVolume")  or 100)
+        max_vol  = int(spec.get("maxVolume")  or 0)
+        step_vol = int(spec.get("stepVolume") or 100)
+        if vol < min_vol:
+            vol = min_vol
+        if max_vol > 0 and vol > max_vol:
+            print(f"⚠️ Volume clamped for {symbol}: {vol} → {max_vol} centilots (broker maxVolume)")
+            vol = max_vol
         # Snap to nearest valid step
-        if step_vol and int(step_vol) > 0:
-            vol = (vol // int(step_vol)) * int(step_vol)
-            vol = max(vol, int(min_vol))
+        if step_vol > 0:
+            vol = (vol // step_vol) * step_vol
+            vol = max(vol, min_vol)
 
         req = openapi.ProtoOANewOrderReq()
         req.ctidTraderAccountId = ACCOUNT_ID
