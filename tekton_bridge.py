@@ -74,7 +74,9 @@ state = {
     "margin_used_cents": 0,
     "starting_equity_cents": 0,
     "position_state": {},           # Phase 11c: keyed by str(positionId)
-    "position_state_ready": False,  # True after live ReconcileReq seed completes
+    "position_state_ready": False,
+    "pnl_cache": None,
+    "pnl_cache_ts": 0.0,  # True after live ReconcileReq seed completes
 }
 
 # ===== API CALL TRACKING =====
@@ -450,24 +452,32 @@ def list_positions():
             threading.Thread(target=seed_position_state_from_live_reconcile, daemon=True).start()
             return jsonify({"success": False, "error": "Bridge still initialising — retry in a few seconds"}), 503
 
-        # Normal path: serve from cached position_state{} + live PnL
-        start_time_pnl = time.time()
-        pnl_msg = openapi.ProtoOAGetPositionUnrealizedPnLReq()
-        pnl_msg.ctidTraderAccountId = ACCOUNT_ID
-        d_pnl, mid_pnl = defer.Deferred(), str(uuid.uuid4())
-        pending_requests[mid_pnl] = d_pnl
-        reactor.callFromThread(lambda: bridge.client.send(pnl_msg, clientMsgId=mid_pnl))
-        pnl_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_pnl, 10)
-        log_ctrader_call("/positions/list_pnl", int((time.time() - start_time_pnl) * 1000), True)
-
+        # Normal path: serve from cached position_state{} + cached PnL (10s TTL)
+        # Caching prevents reactor thread starvation when monitor polls every 15s
+        # while executions / other blocking calls are in flight.
         pnl_map = {}
-        if hasattr(pnl_result, "positionUnrealizedPnL"):
-            for pnl_entry in pnl_result.positionUnrealizedPnL:
-                pid = str(pnl_entry.positionId)
-                pnl_map[pid] = {
-                    "grossPnL_cents": safe_get_field(pnl_entry, "grossUnrealizedPnL", 0),
-                    "netPnL_cents":   safe_get_field(pnl_entry, "netUnrealizedPnL", 0),
-                }
+        now_ts = time.time()
+        if state.get("pnl_cache") is not None and (now_ts - state.get("pnl_cache_ts", 0)) < 10:
+            pnl_map = state["pnl_cache"]
+        else:
+            start_time_pnl = time.time()
+            pnl_msg = openapi.ProtoOAGetPositionUnrealizedPnLReq()
+            pnl_msg.ctidTraderAccountId = ACCOUNT_ID
+            d_pnl, mid_pnl = defer.Deferred(), str(uuid.uuid4())
+            pending_requests[mid_pnl] = d_pnl
+            reactor.callFromThread(lambda: bridge.client.send(pnl_msg, clientMsgId=mid_pnl))
+            pnl_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_pnl, 10)
+            log_ctrader_call("/positions/list_pnl", int((time.time() - start_time_pnl) * 1000), True)
+
+            if hasattr(pnl_result, "positionUnrealizedPnL"):
+                for pnl_entry in pnl_result.positionUnrealizedPnL:
+                    pid = str(pnl_entry.positionId)
+                    pnl_map[pid] = {
+                        "grossPnL_cents": safe_get_field(pnl_entry, "grossUnrealizedPnL", 0),
+                        "netPnL_cents":   safe_get_field(pnl_entry, "netUnrealizedPnL", 0),
+                    }
+            state["pnl_cache"] = pnl_map
+            state["pnl_cache_ts"] = now_ts
 
         positions = []
         for pos_id, ps in state.get("position_state", {}).items():
