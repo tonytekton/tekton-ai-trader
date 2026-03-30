@@ -10,7 +10,7 @@ Thresholds are trading-minutes based — weekends are excluded from age calculat
   15min → 90 min
   60min → 240 min
   4H    → 480 min
-  Daily → 1560 min (26 trading hours — one session + buffer)
+  Daily → 2160 min (36 trading hours — covers Friday close to Monday evening)
 """
 
 import os
@@ -42,7 +42,7 @@ THRESHOLDS = {
     "15min": 90,    # 3 missed candles
     "60min": 240,   # 3 missed candles + buffer
     "4H":    480,   # 1 full candle period + buffer
-    "Daily": 1560,  # 26 trading hours — one full session + buffer
+    "Daily": 2160,  # 36 trading hours — covers Friday close to Monday evening
 }
 
 
