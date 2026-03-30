@@ -1378,12 +1378,18 @@ def get_signals_stats():
         cur.close()
         conn.close()
 
-        counts = {"TOTAL": 0, "PENDING": 0, "EXECUTED": 0, "FAILED": 0, "EXPIRED": 0, "CANCELLED": 0}
+        # All known statuses — TOTAL is computed as sum of all rows
+        known = {"PENDING", "EXECUTING", "COMPLETED", "EXECUTED", "FAILED",
+                 "SLREJECTED", "RRREJECTED", "STALE", "STDISABLED",
+                 "DATAREJECTED", "EXPIRED", "CANCELLED"}
+        counts = {k: 0 for k in known}
+        counts["TOTAL"] = 0
         for row in rows:
             status, cnt = row[0], row[1]
             counts["TOTAL"] += cnt
             if status in counts:
                 counts[status] = cnt
+            # unknown statuses still count toward TOTAL but are not surfaced individually
 
         print(f"📊 API HIT: Signal stats requested. Total={counts['TOTAL']}")
         return jsonify({"success": True, "counts": counts, "symbols": symbols})
