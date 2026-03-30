@@ -14,7 +14,19 @@ BRIDGE_URL = f"http://localhost:8080"
 BRIDGE_KEY = os.getenv("BRIDGE_KEY", "")
 HEADERS    = {"X-Bridge-Key": BRIDGE_KEY, "Content-Type": "application/json"}
 TIMEFRAMES = ["5min", "15min", "60min", "4H", "Daily"]
-CANDLES    = 200  # enough to cover 6-day gap for all TFs
+# Candles needed per TF to cover a worst-case 7-day gap
+# 5min:  7d × 24h × 12 = 2016  → use 2500 (buffer)
+# 15min: 7d × 24h × 4  = 672   → use 800
+# 60min: 7d × 24h      = 168   → use 250
+# 4H:    7d × 6        = 42    → use 100
+# Daily: 7d             = 7    → use 30
+CANDLES_PER_TF = {
+    "5min":  2500,
+    "15min": 800,
+    "60min": 250,
+    "4H":    100,
+    "Daily": 30,
+}
 
 def get_db():
     return psycopg2.connect(
@@ -50,7 +62,7 @@ def backfill():
                 resp = requests.post(
                     f"{BRIDGE_URL}/prices/historical",
                     headers=HEADERS,
-                    json={"symbol": symbol, "timeframe": tf, "count": CANDLES},
+                    json={"symbol": symbol, "timeframe": tf, "count": CANDLES_PER_TF[tf]},
                     timeout=15
                 )
                 if not resp.ok:
