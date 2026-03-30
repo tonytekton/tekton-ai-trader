@@ -54,7 +54,7 @@ def get_symbol_specs():
 
     try:
         resp = requests.get(
-            f"{BRIDGE_URL}/symbols",
+            f"{BRIDGE_URL}/symbols/list",
             headers={"X-Bridge-Key": BRIDGE_KEY},
             timeout=10
         )
