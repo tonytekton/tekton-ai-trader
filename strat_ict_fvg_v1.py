@@ -5,7 +5,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=UserWarning)
 import sys
 
-# This redirects all 'print' statements to a dedicated log file
+# Redirect all output to combined log with [ICT-FVG] prefix
 _log_file = open('/home/tony/tekton-ai-trader/combined_trades.log', 'a', buffering=1)
 sys.stdout = _log_file
 sys.stderr = _log_file
