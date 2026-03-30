@@ -390,6 +390,14 @@ def get_current_session_exposure_pct():
         positions = pos_res.json().get("positions", [])
         account_balance = acc_res.json().get("equity", 0)
         if account_balance <= 0:
+            # Bridge may still be warming up (balance_cents not yet populated).
+            # Fall back to last known balance from SQL settings heartbeat.
+            try:
+                settings = get_settings()
+                account_balance = float(settings.get("last_known_balance", 0) or 0)
+            except Exception:
+                account_balance = 0
+        if account_balance <= 0:
             print("⚠️ Could not fetch account balance for exposure calc — assuming 0%")
             return 0.0, len(positions)
         # Sum unrealised P&L across all open positions (bridge returns cents)
