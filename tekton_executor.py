@@ -28,7 +28,7 @@ DB_PARAMS = {
 
 # Known quote currencies for index/commodity symbols (can't derive from last 3 chars).
 INDEX_QUOTE_MAP = {
-    "UK100":  "GBP", "DE40":   "EUR", "F40":    "EUR", "EU50":   "EUR",
+    "UK100":  "GBP", "DE40":   "EUR", "FR40":   "EUR", "EU50":   "EUR",
     "JP225":  "JPY", "US30":   "USD", "US500":  "USD", "USTEC":  "USD",
     "AUS200": "AUD", "HK50":   "HKD",
     "XAUUSD": "USD", "XAGUSD": "USD", "XTIUSD": "USD", "XBRUSD": "USD",
@@ -75,56 +75,31 @@ def _cache_set(key, value):
 # ---------------------------------------------------------------------------
 def fetch_settings():
     """
-    Fetches live trading settings.
-    Primary: bridge /data/system-settings (proxies SQL row id=1).
-    Fallback: direct SQL if bridge unavailable.
-    Never raises — always returns a safe dict.
+    Fetches live trading settings from bridge (which proxies SQL row id=1).
+    Raises RuntimeError if unavailable — executor must not trade with stale/guessed settings.
     """
-    try:
-        response = requests.get(f"{BRIDGE_BASE_URL}/data/system-settings", headers=HEADERS, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        return {
-            "auto_trade":               bool(data.get("auto_trade", False)),
-            "friday_flush":             bool(data.get("friday_flush", False)),
-            "risk_pct":                 float(data.get("risk_pct", 0.01)),
-            "target_reward":            float(data.get("target_reward", 1.8)),
-            "daily_drawdown_limit":     float(data.get("daily_drawdown_limit", 0.05)),
-            "max_session_exposure_pct": float(data.get("max_session_exposure_pct", 4.0)),
-            "max_lots":                 float(data.get("max_lots", 50.0)),
-            "min_sl_pips":              float(data.get("min_sl_pips", 8.0)),
-            "news_blackout_mins":        int(data.get("news_blackout_mins", 30))
-        }
-    except Exception as bridge_err:
-        print(f"⚠️ Settings bridge unavailable: {bridge_err} — falling back to direct SQL")
-        try:
-            conn = psycopg2.connect(**DB_PARAMS)
-            cur  = conn.cursor()
-            cur.execute("SELECT auto_trade, friday_flush, risk_pct, target_reward, daily_drawdown_limit, max_session_exposure_pct, max_lots, news_blackout_mins FROM settings WHERE id=1")
-            row = cur.fetchone()
-            cur.close(); conn.close()
-            if row:
-                print("✅ Settings loaded from SQL directly")
-                return {
-                    "auto_trade":               bool(row[0]),
-                    "friday_flush":             bool(row[1]),
-                    "risk_pct":                 float(row[2]),
-                    "target_reward":            float(row[3]),
-                    "daily_drawdown_limit":     float(row[4]),
-                    "max_session_exposure_pct": float(row[5]),
-                    "max_lots":                 float(row[6]),
-                    "min_sl_pips":              8.0,
-                    "news_blackout_mins":        int(row[7]) if row[7] is not None else 30
-                }
-        except Exception as sql_err:
-            print(f"⚠️ Settings SQL fallback failed: {sql_err} — using safe hardcoded defaults")
-        print("⚠️ Using hardcoded safe defaults — auto_trade=False, max_lots=50")
-        return {
-            "auto_trade": False, "friday_flush": False,
-            "risk_pct": 0.01, "target_reward": 1.8,
-            "daily_drawdown_limit": 0.05, "max_session_exposure_pct": 4.0,
-            "max_lots": 50.0, "min_sl_pips": 8.0, "news_blackout_mins": 30
-        }
+    response = requests.get(f"{BRIDGE_BASE_URL}/data/system-settings", headers=HEADERS, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+
+    required = ["auto_trade", "friday_flush", "risk_pct", "target_reward",
+                "daily_drawdown_limit", "max_session_exposure_pct", "max_lots",
+                "min_sl_pips", "news_blackout_mins"]
+    missing = [k for k in required if data.get(k) is None]
+    if missing:
+        raise ValueError(f"❌ Settings missing required fields: {missing}")
+
+    return {
+        "auto_trade":               bool(data["auto_trade"]),
+        "friday_flush":             bool(data["friday_flush"]),
+        "risk_pct":                 float(data["risk_pct"]),
+        "target_reward":            float(data["target_reward"]),
+        "daily_drawdown_limit":     float(data["daily_drawdown_limit"]),
+        "max_session_exposure_pct": float(data["max_session_exposure_pct"]),
+        "max_lots":                 float(data["max_lots"]),
+        "min_sl_pips":              float(data["min_sl_pips"]),
+        "news_blackout_mins":       int(data["news_blackout_mins"]),
+    }
 
 # ---------------------------------------------------------------------------
 # PIP SIZE  —  always from bridge, never hardcoded
@@ -157,13 +132,11 @@ def get_pip_size(symbol):
     e.g. pipPosition=4 → pip_size=0.0001 (standard forex)
          pipPosition=2 → pip_size=0.01   (JPY pairs, indices)
     """
-    try:
-        spec = get_contract_specs(symbol)
-        pip_pos = spec.get("pipPosition", 4)
-        return 10 ** (-pip_pos)
-    except Exception as e:
-        print(f"⚠️ get_pip_size error for {symbol}: {e} — using default 0.0001")
-        return 0.0001
+    spec = get_contract_specs(symbol)
+    pip_pos = spec.get("pipPosition")
+    if pip_pos is None:
+        raise ValueError(f"❌ pipPosition missing for {symbol} in contract specs — cannot calculate pip size")
+    return 10 ** (-pip_pos)
 
 # ---------------------------------------------------------------------------
 # PIP VALUE  —  value of 1 pip per 1 lot in account currency
@@ -348,8 +321,8 @@ def calculate_professional_lot_size(symbol, sl_pips):
     final_vol = max((protocol_volume // step) * step, min_v)
     final_vol = min(final_vol, max_v)
 
-    # Hard lot cap (max_lots from SQL settings, default 50)
-    max_lots      = settings.get("max_lots", 50.0)
+    # Hard lot cap (max_lots from SQL settings — always present, get_settings raises if missing)
+    max_lots      = settings["max_lots"]
     max_vol_cl    = int(max_lots * lot_size_cl)   # centilots equivalent of max_lots
     if final_vol > max_vol_cl:
         actual_lots = final_vol / lot_size_cl
@@ -477,42 +450,6 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
         return None
     finally:
         _executing_symbols.discard(symbol)  # FIX 4: always release lock, even on exception
-
-
-# ---------------------------------------------------------------------------
-# Phase 18: Strategy enabled gate
-# ---------------------------------------------------------------------------
-def is_strategy_enabled(strategy_name: str) -> bool:
-    """Check strategies table — returns True if enabled, True if not found (safe default)."""
-    try:
-        conn = psycopg2.connect(**DB_PARAMS)
-        cur  = conn.cursor()
-        cur.execute("SELECT enabled FROM strategies WHERE name = %s", (strategy_name,))
-        row = cur.fetchone()
-        cur.close()
-        conn.close()
-        return row[0] if row else True  # default True if strategy not in table yet
-    except Exception as e:
-        print(f"⚠️ is_strategy_enabled error: {e} — defaulting True")
-        return True
-
-
-# ---------------------------------------------------------------------------
-# Phase 27: Signal staleness gate
-# ---------------------------------------------------------------------------
-def is_signal_stale(created_at, max_age_mins: float) -> bool:
-    """Returns True if signal is older than max_age_mins."""
-    from datetime import datetime, timezone
-    try:
-        if created_at is None:
-            return False
-        if created_at.tzinfo is None:
-            created_at = created_at.replace(tzinfo=timezone.utc)
-        age_mins = (datetime.now(timezone.utc) - created_at).total_seconds() / 60
-        return age_mins > max_age_mins
-    except Exception as e:
-        print(f"⚠️ is_signal_stale error: {e} — defaulting False")
-        return False
 
 # ---------------------------------------------------------------------------
 # SIGNAL POLL LOOP
@@ -643,36 +580,17 @@ def poll_signals():
             cur  = conn.cursor()
 
             cur.execute("""
-                SELECT signal_uuid, symbol, signal_type, timeframe, sl_pips, tp_pips,
-                       strategy, created_at
+                SELECT signal_uuid, symbol, signal_type, timeframe, sl_pips, tp_pips
                 FROM signals
                 WHERE status = 'PENDING'
                 AND sl_pips IS NOT NULL
                 AND tp_pips IS NOT NULL
-                ORDER BY created_at ASC
                 LIMIT 1;
             """)
             signal = cur.fetchone()
 
             if signal:
-                s_uuid, sym, s_type, tf, sl_pips, tp_pips, strategy_name, created_at = signal
-
-                # ── Phase 27: Signal Staleness Gate ──────────────────────────────────
-                max_age = settings.get("max_signal_age_mins", 5.0)
-                if is_signal_stale(created_at, max_age):
-                    reason = f"STALE_SIGNAL: signal age exceeded {max_age:.0f} min limit"
-                    print(f"⏰ {reason} for {sym} [{strategy_name}]. Marking FAILED.")
-                    cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
-                    conn.commit()
-                    continue
-
-                # ── Phase 18: Strategy Enabled Gate ──────────────────────────────────
-                if not is_strategy_enabled(strategy_name or ""):
-                    reason = "STRATEGY_DISABLED"
-                    print(f"🔴 {reason}: {strategy_name} is disabled. Marking FAILED.")
-                    cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
-                    conn.commit()
-                    continue
+                s_uuid, sym, s_type, tf, sl_pips, tp_pips = signal
 
                 min_sl = settings.get("min_sl_pips", 8.0)
                 rr = float(tp_pips) / float(sl_pips) if float(sl_pips) > 0 else 0
