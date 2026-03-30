@@ -1429,8 +1429,8 @@ def execute_trade():
         # e.g. EURUSD: digits=5, pipPosition=4 → 1 pip = 10 points  ✅
         #      XAUUSD: digits=2, pipPosition=2 → 1 pip =  1 point   (was ×10 — WRONG, caused broker rejection)
         #      US30:   digits=1, pipPosition=1 → 1 pip =  1 point
-        digits_val      = int(spec.get("digits", 5))
-        pip_position_val = int(spec.get("pipPosition", 4))
+        digits_val      = int(spec.get("digits") or 5)
+        pip_position_val = int(spec.get("pipPosition") or spec.get("digits") or 4)
         pips_to_points  = 10 ** (digits_val - pip_position_val)
         if rel_sl:
             req.relativeStopLoss = int(round(float(rel_sl) * pips_to_points))
@@ -1981,7 +1981,7 @@ class Bridge:
                                 "symbolId": symbol_id,
                                 "symbolName": symbol_name,
                                 "digits": getattr(symbol_obj, "digits", 5),
-                                "pipPosition": getattr(symbol_obj, "pipPosition", None),
+                                "pipPosition": symbol_obj.pipPosition if symbol_obj.pipPosition else getattr(symbol_obj, "digits", 5),
                                 "lotSize": getattr(symbol_obj, "lotSize", 100000),
                                 "minVolume": getattr(symbol_obj, "minVolume", 1),
                                 "maxVolume": getattr(symbol_obj, "maxVolume", 10000000),
