@@ -821,78 +821,6 @@ def system_settings():
         print(f"⚠️ system_settings error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-
-# ── Phase 18: Strategy Toggle endpoints ────────────────────────────────────
-
-@app.route("/strategies", methods=["GET"])
-@require_auth
-def get_strategies():
-    """Return all strategy rows from the strategies table."""
-    try:
-        conn = get_db_conn()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT name, display_name, enabled, consecutive_losses,
-                   last_loss_at, quality_score_cached, updated_at
-            FROM strategies ORDER BY name
-        """)
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-        strategies = []
-        for row in rows:
-            strategies.append({
-                "name":               row[0],
-                "display_name":       row[1],
-                "enabled":            row[2],
-                "consecutive_losses": row[3],
-                "last_loss_at":       row[4].isoformat() if row[4] else None,
-                "quality_score_cached": float(row[5]) if row[5] is not None else 0.0,
-                "updated_at":         row[6].isoformat() if row[6] else None,
-            })
-        return jsonify({"success": True, "strategies": strategies})
-    except Exception as e:
-        print(f"⚠️ get_strategies error: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-@app.route("/strategies/toggle", methods=["POST"])
-@require_auth
-def toggle_strategy():
-    """Enable or disable a strategy by name. Body: { name, enabled }"""
-    try:
-        data = request.get_json()
-        name    = data.get("name")
-        enabled = bool(data.get("enabled", True))
-        if not name:
-            return jsonify({"success": False, "error": "name required"}), 400
-        conn = get_db_conn()
-        cur = conn.cursor()
-        cur.execute("""
-            UPDATE strategies
-            SET enabled = %s, updated_at = NOW()
-            WHERE name = %s
-            RETURNING name, display_name, enabled, consecutive_losses, updated_at
-        """, (enabled, name))
-        row = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-        if not row:
-            return jsonify({"success": False, "error": f"Strategy '{name}' not found"}), 404
-        print(f"{'✅' if enabled else '🔴'} Strategy {'enabled' if enabled else 'disabled'}: {name}")
-        return jsonify({
-            "success":  True,
-            "name":     row[0],
-            "display_name": row[1],
-            "enabled":  row[2],
-            "consecutive_losses": row[3],
-            "updated_at": row[4].isoformat() if row[4] else None,
-        })
-    except Exception as e:
-        print(f"⚠️ toggle_strategy error: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
-
 @app.route("/calendar/events", methods=["GET"])
 @require_auth
 def get_calendar_events():
@@ -1386,13 +1314,20 @@ def execute_trade():
 
         rel_sl = data.get("rel_sl")
         rel_tp = data.get("rel_tp")
-        # relativeStopLoss/TP is a protobuf int32 field — must be an integer.
-        # cTrader expects integer POINTS (1 pip = 10 points for 5-digit pairs).
-        # Convert: points = round(pips * 10) → always an int.
+        # relativeStopLoss/TP is a protobuf int32 field in POINTS (not pips).
+        # cTrader points = 10^-digits price units.
+        # points_per_pip = 10^(digits - pipPosition)
+        # e.g. EURUSD: digits=5, pipPosition=4 → 10 points/pip  ✓
+        # e.g. XBRUSD: digits=2, pipPosition=2 →  1 point/pip   ✓
+        # e.g. USDJPY: digits=3, pipPosition=2 → 10 points/pip  ✓
+        sym_spec   = spec  # already fetched from symbols_cache above
+        _digits    = int(sym_spec.get("digits", 5))
+        _pip_pos   = int(sym_spec.get("pipPosition", _digits - 1))
+        points_per_pip = 10 ** (_digits - _pip_pos)
         if rel_sl:
-            req.relativeStopLoss = int(round(float(rel_sl) * 10))
+            req.relativeStopLoss    = int(round(float(rel_sl) * points_per_pip))
         if rel_tp:
-            req.relativeTakeProfit = int(round(float(rel_tp) * 10))
+            req.relativeTakeProfit  = int(round(float(rel_tp) * points_per_pip))
 
         d_exec, client_msg_id = defer.Deferred(), str(uuid.uuid4())
         pending_requests[client_msg_id] = d_exec
