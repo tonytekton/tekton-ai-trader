@@ -478,6 +478,22 @@ def execute_trade(s_uuid, symbol, side, timeframe, sl_pips, tp_pips):
         _executing_symbols.discard(symbol)  # FIX 4: always release lock, even on exception
 
 # ---------------------------------------------------------------------------
+
+# ── PHASE 18: STRATEGY ENABLED CHECK ─────────────────────────────────────────
+def is_strategy_enabled(strategy_name: str) -> bool:
+    """Check strategies table. Defaults to True if strategy not found (safe)."""
+    try:
+        conn = psycopg2.connect(**DB_PARAMS)
+        cur  = conn.cursor()
+        cur.execute("SELECT enabled FROM strategies WHERE name = %s", (strategy_name,))
+        row = cur.fetchone()
+        cur.close(); conn.close()
+        return bool(row[0]) if row else True  # unknown strategy = allow through
+    except Exception as e:
+        print(f"⚠️ is_strategy_enabled error: {e} — defaulting to True")
+        return True
+# ─────────────────────────────────────────────────────────────────────────────
+
 # SIGNAL POLL LOOP
 # ---------------------------------------------------------------------------
 def poll_signals():
@@ -606,7 +622,8 @@ def poll_signals():
             cur  = conn.cursor()
 
             cur.execute("""
-                SELECT signal_uuid, symbol, signal_type, timeframe, sl_pips, tp_pips
+                SELECT signal_uuid, symbol, signal_type, timeframe, sl_pips, tp_pips,
+                       strategy, created_at
                 FROM signals
                 WHERE status = 'PENDING'
                 AND sl_pips IS NOT NULL
@@ -616,7 +633,33 @@ def poll_signals():
             signal = cur.fetchone()
 
             if signal:
-                s_uuid, sym, s_type, tf, sl_pips, tp_pips = signal
+                s_uuid, sym, s_type, tf, sl_pips, tp_pips, sig_strategy, sig_created_at = signal
+
+                # ── PHASE 27: SIGNAL STALENESS GATE ──────────────────────────
+                # Reject signals older than max_signal_age_mins (default 5 min)
+                # Prevents execution of signals that arrived while system was paused
+                max_age_mins = settings.get("max_signal_age_mins", 5)
+                if sig_created_at:
+                    from datetime import timezone as _tz2
+                    now_check = datetime.utcnow().replace(tzinfo=_tz2.utc) if sig_created_at.tzinfo else datetime.utcnow()
+                    signal_age_mins = (now_check - sig_created_at).total_seconds() / 60
+                    if signal_age_mins > max_age_mins:
+                        reason = f"STALE_SIGNAL: {signal_age_mins:.1f} mins old (max {max_age_mins} min)"
+                        print(f"⏰ {reason} for {sym} — skipping.")
+                        cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
+                        conn.commit()
+                        continue
+                # ─────────────────────────────────────────────────────────────
+
+                # ── PHASE 18: STRATEGY ENABLED GATE ──────────────────────────
+                # Check strategies table — skip signal if strategy is disabled
+                if sig_strategy and not is_strategy_enabled(sig_strategy):
+                    reason = f"STRATEGY_DISABLED: {sig_strategy}"
+                    print(f"🚫 {reason} — skipping signal for {sym}.")
+                    cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
+                    conn.commit()
+                    continue
+                # ─────────────────────────────────────────────────────────────
 
                 min_sl = settings.get("min_sl_pips", 8.0)
                 rr = float(tp_pips) / float(sl_pips) if float(sl_pips) > 0 else 0
