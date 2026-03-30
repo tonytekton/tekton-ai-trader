@@ -777,6 +777,73 @@ def get_account_summary():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+
+# ── PHASE 18: STRATEGY TOGGLE ENDPOINTS ──────────────────────────────────────
+@app.route("/strategies", methods=["GET"])
+def get_strategies():
+    """Return all strategy rows from the strategies table."""
+    try:
+        conn = psycopg2.connect(**DB_PARAMS)
+        cur  = conn.cursor()
+        cur.execute("""
+            SELECT name, display_name, enabled, consecutive_losses,
+                   last_loss_at, quality_score_cached, updated_at
+            FROM strategies
+            ORDER BY name
+        """)
+        rows = cur.fetchall()
+        cur.close(); conn.close()
+        strategies = []
+        for row in rows:
+            strategies.append({
+                "name":               row[0],
+                "display_name":       row[1],
+                "enabled":            row[2],
+                "consecutive_losses": row[3],
+                "last_loss_at":       row[4].isoformat() if row[4] else None,
+                "quality_score_cached": float(row[5]) if row[5] is not None else 0.0,
+                "updated_at":         row[6].isoformat() if row[6] else None,
+            })
+        return jsonify({"success": True, "strategies": strategies})
+    except Exception as e:
+        print(f"❌ GET /strategies error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/strategies/toggle", methods=["POST"])
+def toggle_strategy():
+    """Enable or disable a strategy by name. Body: { name, enabled }"""
+    try:
+        body    = request.get_json(force=True) or {}
+        name    = body.get("name", "").strip()
+        enabled = body.get("enabled")
+        if not name or enabled is None:
+            return jsonify({"success": False, "error": "name and enabled required"}), 400
+        conn = psycopg2.connect(**DB_PARAMS)
+        cur  = conn.cursor()
+        cur.execute("""
+            UPDATE strategies
+            SET enabled = %s, updated_at = NOW()
+            WHERE name = %s
+            RETURNING name, display_name, enabled, updated_at
+        """, (bool(enabled), name))
+        row = cur.fetchone()
+        conn.commit(); cur.close(); conn.close()
+        if not row:
+            return jsonify({"success": False, "error": f"Strategy '{name}' not found"}), 404
+        status = "enabled" if row[2] else "disabled"
+        print(f"🔀 Strategy toggle: {row[0]} ({row[1]}) → {status}")
+        return jsonify({
+            "success":      True,
+            "name":         row[0],
+            "display_name": row[1],
+            "enabled":      row[2],
+            "updated_at":   row[3].isoformat() if row[3] else None,
+        })
+    except Exception as e:
+        print(f"❌ POST /strategies/toggle error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+# ─────────────────────────────────────────────────────────────────────────────
+
 @app.route("/data/settings", methods=["GET", "POST"])
 @app.route("/data/system-settings", methods=["GET", "POST"])  # legacy alias
 @require_auth
