@@ -478,32 +478,12 @@ def list_positions():
             threading.Thread(target=seed_position_state_from_live_reconcile, daemon=True).start()
             return jsonify({"success": False, "error": "Bridge still initialising — retry in a few seconds"}), 503
 
-        # Normal path: serve from cached position_state{} + cached PnL (10s TTL)
-        # Caching prevents reactor thread starvation when monitor polls every 15s
-        # while executions / other blocking calls are in flight.
-        pnl_map = {}
-        now_ts = time.time()
-        if state.get("pnl_cache") is not None and (now_ts - state.get("pnl_cache_ts", 0)) < 30:  # 30s TTL — monitor polls every 30s, no need to hit cTrader more often
-            pnl_map = state["pnl_cache"]
-        else:
-            start_time_pnl = time.time()
-            pnl_msg = openapi.ProtoOAGetPositionUnrealizedPnLReq()
-            pnl_msg.ctidTraderAccountId = ACCOUNT_ID
-            d_pnl, mid_pnl = defer.Deferred(), str(uuid.uuid4())
-            pending_requests[mid_pnl] = d_pnl
-            reactor.callFromThread(lambda: bridge.client.send(pnl_msg, clientMsgId=mid_pnl))
-            pnl_result = threads.blockingCallFromThread(reactor, wait_for_deferred, d_pnl, 15)
-            log_ctrader_call("/positions/list_pnl", int((time.time() - start_time_pnl) * 1000), True)
-
-            if hasattr(pnl_result, "positionUnrealizedPnL"):
-                for pnl_entry in pnl_result.positionUnrealizedPnL:
-                    pid = str(pnl_entry.positionId)
-                    pnl_map[pid] = {
-                        "grossPnL_cents": safe_get_field(pnl_entry, "grossUnrealizedPnL", 0),
-                        "netPnL_cents":   safe_get_field(pnl_entry, "netUnrealizedPnL", 0),
-                    }
-            state["pnl_cache"] = pnl_map
-            state["pnl_cache_ts"] = now_ts
+        # Normal path: serve from position_state{} only — NO live PnL fetch.
+        # Live PnL fetches (ProtoOAGetPositionUnrealizedPnLReq) block the reactor
+        # and cause cascade timeouts when called from Flask threads under load.
+        # unrealizedNetPnL_cents returned as None — UI handles null gracefully.
+        # If PnL display is needed in future, push it via unsolicited events instead.
+        pnl_map = {}  # empty — PnL not fetched
 
         positions = []
         for pos_id, ps in state.get("position_state", {}).items():
