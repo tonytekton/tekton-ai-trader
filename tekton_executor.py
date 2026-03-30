@@ -676,8 +676,8 @@ def poll_signals():
                 latest_candle = cur.fetchone()[0]
                 if latest_candle is None:
                     reason = f"STALE_DATA: no candles found for {sym}/{tf}"
-                    print(f"🚫 {reason}. Marking FAILED.")
-                    cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
+                    print(f"🚫 {reason}. Marking DATAREJECTED.")
+                    cur.execute("UPDATE signals SET status='DATAREJECTED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
                     conn.commit()
                     continue
                 from datetime import timezone as _tz
@@ -685,8 +685,8 @@ def poll_signals():
                 candle_age_mins = (now_utc - latest_candle).total_seconds() / 60
                 if candle_age_mins > MAX_DATA_AGE_MINS:
                     reason = f"STALE_DATA: newest {sym}/{tf} candle is {candle_age_mins:.0f} mins old (max {MAX_DATA_AGE_MINS})"
-                    print(f"🚫 {reason}. Marking FAILED.")
-                    cur.execute("UPDATE signals SET status='FAILED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
+                    print(f"🚫 {reason}. Marking DATAREJECTED.")
+                    cur.execute("UPDATE signals SET status='DATAREJECTED', error_reason=%s WHERE signal_uuid=%s", (reason, str(s_uuid)))
                     conn.commit()
                     continue
                 # ─────────────────────────────────────────────────────────────
