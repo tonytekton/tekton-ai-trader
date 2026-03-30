@@ -5,12 +5,12 @@ Tekton AI Trader — Market Data Freshness Monitor
 Runs as a VM cron job every 30 mins during market hours.
 Checks market_data table for stale candles and sends Telegram alert if any found.
 
-Thresholds are set to candle period + generous buffer to avoid false alarms:
-  5min  → 45 min   (3 missed candles)
-  15min → 90 min   (3 missed candles)
-  60min → 240 min  (3 missed candles + buffer)
-  4H    → 480 min  (1 full candle period + buffer)
-  Daily → 2880 min (2 full days — covers weekends + holiday gaps)
+Thresholds are trading-minutes based — weekends are excluded from age calculation.
+  5min  → 45 min
+  15min → 90 min
+  60min → 240 min
+  4H    → 480 min
+  Daily → 1560 min (26 trading hours — one session + buffer)
 """
 
 import os
@@ -36,24 +36,58 @@ DB_PARAMS = {
 TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# Thresholds: candle period + buffer to avoid false alarms
+# Thresholds in TRADING minutes (weekends excluded)
 THRESHOLDS = {
     "5min":  45,    # 3 missed candles
     "15min": 90,    # 3 missed candles
     "60min": 240,   # 3 missed candles + buffer
     "4H":    480,   # 1 full candle period + buffer
-    "Daily": 2880,  # 2 full days — covers weekend gaps
+    "Daily": 1560,  # 26 trading hours — one full session + buffer
 }
+
+
+def trading_minutes_since(dt: datetime) -> float:
+    """
+    Calculate elapsed TRADING minutes between dt and now UTC,
+    excluding weekends (Sat 00:00 UTC — Mon 06:00 UTC).
+    """
+    now = datetime.now(timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+
+    elapsed = 0.0
+    cursor  = dt
+
+    while cursor < now:
+        wd = cursor.weekday()  # 0=Mon, 6=Sun
+        h  = cursor.hour + cursor.minute / 60.0
+
+        # Skip weekends and Monday pre-open
+        is_weekend = (wd == 5) or (wd == 6) or (wd == 0 and h < 6)
+
+        if not is_weekend:
+            # Advance in 1-minute steps (capped at remaining time)
+            step = min(1.0, (now - cursor).total_seconds() / 60.0)
+            elapsed += step
+
+        cursor += timedelta(minutes=1)
+
+        # Safety cap — don't loop more than 10 days worth
+        if elapsed > 14400:
+            break
+
+    return elapsed
+
 
 # Market hours: Mon 06:00 UTC — Fri 21:00 UTC
 def is_market_hours() -> bool:
     now = datetime.now(timezone.utc)
-    wd  = now.weekday()  # 0=Mon, 6=Sun
-    if wd == 5: return False  # Saturday always closed
-    if wd == 6: return False  # Sunday always closed
+    wd  = now.weekday()
+    if wd == 5: return False
+    if wd == 6: return False
     h = now.hour + now.minute / 60.0
-    if wd == 0 and h < 6:   return False  # Monday pre-open
-    if wd == 4 and h >= 21: return False  # Friday close
+    if wd == 0 and h < 6:   return False
+    if wd == 4 and h >= 21: return False
     return True
 
 
@@ -84,8 +118,6 @@ def check_freshness():
         print("⏸ Outside market hours — skipping check")
         sys.exit(0)
 
-    now_utc = datetime.now(timezone.utc)
-
     try:
         conn = psycopg2.connect(**DB_PARAMS)
         cur  = conn.cursor()
@@ -104,7 +136,9 @@ def check_freshness():
         send_telegram(msg)
         sys.exit(1)
 
-    stale = []
+    now_utc = datetime.now(timezone.utc)
+    stale   = []
+
     for tf, latest in rows:
         if tf not in THRESHOLDS:
             continue
@@ -115,13 +149,13 @@ def check_freshness():
         if latest.tzinfo is None:
             latest = latest.replace(tzinfo=timezone.utc)
 
-        age_mins = (now_utc - latest).total_seconds() / 60
-        threshold = THRESHOLDS[tf]
+        trading_mins = trading_minutes_since(latest)
+        threshold    = THRESHOLDS[tf]
 
-        if age_mins > threshold:
-            stale.append(f"  {tf}: {age_mins:.0f} min old (limit {threshold} min)")
+        if trading_mins > threshold:
+            stale.append(f"  {tf}: {trading_mins:.0f} trading-min old (limit {threshold})")
         else:
-            print(f"✅ {tf}: {age_mins:.0f} min old — OK")
+            print(f"✅ {tf}: {trading_mins:.0f} trading-min old — OK")
 
     if stale:
         lines = ["⚠️ Tekton Data Freshness Alert", ""]
