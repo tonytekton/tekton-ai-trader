@@ -117,19 +117,18 @@ def get_pip_size(symbol):
     Returns pip size from live bridge pipPosition.
     Formula: pip_size = 10^-pipPosition  (consistent with executor and strategy)
     """
-    try:
-        spec_res = requests.post(
-            f"{BRIDGE_URL}/contract/specs",
-            json={"symbol": symbol},
-            headers=HEADERS,
-            timeout=10
-        )
-        spec    = spec_res.json().get("contract_specifications", {})
-        pip_pos = spec.get("pipPosition", 4)
-        return 10 ** (-pip_pos)
-    except Exception as e:
-        print(f"⚠️ get_pip_size error for {symbol}: {e} — using default 0.0001")
-        return 0.0001
+    spec_res = requests.post(
+        f"{BRIDGE_URL}/contract/specs",
+        json={"symbol": symbol},
+        headers=HEADERS,
+        timeout=10
+    )
+    spec_res.raise_for_status()
+    spec = spec_res.json().get("contract_specifications", {})
+    pip_pos = spec.get("pipPosition")
+    if pip_pos is None:
+        raise ValueError(f"❌ pipPosition missing for {symbol} in contract specs — cannot calculate pip size")
+    return 10 ** (-pip_pos)
 
 
 # ---------------------------------------------------------------------------
@@ -188,8 +187,12 @@ def manage_risk(config):
                 return False
 
             sig     = signals[0]
-            sl_pips = float(sig.get("sl_pips") or 0)
-            tp_pips = float(sig.get("tp_pips") or 0)
+            sl_pips_raw = sig.get("sl_pips")
+            tp_pips_raw = sig.get("tp_pips")
+            if not sl_pips_raw or not tp_pips_raw:
+                raise ValueError(f"❌ sl_pips or tp_pips missing for signal {sig.get('uuid')} — cannot calculate R")
+            sl_pips = float(sl_pips_raw)
+            tp_pips = float(tp_pips_raw)
 
             if missing_sl and sl_pips == 0:
                 print(f"🚨 Signal for {sym} pos_id={p_id} has sl_pips=0 — unrecoverable, closing position")
@@ -232,9 +235,12 @@ def manage_risk(config):
             continue
 
         # Prices are pre-scaled decimals from bridge (position_state{} enriched)
-        entry = pos.get("entry_price") or 0
-        sl    = pos.get("stop_loss") or 0
-        tp    = pos.get("take_profit") or 0
+        entry = pos.get("entry_price")
+        sl    = pos.get("stop_loss")
+        tp    = pos.get("take_profit")
+        if not entry or not sl or not tp:
+            print(f"⚠️ Position {pos.get('position_id')} missing entry/sl/tp — skipping display")
+            continue
 
         # SL/TP safety check — reapply or close if missing
         missing_sl = sl == 0
