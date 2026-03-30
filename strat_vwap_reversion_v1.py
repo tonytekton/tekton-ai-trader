@@ -129,7 +129,7 @@ def get_symbol_specs():
             sym     = s.get("name", "")
             pip_pos     = s.get("pipPosition")
             specs[sym] = {
-                "pip_size":    _get_pip_size(sym, pip_pos),
+                "pip_size":    10 ** (-pip_pos),
                 "price_scale": 100000,  # cTrader trendbar raw integers are always price × 100,000
             }
         _symbol_specs_cache = specs
