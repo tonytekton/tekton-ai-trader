@@ -13,7 +13,8 @@ const STATUS_STYLES = {
   SLREJECTED: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
   RRREJECTED: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
   STALE:      'bg-slate-500/10 text-slate-400 border-slate-500/20',
-  STDISABLED: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+  STDISABLED:    'bg-slate-500/10 text-slate-400 border-slate-500/20',
+  DATAREJECTED: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
   EXPIRED:    'bg-slate-700/30 text-slate-500 border-slate-700/50',
   CANCELLED:  'bg-slate-700/30 text-slate-500 border-slate-700/50',
 };
@@ -27,7 +28,8 @@ const STATUS_LABELS = {
   SLREJECTED: 'SL Rejected',
   RRREJECTED: 'RR Rejected',
   STALE:      'Stale',
-  STDISABLED: 'Strat Disabled',
+  STDISABLED:    'Strat Disabled',
+  DATAREJECTED: 'Data Rejected',
   EXPIRED:    'Expired',
   CANCELLED:  'Cancelled',
 };
@@ -40,7 +42,8 @@ const STAT_CARDS = [
   { key: 'SLREJECTED', label: 'SL Rejected',    style: 'text-orange-400 border-orange-500/20 bg-orange-500/5' },
   { key: 'RRREJECTED', label: 'RR Rejected',    style: 'text-orange-400 border-orange-500/20 bg-orange-500/5' },
   { key: 'STALE',      label: 'Stale',          style: 'text-slate-400 border-slate-500/20 bg-slate-500/5' },
-  { key: 'STDISABLED', label: 'Strat Disabled', style: 'text-slate-400 border-slate-500/20 bg-slate-500/5' },
+  { key: 'STDISABLED',    label: 'Strat Disabled', style: 'text-slate-400 border-slate-500/20 bg-slate-500/5' },
+  { key: 'DATAREJECTED', label: 'Data Rejected',  style: 'text-amber-400 border-amber-500/20 bg-amber-500/5' },
 ];
 
 export default function Signals() {
@@ -118,6 +121,7 @@ export default function Signals() {
           <option value="RRREJECTED">RR Rejected</option>
           <option value="STALE">Stale</option>
           <option value="STDISABLED">Strat Disabled</option>
+          <option value="DATAREJECTED">Data Rejected</option>
         </select>
         <select value={symbolFilter} onChange={handleSymbolChange} className={selectClass}>
           <option value="">All Symbols</option>
