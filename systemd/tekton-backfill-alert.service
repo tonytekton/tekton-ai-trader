@@ -1,0 +1,9 @@
+[Unit]
+Description=Alert when Tekton backfill fails
+
+[Service]
+Type=oneshot
+User=tony
+WorkingDirectory=/home/tony/tekton-ai-trader
+EnvironmentFile=/home/tony/tekton-ai-trader/.env
+ExecStart=/home/tony/tekton-ai-trader/venv/bin/python /home/tony/tekton-ai-trader/notify_lester.py "BACKFILL_FAILED" "tekton_backfill.py exited with error — market data may be stale. Check: journalctl -u tekton-backfill.service -n 50"
