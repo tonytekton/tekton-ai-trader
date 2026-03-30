@@ -1009,6 +1009,37 @@ def fetch_all_deals(from_ts: int, to_ts: int, max_rows_per_page: int = 500) -> l
 @require_auth
 def get_executions():
     try:
+        # --- Cache check — 60s TTL on closed trades (30-day deal fetch is expensive) ---
+        # Open trades are always rebuilt fresh from position_state{}.
+        # Closed trades only change when a position closes — 60s staleness is acceptable.
+        now_ts = time.time()
+        executions_cache     = state.get("executions_cache")
+        executions_cache_ts  = state.get("executions_cache_ts", 0)
+        if executions_cache is not None and (now_ts - executions_cache_ts) < 60:
+            # Rebuild open trades fresh, stitch with cached closed trades
+            open_trades = []
+            for pid, ps in state.get("position_state", {}).items():
+                symbol  = ps.get("symbol", "UNKNOWN")
+                side    = ps.get("side", "BUY")
+                volume  = ps.get("volume_raw")
+                entry   = ps.get("entry_price")
+                sl      = ps.get("stop_loss")
+                tp      = ps.get("take_profit")
+                open_ts = ps.get("open_ts")
+                comment = ps.get("comment")
+                digits  = ps.get("digits", 5)
+                open_trades.append({
+                    "id": pid, "signal_uuid": comment if comment else None,
+                    "symbol": symbol, "side": side,
+                    "volume": round(float(volume) / 10_000_000, 2) if volume else None,
+                    "entry_price": entry, "stop_loss": sl, "take_profit": tp,
+                    "close_price": None, "pnl": None, "status": "open",
+                    "created_at": datetime.fromtimestamp(open_ts / 1000).isoformat() if open_ts else None,
+                    "closed_at": None, "digits": digits
+                })
+            all_trades = open_trades + executions_cache
+            return jsonify({"success": True, "trades": all_trades, "source": "cache"})
+
         # --- 1. Build Open Positions from position_state{} (Phase 11c) ---
         # No live ReconcileReq — position_state{} is authoritative (seeded at startup
         # from ReconcileReq and kept live by ExecutionEvent handler).
